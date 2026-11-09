@@ -195,8 +195,20 @@ it('crafts planks at workbench and sword at forge atomically granting blacksmith
   let s = await service.sync(id);
   await db.inventorySlot.createMany({
     data: [
-      { id: randomUUID(), characterId: id, index: 10, itemId: 'wood', quantity: 10 },
-      { id: randomUUID(), characterId: id, index: 11, itemId: 'stone', quantity: 5 },
+      {
+        id: randomUUID(),
+        characterId: id,
+        index: 10,
+        itemId: 'wood',
+        quantity: 10,
+      },
+      {
+        id: randomUUID(),
+        characterId: id,
+        index: 11,
+        itemId: 'stone',
+        quantity: 5,
+      },
     ],
   });
   s = await service.sync(id);
@@ -230,4 +242,116 @@ it('crafts planks at workbench and sword at forge atomically granting blacksmith
   expect(s.inventory.find((i) => i.itemId === 'wood')?.quantity).toBe(5);
   expect(s.inventory.find((i) => i.itemId === 'stone')?.quantity).toBe(3);
   expect(s.skills.find((i) => i.profession === 'blacksmith')?.xp).toBe(35);
+});
+it('attacks slimes within range, validates cooldown, takes damage, awards warrior xp and slime goo on kill', async () => {
+  const id = await fixture();
+  let s = await service.sync(id);
+
+  // Fora de alcance
+  await expect(
+    service.act(
+      id,
+      {
+        id: randomUUID(),
+        revision: s.revision,
+        kind: 'attack',
+        targetId: 'slime-1',
+      },
+      () => ({ x: 1040, y: 1040, direction: 'down' }),
+    ),
+  ).rejects.toThrow('alcance');
+
+  // No alcance do slime-1 (1540, 1700)
+  const slimePos = () => ({ x: 1540, y: 1700, direction: 'down' });
+  const slime = service.monstersManager.get('slime-1')!;
+  slime.health = slime.maxHealth;
+  slime.state = 'idle';
+
+  // 1º ataque desarmado (dano: 20 -> vida vai para 40)
+  s = await service.act(
+    id,
+    {
+      id: randomUUID(),
+      revision: s.revision,
+      kind: 'attack',
+      targetId: 'slime-1',
+    },
+    slimePos,
+  );
+  expect(slime.health).toBe(40);
+
+  // Rejeitado de imediato pelo cooldown de 400ms
+  await expect(
+    service.act(
+      id,
+      {
+        id: randomUUID(),
+        revision: s.revision,
+        kind: 'attack',
+        targetId: 'slime-1',
+      },
+      slimePos,
+    ),
+  ).rejects.toThrow('Aguarde o golpe anterior');
+
+  // Aguardar fim do cooldown
+  await new Promise((resolve) => setTimeout(resolve, 450));
+
+  // Conceder espada para testar bônus de dano (dano: 30)
+  await db.inventorySlot.create({
+    data: {
+      id: randomUUID(),
+      characterId: id,
+      index: 15,
+      itemId: 'sword',
+      quantity: 1,
+    },
+  });
+  s = await service.sync(id);
+
+  // 2º ataque com espada (dano 30 -> vida vai de 40 para 10)
+  s = await service.act(
+    id,
+    {
+      id: randomUUID(),
+      revision: s.revision,
+      kind: 'attack',
+      targetId: 'slime-1',
+    },
+    slimePos,
+  );
+  expect(slime.health).toBe(10);
+
+  await new Promise((resolve) => setTimeout(resolve, 450));
+
+  // 3º ataque (golpe fatal -> derrota o slime)
+  s = await service.act(
+    id,
+    {
+      id: randomUUID(),
+      revision: s.revision,
+      kind: 'attack',
+      targetId: 'slime-1',
+    },
+    slimePos,
+  );
+  expect(slime.health).toBe(0);
+  expect(slime.state).toBe('dead');
+  expect(s.inventory.find((i) => i.itemId === 'slime_goo')?.quantity).toBe(2);
+  expect(s.skills.find((i) => i.profession === 'warrior')?.xp).toBe(30);
+
+  // Atacar monstro derrotado é rejeitado
+  await new Promise((resolve) => setTimeout(resolve, 450));
+  await expect(
+    service.act(
+      id,
+      {
+        id: randomUUID(),
+        revision: s.revision,
+        kind: 'attack',
+        targetId: 'slime-1',
+      },
+      slimePos,
+    ),
+  ).rejects.toThrow('derrotado');
 });

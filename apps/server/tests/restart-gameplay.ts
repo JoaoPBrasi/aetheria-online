@@ -46,6 +46,7 @@ room.onMessage('gameplay', (s: GameplaySnapshot) => {
   snapshot = s;
 });
 room.onMessage('resources', () => undefined);
+room.onMessage('monsters', () => undefined);
 let plots: import('@aetheria/shared').FarmSnapshot[] = [];
 room.onMessage('plots', (p: import('@aetheria/shared').FarmSnapshot[]) => {
   plots = p;

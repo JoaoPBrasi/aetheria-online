@@ -13,6 +13,9 @@ export interface GameSnapshot {
   gameplayError?: string | null;
   actionPending?: boolean;
   resources?: Record<string, number>;
+  monsters?: import('../data/gameplay.js').MonsterSnapshot[];
+  health?: number;
+  maxHealth?: number;
   worldTime?: number;
   inputBlocked?: boolean;
   feedback?: string;

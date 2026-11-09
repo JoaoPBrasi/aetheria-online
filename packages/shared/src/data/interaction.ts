@@ -2,9 +2,11 @@ import {
   ITEMS,
   RESOURCES,
   CRAFTING_STATIONS,
+  MONSTERS,
   type GameplaySnapshot,
   type ItemId,
   type CraftingStationType,
+  type MonsterSnapshot,
 } from './gameplay.js';
 import { cropStatus, type FarmSnapshot, type CropId } from './farming.js';
 export function hasTool(
@@ -24,6 +26,7 @@ export function interaction(
   now: number,
   crop: CropId,
   target?: string,
+  monsters: MonsterSnapshot[] = [],
 ) {
   const candidates = [
     ...RESOURCES.map((r) => ({
@@ -33,6 +36,9 @@ export function interaction(
       name: r.name,
       node: r,
       plot: undefined as FarmSnapshot | undefined,
+      station: undefined as
+        { id: string; name: string; type: CraftingStationType } | undefined,
+      monster: undefined as MonsterSnapshot | undefined,
     })),
     ...plots.map((p) => ({
       id: p.id,
@@ -41,7 +47,9 @@ export function interaction(
       name: 'Parcela ' + p.id.split('-').at(-1),
       node: undefined,
       plot: p,
-      station: undefined as { id: string; name: string; type: CraftingStationType } | undefined,
+      station: undefined as
+        { id: string; name: string; type: CraftingStationType } | undefined,
+      monster: undefined as MonsterSnapshot | undefined,
     })),
     ...CRAFTING_STATIONS.map((st) => ({
       id: st.id,
@@ -51,7 +59,23 @@ export function interaction(
       node: undefined,
       plot: undefined,
       station: st,
+      monster: undefined as MonsterSnapshot | undefined,
     })),
+    ...monsters
+      .filter((m) => m.state !== 'dead')
+      .map((m) => {
+        const def = MONSTERS.find((d) => d.id === m.id);
+        return {
+          id: m.id,
+          x: m.x,
+          y: m.y,
+          name: def?.name ?? 'Monstro',
+          node: undefined,
+          plot: undefined,
+          station: undefined,
+          monster: m,
+        };
+      }),
   ];
   const chosen = candidates
     .filter((c) => !target || c.id === target)
@@ -109,6 +133,12 @@ export function interaction(
       kind: 'open_crafting',
       stationId: chosen.station.id,
       stationType: chosen.station.type,
+    };
+  } else if (chosen.monster) {
+    label = `Atacar ${chosen.name} (${chosen.monster.health}/${chosen.monster.maxHealth} HP)`;
+    payload = {
+      kind: 'attack',
+      targetId: chosen.monster.id,
     };
   }
   if (tool && !hasTool(s, tool)) {

@@ -81,6 +81,12 @@ export class WorldConnection {
       room.onMessage('resources', (resources: Record<string, number>) => {
         if (!this.disposed) gameBridge.update({ resources });
       });
+      room.onMessage(
+        'monsters',
+        (monsters: import('@aetheria/shared').MonsterSnapshot[]) => {
+          if (!this.disposed) gameBridge.update({ monsters });
+        },
+      );
       room.onMessage('gameplay', (snapshot: GameplaySnapshot) => {
         if (this.disposed) return;
         const old = gameBridge.getSnapshot().gameplay;
@@ -135,7 +141,13 @@ export class WorldConnection {
         movement.pending = [];
         movement.reconcile(room.state, room.sessionId);
         movement.send = (input) => room.send('move', input);
-        gameBridge.update({ status: 'connected', error: null });
+        const self = room.state.players.get(room.sessionId);
+        gameBridge.update({
+          status: 'connected',
+          error: null,
+          health: self?.health ?? 100,
+          maxHealth: self?.maxHealth ?? 100,
+        });
         room.send('sync');
       });
       gameBridge.update({
@@ -145,7 +157,13 @@ export class WorldConnection {
       room.onStateChange((state) => {
         if (this.disposed) return;
         movement.reconcile(state, room.sessionId);
-        if (!this.disposed) gameBridge.update({ players: state.players.size });
+        const self = state.players.get(room.sessionId);
+        if (!this.disposed)
+          gameBridge.update({
+            players: state.players.size,
+            health: self?.health ?? 100,
+            maxHealth: self?.maxHealth ?? 100,
+          });
       });
       room.onLeave(() => {
         if (this.disposed) return;

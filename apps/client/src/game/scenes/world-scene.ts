@@ -10,6 +10,7 @@ import {
   CRAFTING_STATIONS,
   cropStatus,
   interaction,
+  MONSTERS,
 } from '@aetheria/shared';
 import { gameBridge } from '../managers/game-bridge';
 import { movement } from '../networking/movement';
@@ -28,6 +29,14 @@ export class WorldScene extends Phaser.Scene {
   private plots = new Map<string, Phaser.GameObjects.Rectangle>();
   private accumulator = 0;
   private remoteSprites = new Map<string, Phaser.GameObjects.Container>();
+  private monsterSprites = new Map<
+    string,
+    {
+      container: Phaser.GameObjects.Container;
+      body: Phaser.GameObjects.Ellipse;
+      hpFill: Phaser.GameObjects.Rectangle;
+    }
+  >();
   constructor() {
     super('world');
   }
@@ -70,13 +79,7 @@ export class WorldScene extends Phaser.Scene {
     for (const station of CRAFTING_STATIONS) {
       const isForge = station.type === 'forge';
       this.add
-        .rectangle(
-          station.x,
-          station.y,
-          32,
-          24,
-          isForge ? 0x5a5d64 : 0x8b5a2b,
-        )
+        .rectangle(station.x, station.y, 32, 24, isForge ? 0x5a5d64 : 0x8b5a2b)
         .setStrokeStyle(2, isForge ? 0xcc6633 : 0xd4a373)
         .setDepth(station.y)
         .setInteractive({ useHandCursor: true })
@@ -289,6 +292,8 @@ export class WorldScene extends Phaser.Scene {
         farmState.resources ?? {},
         Date.now(),
         'turnip',
+        undefined,
+        farmState.monsters ?? [],
       );
       if (target)
         this.focusRing
@@ -402,5 +407,70 @@ export class WorldScene extends Phaser.Scene {
         sprite.destroy();
         this.remoteSprites.delete(id);
       }
+
+    const liveMonsters = new Set<string>();
+    for (const m of farmState.monsters ?? []) {
+      liveMonsters.add(m.id);
+      let entry = this.monsterSprites.get(m.id);
+      if (!entry) {
+        const def = MONSTERS.find((d) => d.id === m.id);
+        const name = def?.name ?? 'Slime';
+        const shadow = this.add.ellipse(0, 0, 26, 10, 0x132b24, 0.4);
+        const body = this.add.ellipse(0, -12, 28, 22, 0x5cd65c);
+        const eyeLeft = this.add.ellipse(-5, -14, 4, 6, 0x132b24);
+        const eyeRight = this.add.ellipse(5, -14, 4, 6, 0x132b24);
+        const pupilLeft = this.add.ellipse(-4, -15, 2, 2, 0xffffff);
+        const pupilRight = this.add.ellipse(6, -15, 2, 2, 0xffffff);
+        const label = this.add
+          .text(0, -32, name, {
+            fontSize: '10px',
+            color: '#bbf2b6',
+            backgroundColor: '#183820',
+          })
+          .setOrigin(0.5);
+        const hpBg = this.add.rectangle(0, -22, 26, 4, 0x222222);
+        const hpFill = this.add
+          .rectangle(-13, -22, 26, 4, 0x33cc33)
+          .setOrigin(0, 0.5);
+
+        const container = this.add.container(m.x, m.y, [
+          shadow,
+          body,
+          eyeLeft,
+          eyeRight,
+          pupilLeft,
+          pupilRight,
+          label,
+          hpBg,
+          hpFill,
+        ]);
+        container.setSize(32, 32);
+        container
+          .setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => gameBridge.interact?.(m.id));
+
+        entry = { container, body, hpFill };
+        this.monsterSprites.set(m.id, entry);
+      }
+
+      if (m.state === 'dead' || m.health <= 0) {
+        entry.container.setVisible(false);
+      } else {
+        entry.container.setVisible(true);
+        entry.container.setPosition(m.x, m.y).setDepth(m.y);
+        const squish = 1 + Math.sin(time / 150 + m.x) * 0.12;
+        entry.body.setScale(1 / squish, squish);
+        const pct = Math.max(0, Math.min(1, m.health / m.maxHealth));
+        entry.hpFill.width = 26 * pct;
+        entry.hpFill.setFillStyle(pct > 0.3 ? 0x33cc33 : 0xcc3333);
+      }
+    }
+
+    for (const [id, entry] of this.monsterSprites) {
+      if (!liveMonsters.has(id)) {
+        entry.container.destroy();
+        this.monsterSprites.delete(id);
+      }
+    }
   }
 }

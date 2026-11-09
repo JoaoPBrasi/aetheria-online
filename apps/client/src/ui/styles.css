@@ -619,6 +619,36 @@ footer {
   color: #b6c4a5;
   margin: 3px 0 7px;
 }
+.hud-health-bar {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  background: #192720;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #3c5443;
+  margin: 4px 0 6px;
+}
+.hud-health-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #389e47, #5edb73);
+  transition: width 0.2s ease-out;
+}
+.hud-health-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  font-size: 8px !important;
+  font-weight: bold;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+}
 .hud-identity small {
   font-size: 10px;
   color: #a8d2b1;
@@ -1346,4 +1376,3 @@ footer {
   color: #7b8f80;
   cursor: not-allowed;
 }
-

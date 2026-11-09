@@ -46,6 +46,7 @@ async function join(token: string) {
   room.onMessage('gameplay', () => undefined);
   room.onMessage('resources', () => undefined);
   room.onMessage('plots', () => undefined);
+  room.onMessage('monsters', () => undefined);
   return room;
 }
 afterAll(async () => {

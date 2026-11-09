@@ -21,7 +21,12 @@ export class GameplayRepository {
   async execute(
     characterId: string,
     action?: GameAction,
-    reward?: { item: ItemId; profession: string },
+    reward?: {
+      item: ItemId;
+      profession: string;
+      quantity?: number;
+      xp?: number;
+    },
     position?: Position,
   ): Promise<GameplaySnapshot> {
     return this.db.$transaction(async (tx) => {
@@ -225,7 +230,9 @@ export class GameplayRepository {
       if (action?.kind === 'craft') {
         const recipe = CRAFTING_RECIPES[action.recipeId];
         if (!recipe) throw new Error('Receita desconhecida.');
-        const station = CRAFTING_STATIONS.find((s) => s.id === action.stationId);
+        const station = CRAFTING_STATIONS.find(
+          (s) => s.id === action.stationId,
+        );
         if (!station) throw new Error('Estação de trabalho desconhecida.');
         if (station.type !== recipe.station)
           throw new Error('Estação incorreta para esta receita.');
@@ -245,6 +252,21 @@ export class GameplayRepository {
           data: { xp: { increment: recipe.xp } },
         });
         changed = true;
+      }
+      if (action?.kind === 'attack') {
+        if (reward) {
+          slots = addItem(slots, reward.item, reward.quantity ?? 1);
+          await tx.characterSkill.update({
+            where: {
+              characterId_profession: {
+                characterId,
+                profession: 'warrior',
+              },
+            },
+            data: { xp: { increment: reward.xp ?? 30 } },
+          });
+          changed = true;
+        }
       }
       if (changed) {
         await tx.inventorySlot.deleteMany({ where: { characterId } });

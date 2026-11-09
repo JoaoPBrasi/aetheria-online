@@ -52,3 +52,26 @@ it('blocks cooldown and plots belonging to others', () => {
     )?.enabled,
   ).toBe(false);
 });
+it('detects live monsters within range and returns attack action payload', () => {
+  const monster = {
+    id: 'slime-1',
+    x: 1540,
+    y: 1700,
+    health: 60,
+    maxHealth: 60,
+    state: 'idle' as const,
+  };
+  const target = interaction(
+    s,
+    { x: 1540, y: 1700 },
+    [],
+    {},
+    0,
+    'turnip',
+    undefined,
+    [monster],
+  );
+  expect(target?.enabled).toBe(true);
+  expect(target?.payload).toEqual({ kind: 'attack', targetId: 'slime-1' });
+  expect(target?.label).toContain('Atacar Slime Saltitante (60/60 HP)');
+});

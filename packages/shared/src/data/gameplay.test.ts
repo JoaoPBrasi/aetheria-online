@@ -52,7 +52,12 @@ it('crafts items consuming materials and rejecting insufficient ingredients', ()
   ];
   expect(canCraft(bag, CRAFTING_RECIPES.plank)).toBe(true);
   expect(canCraft(bag, CRAFTING_RECIPES.sword)).toBe(true);
-  expect(canCraft([{ index: 0, itemId: 'wood', quantity: 1 }], CRAFTING_RECIPES.plank)).toBe(false);
+  expect(
+    canCraft(
+      [{ index: 0, itemId: 'wood', quantity: 1 }],
+      CRAFTING_RECIPES.plank,
+    ),
+  ).toBe(false);
 
   const afterPlank = craftItem(bag, CRAFTING_RECIPES.plank);
   expect(afterPlank.find((s) => s.itemId === 'wood')?.quantity).toBe(3);

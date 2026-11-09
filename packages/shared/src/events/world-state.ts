@@ -12,6 +12,8 @@ export class PlayerPresence extends Schema {
   declare hairColor: string;
   declare skinColor: string;
   declare hairStyle: string;
+  declare health: number;
+  declare maxHealth: number;
   constructor() {
     super();
     this.characterId = '';
@@ -26,6 +28,8 @@ export class PlayerPresence extends Schema {
     this.hairColor = '#59422f';
     this.skinColor = '#e1b68c';
     this.hairStyle = 'short';
+    this.health = 100;
+    this.maxHealth = 100;
   }
 }
 defineTypes(PlayerPresence, {
@@ -41,6 +45,8 @@ defineTypes(PlayerPresence, {
   hairColor: 'string',
   skinColor: 'string',
   hairStyle: 'string',
+  health: 'int32',
+  maxHealth: 'int32',
 });
 export class WorldState extends Schema {
   declare mapId: string;

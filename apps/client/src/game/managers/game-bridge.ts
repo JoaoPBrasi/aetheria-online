@@ -7,6 +7,9 @@ export class GameBridge {
     players: 0,
     error: null,
     fps: 0,
+    health: 100,
+    maxHealth: 100,
+    monsters: [],
   };
   private listeners = new Set<() => void>();
   getSnapshot = () => this.snapshot;

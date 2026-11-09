@@ -46,6 +46,7 @@ export class WorldRoom extends Room<{
         client.send('gameplay', await this.gameplay.sync(p.characterId));
         client.send('resources', this.gameplay.resources());
         client.send('plots', await this.gameplay.plots());
+        client.send('monsters', this.gameplay.monsters());
       } catch {
         client.send('gameplayError', 'Banco indisponível. Tente novamente.');
       }
@@ -68,6 +69,13 @@ export class WorldRoom extends Room<{
           raw.kind === 'farm'
         )
           this.broadcast('plots', await this.gameplay.plots());
+        if (
+          raw &&
+          typeof raw === 'object' &&
+          'kind' in raw &&
+          raw.kind === 'attack'
+        )
+          this.broadcast('monsters', this.gameplay.monsters());
       } catch (error) {
         const safe = [
           'Parcela fora de alcance.',
@@ -102,6 +110,10 @@ export class WorldRoom extends Room<{
           'Estação incorreta para esta receita.',
           'Estação de trabalho fora de alcance.',
           'Materiais insuficientes.',
+          'Monstro não encontrado.',
+          'Monstro já derrotado.',
+          'Monstro fora de alcance.',
+          'Aguarde o golpe anterior.',
         ];
         client.send(
           'gameplayError',
@@ -118,6 +130,7 @@ export class WorldRoom extends Room<{
       if (this.state.players.get(client.sessionId)?.connected)
         this.inputs.get(client.sessionId)?.accept(message);
     });
+    let monsterBroadcastCounter = 0;
     this.setSimulationInterval(() => {
       for (const [id, player] of this.state.players) {
         if (!player.connected) continue;
@@ -128,6 +141,51 @@ export class WorldRoom extends Room<{
           player.ack = next.seq;
           if (next.direction) player.direction = next.direction;
         }
+      }
+
+      const playerTargets = new Map<
+        string,
+        import('../services/monster-manager.js').PlayerTarget
+      >();
+      for (const [sessionId, p] of this.state.players) {
+        if (!p.connected) continue;
+        playerTargets.set(p.characterId, {
+          sessionId,
+          characterId: p.characterId,
+          x: p.x,
+          y: p.y,
+          health: p.health,
+          connected: p.connected,
+        });
+      }
+
+      const { playerDamages } = this.gameplay.monstersManager.tick(
+        0.05,
+        playerTargets,
+      );
+      for (const hit of playerDamages) {
+        const player = this.state.players.get(hit.sessionId);
+        if (player && player.connected) {
+          player.health = Math.max(0, player.health - hit.damage);
+          if (player.health <= 0) {
+            player.health = player.maxHealth;
+            player.x = WORLD_SPAWN.x;
+            player.y = WORLD_SPAWN.y;
+            this.inputs.get(hit.sessionId)?.clear();
+            const client = this.clients.find(
+              (c) => c.sessionId === hit.sessionId,
+            );
+            client?.send(
+              'gameplayError',
+              'Você foi derrotado e retornou à praça de Brumavale.',
+            );
+          }
+        }
+      }
+
+      monsterBroadcastCounter++;
+      if (monsterBroadcastCounter % 2 === 0) {
+        this.broadcast('monsters', this.gameplay.monsters());
       }
     }, 50);
   }

@@ -41,6 +41,8 @@ export function GameHud({
           s.resources ?? {},
           s.worldTime ?? 0,
           crop,
+          undefined,
+          s.monsters ?? [],
         )
       : undefined;
   useEffect(() => {
@@ -67,6 +69,7 @@ export function GameHud({
         now.worldTime ?? 0,
         crop,
         target,
+        now.monsters ?? [],
       );
       if (item?.enabled) {
         if (item.payload.kind === 'open_crafting') {
@@ -106,7 +109,7 @@ export function GameHud({
                 : 'crafting';
         setPanel((p) => (p === next ? null : next));
       }
-      if (k === 'e') {
+      if (k === 'e' || k === ' ') {
         e.preventDefault();
         act();
       }
@@ -124,6 +127,26 @@ export function GameHud({
         <div>
           <strong>{name}</strong>
           <span>Explorador de Brumavale</span>
+          <div
+            className="hud-health-bar"
+            title={`Vida: ${s.health ?? 100}/${s.maxHealth ?? 100} HP`}
+          >
+            <div
+              className="hud-health-fill"
+              style={{
+                width: `${Math.max(
+                  0,
+                  Math.min(
+                    100,
+                    ((s.health ?? 100) / (s.maxHealth ?? 100)) * 100,
+                  ),
+                )}%`,
+              }}
+            />
+            <span className="hud-health-text">
+              {s.health ?? 100} / {s.maxHealth ?? 100} HP
+            </span>
+          </div>
           <small data-testid="connection-status">
             {s.status === 'connected' ? 'Conectado' : 'Reconectando…'} ·{' '}
             <b data-testid="player-count">{s.players} / 16</b>

@@ -14,6 +14,7 @@ export const ITEMS = {
   pumpkin: { name: 'Abóbora', stack: 99, tool: false },
   plank: { name: 'Tábua de madeira', stack: 99, tool: false },
   sword: { name: 'Espada de treino', stack: 1, tool: true },
+  slime_goo: { name: 'Gosma de slime', stack: 99, tool: false },
 } as const;
 export type ItemId = keyof typeof ITEMS;
 export interface Slot {
@@ -140,6 +141,76 @@ export const CRAFTING_RECIPES: Record<string, CraftingRecipe> = {
 };
 export type RecipeId = keyof typeof CRAFTING_RECIPES;
 
+export interface MonsterDefinition {
+  id: string;
+  name: string;
+  spawnX: number;
+  spawnY: number;
+  maxHealth: number;
+  damage: number;
+  speed: number;
+  aggroRange: number;
+  attackRange: number;
+  returnRange: number;
+  xp: number;
+  drop: { itemId: ItemId; quantity: number };
+}
+
+export const MONSTERS: readonly MonsterDefinition[] = [
+  {
+    id: 'slime-1',
+    name: 'Slime Saltitante',
+    spawnX: 1540,
+    spawnY: 1700,
+    maxHealth: 60,
+    damage: 10,
+    speed: 80,
+    aggroRange: 120,
+    attackRange: 36,
+    returnRange: 220,
+    xp: 30,
+    drop: { itemId: 'slime_goo', quantity: 2 },
+  },
+  {
+    id: 'slime-2',
+    name: 'Slime Espinhoso',
+    spawnX: 1580,
+    spawnY: 1730,
+    maxHealth: 60,
+    damage: 10,
+    speed: 80,
+    aggroRange: 120,
+    attackRange: 36,
+    returnRange: 220,
+    xp: 30,
+    drop: { itemId: 'slime_goo', quantity: 2 },
+  },
+  {
+    id: 'slime-3',
+    name: 'Slime Musgoso',
+    spawnX: 1500,
+    spawnY: 1740,
+    maxHealth: 60,
+    damage: 10,
+    speed: 80,
+    aggroRange: 120,
+    attackRange: 36,
+    returnRange: 220,
+    xp: 30,
+    drop: { itemId: 'slime_goo', quantity: 2 },
+  },
+] as const;
+
+export interface MonsterSnapshot {
+  id: string;
+  x: number;
+  y: number;
+  health: number;
+  maxHealth: number;
+  state: 'idle' | 'patrol' | 'chase' | 'attack' | 'return' | 'dead';
+  targetId?: string;
+}
+
 const slot = z.number().int().min(0).max(23);
 const base = { id: z.uuid(), revision: z.number().int().nonnegative() };
 export const GameActionSchema = z.discriminatedUnion('kind', [
@@ -172,6 +243,13 @@ export const GameActionSchema = z.discriminatedUnion('kind', [
       kind: z.literal('craft'),
       recipeId: z.enum(['plank', 'sword']),
       stationId: z.string().max(40),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
+      kind: z.literal('attack'),
+      targetId: z.string().max(40),
     })
     .strict(),
 ]);
@@ -253,5 +331,9 @@ export function consumeItems(
 export function craftItem(slots: Slot[], recipe: CraftingRecipe): Slot[] {
   if (!canCraft(slots, recipe)) throw new Error('Materiais insuficientes.');
   const afterConsumption = consumeItems(slots, recipe.inputs);
-  return addItem(afterConsumption, recipe.output.itemId, recipe.output.quantity);
+  return addItem(
+    afterConsumption,
+    recipe.output.itemId,
+    recipe.output.quantity,
+  );
 }
