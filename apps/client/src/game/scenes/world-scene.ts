@@ -43,9 +43,51 @@ export class WorldScene extends Phaser.Scene {
   }
   preload() {
     this.load.tilemapTiledJSON('brumavale', '/maps/brumavale.tmj');
+    this.load.spritesheet('npc-wizard', '/sprites/npc-wizard-idle.png', {
+      frameWidth: 32,
+      frameHeight: 32,
+    });
+    this.load.spritesheet('bonfire', '/sprites/bonfire-idle.png', {
+      frameWidth: 32,
+      frameHeight: 32,
+    });
+    this.load.image('station-workbench', '/sprites/station-workbench.png');
+    this.load.image('station-anvil', '/sprites/station-anvil.png');
   }
   create() {
     this.focusRing = this.add.graphics().setDepth(5001);
+
+    if (!this.anims.exists('npc-wizard-idle')) {
+      this.anims.create({
+        key: 'npc-wizard-idle',
+        frames: this.anims.generateFrameNumbers('npc-wizard', {
+          start: 0,
+          end: 3,
+        }),
+        frameRate: 4,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists('bonfire-burn')) {
+      this.anims.create({
+        key: 'bonfire-burn',
+        frames: this.anims.generateFrameNumbers('bonfire', {
+          start: 0,
+          end: 3,
+        }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+
+    // Fogueira animada no centro da vila
+    this.add.ellipse(1040, 1018, 28, 12, 0x132b24, 0.4).setDepth(1015);
+    const bonfire = this.add
+      .sprite(1040, 1008, 'bonfire')
+      .setScale(1.2)
+      .setDepth(1016);
+    bonfire.play('bonfire-burn');
+
     for (const plot of FARM_PLOTS) {
       const shape = this.add
         .rectangle(plot.tileX * 32 + 16, plot.tileY * 32 + 16, 28, 28, 0x775037)
@@ -79,34 +121,36 @@ export class WorldScene extends Phaser.Scene {
     }
     for (const station of CRAFTING_STATIONS) {
       const isForge = station.type === 'forge';
+      const textureKey = isForge ? 'station-anvil' : 'station-workbench';
       this.add
-        .rectangle(station.x, station.y, 32, 24, isForge ? 0x5a5d64 : 0x8b5a2b)
-        .setStrokeStyle(2, isForge ? 0xcc6633 : 0xd4a373)
+        .ellipse(station.x, station.y + 10, 36, 14, 0x132b24, 0.35)
+        .setDepth(station.y - 1);
+      this.add
+        .image(station.x, station.y, textureKey)
         .setDepth(station.y)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => gameBridge.interact?.(station.id));
       this.add
         .text(
           station.x,
-          station.y - 20,
+          station.y - 22,
           isForge ? '🔨 ' + station.name : '🪵 ' + station.name,
           {
             fontSize: '10px',
             color: '#f6e7bc',
             backgroundColor: '#21372b',
+            padding: { x: 4, y: 2 },
           },
         )
         .setOrigin(0.5)
         .setDepth(station.y + 1);
     }
     for (const npc of NPCS) {
-      const shadow = this.add.ellipse(0, 0, 25, 10, 0x132b24, 0.4);
-      const robe = this.add.rectangle(0, -18, 22, 22, 0x2e4259);
-      const head = this.add.rectangle(0, -35, 16, 16, 0xe1b68c);
-      const hair = this.add.rectangle(0, -43, 18, 7, 0xd9d9d9);
-      const beard = this.add.rectangle(0, -28, 14, 12, 0xe8e8e8);
+      const shadow = this.add.ellipse(0, 4, 25, 10, 0x132b24, 0.4);
+      const sprite = this.add.sprite(0, -10, 'npc-wizard').setScale(1.1);
+      sprite.play('npc-wizard-idle');
       const label = this.add
-        .text(0, -56, `✦ ${npc.name}`, {
+        .text(0, -38, `✦ ${npc.name}`, {
           fontSize: '11px',
           color: '#f7df94',
           backgroundColor: '#1b2621',
@@ -114,7 +158,7 @@ export class WorldScene extends Phaser.Scene {
         })
         .setOrigin(0.5);
       const title = this.add
-        .text(0, -70, npc.title, {
+        .text(0, -52, npc.title, {
           fontSize: '9px',
           color: '#a3bfab',
         })
@@ -122,10 +166,7 @@ export class WorldScene extends Phaser.Scene {
 
       const npcContainer = this.add.container(npc.x, npc.y, [
         shadow,
-        robe,
-        head,
-        beard,
-        hair,
+        sprite,
         label,
         title,
       ]);

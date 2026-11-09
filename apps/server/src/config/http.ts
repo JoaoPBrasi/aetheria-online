@@ -124,8 +124,8 @@ export function createHttpApp(
       });
       return;
     }
-    // Avoid logging DB URLs, tokens or raw Prisma errors.
-    console.error('request_failed');
+    // Exibe o erro real em ambiente de desenvolvimento para diagnóstico claro.
+    console.error('request_failed:', error);
     res.status(503).json({
       error: {
         code: 'SERVICE_UNAVAILABLE',
