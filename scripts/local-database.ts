@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
@@ -44,6 +44,21 @@ function control(args: string[], quiet = false) {
 }
 
 const initialised = existsSync(resolve(dataDir, 'PG_VERSION'));
+const pidFile = resolve(dataDir, 'postmaster.pid');
+if (existsSync(pidFile)) {
+  const pid = Number(readFileSync(pidFile, 'utf8').split('\n')[0]?.trim());
+  if (pid) {
+    try {
+      process.kill(pid, 0);
+    } catch {
+      try {
+        unlinkSync(pidFile);
+      } catch {
+        /* ignora falha de exclusão concorrente */
+      }
+    }
+  }
+}
 const running = initialised && (await control(['status'], true)) === 0;
 if (command === 'down') {
   if (running && (await control(['-w', '-m', 'fast', 'stop'])) !== 0) {
