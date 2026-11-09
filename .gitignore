@@ -1,0 +1,16 @@
+node_modules/
+.local-tools/
+.data/
+dist/
+.env
+.env.*
+!.env.example
+coverage/
+playwright-report/
+test-results/
+work/
+apps/server/src/generated/
+*.log
+.vite/
+.vite-temp/
+

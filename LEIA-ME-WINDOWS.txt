@@ -1,0 +1,25 @@
+AETHERIA ONLINE - MULTIPLAYER LOCAL SEM DOCKER
+
+No PowerShell:
+Set-Location 'C:\Dev\Projetos\teste rpg wow'
+.\pnpm.cmd setup:local
+.\pnpm.cmd dev
+
+Abra http://localhost:5173. O setup pode ser repetido sem apagar personagens.
+Em outras ocasioes: .\pnpm.cmd db:up e .\pnpm.cmd dev.
+Para dois jogadores, use perfis diferentes ou uma janela anonima.
+Na mesma rede, abra http://IP-DO-COMPUTADOR:5173 no outro dispositivo.
+O firewall deve permitir a porta 5173 na rede privada.
+
+Para parar: Ctrl+C no jogo e depois .\pnpm.cmd db:down.
+Para consultar o banco: .\pnpm.cmd db:status.
+PostgreSQL escuta apenas em 127.0.0.1 e persiste em .data/postgres.
+Nao exclua .data: essa pasta contem os personagens locais.
+Os schemas Prisma ficam em apps/server/prisma/schema.prisma.
+Node.js 24 e pnpm 11.25.0 estao instalados em .local-tools.
+
+Para nova instalacao: instale Node.js 24 e pnpm 11.25.0,
+execute pnpm install --frozen-lockfile, copie .env.example para .env
+sem sobrescrever configuracoes existentes e execute pnpm setup:local.
+A identidade atual e de desenvolvimento. Nao exponha esta versao na internet.
+Mapa jogavel e movimentacao pertencem as proximas etapas. Consulte README.md.

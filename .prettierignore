@@ -1,0 +1,9 @@
+pnpm-lock.yaml
+.data/
+.local-tools/
+node_modules/
+dist/
+apps/server/src/generated/
+work/
+playwright-report/
+test-results/

@@ -1,0 +1,9 @@
+ALTER TABLE "Character" ADD COLUMN "starterGranted" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Character" ALTER COLUMN "x" SET DEFAULT 1040;
+ALTER TABLE "Character" ALTER COLUMN "y" SET DEFAULT 1040;
+CREATE TABLE "GameActionReceipt" (
+  "characterId" UUID NOT NULL REFERENCES "Character"("id") ON DELETE CASCADE,
+  "actionId" UUID NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY ("characterId", "actionId")
+);

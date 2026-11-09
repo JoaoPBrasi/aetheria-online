@@ -1,0 +1,192 @@
+import { Client, type Room } from '@colyseus/sdk';
+import {
+  ITEMS,
+  type WorldState,
+  type GameplaySnapshot,
+} from '@aetheria/shared';
+import { gameBridge } from '../managers/game-bridge';
+import { request, RequestError } from './api';
+import { movement } from './movement';
+const connectionErrors: Record<string, string> = {
+  ALREADY_CONNECTED: 'Personagem já conectado em outra janela.',
+  INVALID_SESSION: 'Sessão inválida. Crie uma nova identidade local.',
+  PERSISTENCE_UNAVAILABLE: 'Banco de dados indisponível. Tente novamente.',
+  INVALID_JOIN: 'Não foi possível validar a entrada na vila.',
+  AUTH_NOT_CONFIGURED: 'Autenticação indisponível neste ambiente.',
+};
+const connectionMessage = (message?: string) =>
+  (message && connectionErrors[message]) ||
+  'Não foi possível conectar à vila. Tente novamente.';
+export class WorldConnection {
+  private room?: Room<WorldState>;
+  private disposed = false;
+  private lastAction?: Record<string, unknown>;
+  refresh() {
+    if (gameBridge.getSnapshot().status === 'connected')
+      this.room?.send('sync');
+  }
+  action(payload: Record<string, unknown>) {
+    const current = gameBridge.getSnapshot();
+    if (
+      current.status !== 'connected' ||
+      current.actionPending ||
+      !current.gameplay
+    )
+      return;
+    this.lastAction = {
+      ...payload,
+      id: crypto.randomUUID(),
+      revision: current.gameplay.revision,
+    };
+    this.retryAction();
+  }
+  retryAction() {
+    if (!this.lastAction || gameBridge.getSnapshot().status !== 'connected')
+      return;
+    gameBridge.update({ actionPending: true, gameplayError: null });
+    this.room?.send('action', this.lastAction);
+  }
+  async connect(token: string) {
+    gameBridge.update({ status: 'connecting', error: null });
+    movement.reset();
+    gameBridge.update({
+      gameplay: undefined,
+      gameplayError: null,
+      actionPending: false,
+    });
+    try {
+      const reservation = (await request(
+        '/api/world/seat',
+        token,
+      )) as Parameters<Client['consumeSeatReservation']>[0];
+      if (this.disposed) return;
+      const client = new Client(
+        `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/socket`,
+      );
+      const room = await client.consumeSeatReservation<WorldState>(reservation);
+      if (this.disposed) {
+        await room.leave();
+        return;
+      }
+      room.reconnection.enabled = true;
+      room.reconnection.maxRetries = 12;
+      room.reconnection.maxDelay = 2000;
+      this.room = room;
+      room.onMessage(
+        'plots',
+        (plots: import('@aetheria/shared').FarmSnapshot[]) => {
+          if (!this.disposed) gameBridge.update({ plots });
+        },
+      );
+      room.onMessage('resources', (resources: Record<string, number>) => {
+        if (!this.disposed) gameBridge.update({ resources });
+      });
+      room.onMessage('gameplay', (snapshot: GameplaySnapshot) => {
+        if (this.disposed) return;
+        const old = gameBridge.getSnapshot().gameplay;
+        if (old && snapshot.revision > old.revision) {
+          const gains = Object.keys(ITEMS)
+            .map((id) => {
+              const count = (snap: GameplaySnapshot) =>
+                snap.inventory
+                  .filter((i) => i.itemId === id)
+                  .reduce((a, b) => a + b.quantity, 0);
+              return {
+                id: id as keyof typeof ITEMS,
+                n: count(snapshot) - count(old),
+              };
+            })
+            .filter((g) => g.n > 0 && !ITEMS[g.id].tool);
+          if (gains.length)
+            gameBridge.update({
+              feedback: gains
+                .map((g) => `+${g.n} ${ITEMS[g.id].name}`)
+                .join(' · '),
+              feedbackAt: Date.now(),
+            });
+        }
+        if (!old || snapshot.revision >= old.revision)
+          gameBridge.update({
+            gameplay: snapshot,
+            actionPending: false,
+            gameplayError: gameBridge.getSnapshot().actionPending
+              ? null
+              : gameBridge.getSnapshot().gameplayError,
+          });
+      });
+      room.onMessage('gameplayError', (message: string) => {
+        if (this.disposed) return;
+        gameBridge.update({ gameplayError: message, actionPending: false });
+        room.send('sync');
+      });
+      room.send('sync');
+      movement.send = (input) => room.send('move', input);
+      room.onDrop(() => {
+        if (this.disposed) return;
+        movement.send = undefined;
+        movement.pending = [];
+        gameBridge.update({
+          status: 'connecting',
+          error: 'Reconectando à vila…',
+        });
+      });
+      room.onReconnect(() => {
+        if (this.disposed) return;
+        movement.pending = [];
+        movement.reconcile(room.state, room.sessionId);
+        movement.send = (input) => room.send('move', input);
+        gameBridge.update({ status: 'connected', error: null });
+        room.send('sync');
+      });
+      gameBridge.update({
+        status: 'connected',
+        players: room.state?.players?.size ?? 0,
+      });
+      room.onStateChange((state) => {
+        if (this.disposed) return;
+        movement.reconcile(state, room.sessionId);
+        if (!this.disposed) gameBridge.update({ players: state.players.size });
+      });
+      room.onLeave(() => {
+        if (this.disposed) return;
+        movement.send = undefined;
+        movement.pending = [];
+        movement.remotes.clear();
+        if (!this.disposed)
+          gameBridge.update({
+            status: 'offline',
+            players: 0,
+            error: 'Conexão encerrada. Entre novamente na vila.',
+          });
+      });
+      room.onError((_code, message) => {
+        if (!this.disposed)
+          gameBridge.update({
+            status: 'error',
+            error: connectionMessage(message),
+          });
+      });
+    } catch (error) {
+      if (!this.disposed)
+        gameBridge.update({
+          status: 'error',
+          players: 0,
+          error:
+            error instanceof RequestError
+              ? error.message
+              : connectionMessage(
+                  error instanceof Error ? error.message : undefined,
+                ),
+        });
+    }
+  }
+  dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
+    movement.send = undefined;
+    movement.pending = [];
+    movement.remotes.clear();
+    if (this.room) void this.room.leave();
+    gameBridge.update({ status: 'offline', players: 0 });
+  }
+}

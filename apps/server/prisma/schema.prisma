@@ -1,0 +1,102 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Account {
+  id           String     @id @default(uuid()) @db.Uuid
+  devTokenHash String     @unique @db.Char(64)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  character    Character?
+}
+
+model Character {
+  id                String               @id @default(uuid()) @db.Uuid
+  accountId         String               @unique @db.Uuid
+  account           Account              @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name              String               @db.VarChar(20)
+  appearance        String
+  clothingColor String @default("#c4d597") @db.VarChar(7)
+  hairColor String @default("#59422f") @db.VarChar(7)
+  skinColor String @default("#e1b68c") @db.VarChar(7)
+  hairStyle String @default("short")
+  mapId             String               @default("brumavale")
+  x                 Float                @default(1040)
+  y                 Float                @default(1040)
+  direction         String               @default("down")
+  health            Int                  @default(100)
+  energy            Int                  @default(100)
+  revision          Int                  @default(0)
+  starterGranted    Boolean              @default(false)
+  farmingKitGranted Boolean              @default(false)
+  actions           GameActionReceipt[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  inventory         InventorySlot[]
+  skills            CharacterSkill[]
+  equipment         CharacterEquipment[]
+  plots             FarmPlot[]
+}
+
+model InventorySlot {
+  id          String    @id @default(uuid()) @db.Uuid
+  characterId String    @db.Uuid
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  index       Int
+  itemId      String
+  quantity    Int
+
+  @@unique([characterId, index])
+}
+
+model GameActionReceipt {
+  characterId String    @db.Uuid
+  actionId    String    @db.Uuid
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@id([characterId, actionId])
+}
+
+model CharacterSkill {
+  id          String    @id @default(uuid()) @db.Uuid
+  characterId String    @db.Uuid
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  profession  String
+  xp          Int       @default(0)
+
+  @@unique([characterId, profession])
+}
+
+model CharacterEquipment {
+  id          String    @id @default(uuid()) @db.Uuid
+  characterId String    @db.Uuid
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  slot        String
+  itemId      String
+
+  @@unique([characterId, slot])
+}
+
+model FarmPlot {
+  id        String     @id
+  mapId     String
+  tileX     Int
+  tileY     Int
+  ownerId   String?    @db.Uuid
+  owner     Character? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  prepared  Boolean    @default(false)
+  cropId    String?
+  plantedAt DateTime?
+  wateredAt DateTime?
+  harvestAt DateTime?
+
+  @@unique([mapId, tileX, tileY])
+  @@index([ownerId])
+}
