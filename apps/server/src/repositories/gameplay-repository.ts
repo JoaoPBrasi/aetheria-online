@@ -5,6 +5,9 @@ import {
   transferItem,
   CROPS,
   hasTool,
+  CRAFTING_RECIPES,
+  CRAFTING_STATIONS,
+  craftItem,
   type CropId,
   type FarmSnapshot,
   type GameAction,
@@ -216,6 +219,30 @@ export class GameplayRepository {
             },
           },
           data: { xp: { increment: 10 } },
+        });
+        changed = true;
+      }
+      if (action?.kind === 'craft') {
+        const recipe = CRAFTING_RECIPES[action.recipeId];
+        if (!recipe) throw new Error('Receita desconhecida.');
+        const station = CRAFTING_STATIONS.find((s) => s.id === action.stationId);
+        if (!station) throw new Error('Estação de trabalho desconhecida.');
+        if (station.type !== recipe.station)
+          throw new Error('Estação incorreta para esta receita.');
+        if (
+          !position ||
+          Math.hypot(station.x - position.x, station.y - position.y) > 72
+        )
+          throw new Error('Estação de trabalho fora de alcance.');
+        slots = craftItem(slots, recipe);
+        await tx.characterSkill.update({
+          where: {
+            characterId_profession: {
+              characterId,
+              profession: recipe.profession,
+            },
+          },
+          data: { xp: { increment: recipe.xp } },
         });
         changed = true;
       }

@@ -97,6 +97,11 @@ export class WorldRoom extends Room<{
           'Escolha uma ferramenta.',
           'Recurso indisponível.',
           'Equipe a ferramenta adequada.',
+          'Receita desconhecida.',
+          'Estação de trabalho desconhecida.',
+          'Estação incorreta para esta receita.',
+          'Estação de trabalho fora de alcance.',
+          'Materiais insuficientes.',
         ];
         client.send(
           'gameplayError',

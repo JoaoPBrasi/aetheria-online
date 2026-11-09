@@ -2,6 +2,9 @@ import { expect, it } from 'vitest';
 import {
   addItem,
   transferItem,
+  canCraft,
+  craftItem,
+  CRAFTING_RECIPES,
   GameActionSchema,
   levelForXp,
   type Slot,
@@ -41,4 +44,22 @@ it('validates action ownership boundaries and configurable level curve', () => {
   expect(levelForXp(0)).toBe(1);
   expect(levelForXp(100)).toBe(2);
   expect(levelForXp(400)).toBe(3);
+});
+it('crafts items consuming materials and rejecting insufficient ingredients', () => {
+  const bag: Slot[] = [
+    { index: 0, itemId: 'wood', quantity: 5 },
+    { index: 1, itemId: 'stone', quantity: 2 },
+  ];
+  expect(canCraft(bag, CRAFTING_RECIPES.plank)).toBe(true);
+  expect(canCraft(bag, CRAFTING_RECIPES.sword)).toBe(true);
+  expect(canCraft([{ index: 0, itemId: 'wood', quantity: 1 }], CRAFTING_RECIPES.plank)).toBe(false);
+
+  const afterPlank = craftItem(bag, CRAFTING_RECIPES.plank);
+  expect(afterPlank.find((s) => s.itemId === 'wood')?.quantity).toBe(3);
+  expect(afterPlank.find((s) => s.itemId === 'plank')?.quantity).toBe(1);
+
+  const afterSword = craftItem(bag, CRAFTING_RECIPES.sword);
+  expect(afterSword.find((s) => s.itemId === 'wood')?.quantity).toBe(2);
+  expect(afterSword.find((s) => s.itemId === 'stone')).toBeUndefined();
+  expect(afterSword.find((s) => s.itemId === 'sword')?.quantity).toBe(1);
 });

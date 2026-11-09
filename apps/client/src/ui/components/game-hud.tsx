@@ -6,10 +6,12 @@ import {
   PROFESSION_NAMES,
   levelForXp,
   type CropId,
+  type CraftingStationId,
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
 import type { WorldConnection } from '../../game/networking/world-connection';
 import { GameplayPanel } from './gameplay-panel';
+import { CraftingPanel } from './crafting-panel';
 export function GameHud({
   connection,
   name,
@@ -22,7 +24,12 @@ export function GameHud({
   onExit: () => void;
 }) {
   const s = useSyncExternalStore(gameBridge.subscribe, gameBridge.getSnapshot);
-  const [panel, setPanel] = useState<'bag' | 'skills' | 'farm' | null>(null);
+  const [panel, setPanel] = useState<
+    'bag' | 'skills' | 'farm' | 'crafting' | null
+  >(null);
+  const [craftStation, setCraftStation] = useState<
+    CraftingStationId | undefined
+  >(undefined);
   const [crop, setCrop] = useState<CropId>('turnip');
   const close = useRef<HTMLButtonElement>(null);
   const nearby =
@@ -61,7 +68,14 @@ export function GameHud({
         crop,
         target,
       );
-      if (item?.enabled) connection?.action(item.payload);
+      if (item?.enabled) {
+        if (item.payload.kind === 'open_crafting') {
+          setCraftStation(item.payload.stationId as CraftingStationId);
+          setPanel('crafting');
+        } else {
+          connection?.action(item.payload);
+        }
+      }
     };
     gameBridge.interact = act;
     const key = (e: KeyboardEvent) => {
@@ -80,9 +94,16 @@ export function GameHud({
         setPanel(null);
         return;
       }
-      if (k === 'b' || k === 'l' || k === 'h') {
+      if (k === 'b' || k === 'l' || k === 'h' || k === 'c') {
         e.preventDefault();
-        const next = k === 'b' ? 'bag' : k === 'l' ? 'skills' : 'farm';
+        const next =
+          k === 'b'
+            ? 'bag'
+            : k === 'l'
+              ? 'skills'
+              : k === 'h'
+                ? 'farm'
+                : 'crafting';
         setPanel((p) => (p === next ? null : next));
       }
       if (k === 'e') {
@@ -186,6 +207,15 @@ export function GameHud({
           <kbd>H</kbd>
           <span>♧</span>Horta
         </button>
+        <button
+          aria-label="Abrir criação"
+          onClick={() =>
+            setPanel((p) => (p === 'crafting' ? null : 'crafting'))
+          }
+        >
+          <kbd>C</kbd>
+          <span>🔨</span>Criação
+        </button>
         <div className="dock-divider" />
         <span className="dock-note">
           FERRAMENTAS AUTOMÁTICAS
@@ -246,7 +276,9 @@ export function GameHud({
                 ? 'PERTENCES'
                 : panel === 'skills'
                   ? 'OFÍCIOS'
-                  : 'AGRICULTURA'}
+                  : panel === 'farm'
+                    ? 'AGRICULTURA'
+                    : 'CRIAÇÃO & FORJA'}
             </span>
             <button
               ref={close}
@@ -260,6 +292,11 @@ export function GameHud({
             <GameplayPanel connection={connection} section="bag" />
           ) : panel === 'farm' ? (
             <GameplayPanel connection={connection} section="farm" />
+          ) : panel === 'crafting' ? (
+            <CraftingPanel
+              connection={connection}
+              initialStation={craftStation}
+            />
           ) : (
             <section className="lifeskills">
               <h2>Ofícios & ferramentas</h2>

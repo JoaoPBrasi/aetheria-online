@@ -7,6 +7,7 @@ import {
   worldTiles,
   RESOURCES,
   FARM_PLOTS,
+  CRAFTING_STATIONS,
   cropStatus,
   interaction,
 } from '@aetheria/shared';
@@ -65,6 +66,34 @@ export class WorldScene extends Phaser.Scene {
         })
         .setOrigin(0.5)
         .setDepth(node.y + 1);
+    }
+    for (const station of CRAFTING_STATIONS) {
+      const isForge = station.type === 'forge';
+      this.add
+        .rectangle(
+          station.x,
+          station.y,
+          32,
+          24,
+          isForge ? 0x5a5d64 : 0x8b5a2b,
+        )
+        .setStrokeStyle(2, isForge ? 0xcc6633 : 0xd4a373)
+        .setDepth(station.y)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => gameBridge.interact?.(station.id));
+      this.add
+        .text(
+          station.x,
+          station.y - 20,
+          isForge ? '🔨 ' + station.name : '🪵 ' + station.name,
+          {
+            fontSize: '10px',
+            color: '#f6e7bc',
+            backgroundColor: '#21372b',
+          },
+        )
+        .setOrigin(0.5)
+        .setDepth(station.y + 1);
     }
     // Code-native pixel art atlas: no external assets or runtime downloads.
     const g = this.add.graphics();

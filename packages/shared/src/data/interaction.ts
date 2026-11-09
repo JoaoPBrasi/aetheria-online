@@ -1,8 +1,10 @@
 import {
   ITEMS,
   RESOURCES,
+  CRAFTING_STATIONS,
   type GameplaySnapshot,
   type ItemId,
+  type CraftingStationType,
 } from './gameplay.js';
 import { cropStatus, type FarmSnapshot, type CropId } from './farming.js';
 export function hasTool(
@@ -39,6 +41,16 @@ export function interaction(
       name: 'Parcela ' + p.id.split('-').at(-1),
       node: undefined,
       plot: p,
+      station: undefined as { id: string; name: string; type: CraftingStationType } | undefined,
+    })),
+    ...CRAFTING_STATIONS.map((st) => ({
+      id: st.id,
+      x: st.x,
+      y: st.y,
+      name: st.name,
+      node: undefined,
+      plot: undefined,
+      station: st,
     })),
   ];
   const chosen = candidates
@@ -91,6 +103,13 @@ export function interaction(
         Math.max(0, Math.ceil(((p.harvestAt ?? 0) - now) / 1000)) +
         ' s';
     }
+  } else if (chosen.station) {
+    label = 'Usar ' + chosen.station.name;
+    payload = {
+      kind: 'open_crafting',
+      stationId: chosen.station.id,
+      stationType: chosen.station.type,
+    };
   }
   if (tool && !hasTool(s, tool)) {
     enabled = false;

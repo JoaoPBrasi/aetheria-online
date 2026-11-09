@@ -1223,3 +1223,127 @@ footer {
     flex-wrap: wrap;
   }
 }
+
+/* Crafting & Forja */
+.crafting-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.crafting-panel h2 {
+  font-family: Georgia, serif;
+  font-size: 20px;
+  color: #eedca4;
+  margin: 0;
+}
+.crafting-panel p {
+  color: #c7d2bf;
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.4;
+}
+.station-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #3c5443;
+  padding-bottom: 8px;
+}
+.station-tab {
+  background: #1e3328;
+  border: 1px solid #4a6854;
+  color: #d8dec8;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.station-tab:hover {
+  background: #2a4738;
+}
+.station-tab.active {
+  background: #395f4c;
+  border-color: #eedca4;
+  color: #fff;
+  font-weight: 600;
+}
+.recipes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+.recipe-card {
+  background: #172a21;
+  border: 1px solid #3d5947;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s;
+}
+.recipe-card.ready {
+  border-color: #7da876;
+}
+.recipe-card.locked {
+  opacity: 0.85;
+}
+.recipe-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 15px;
+  color: #f7eed7;
+}
+.recipe-xp {
+  font-size: 12px;
+  color: #eedca4;
+  background: #243d2f;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #486953;
+}
+.recipe-ingredients {
+  font-size: 13px;
+  color: #bcc6b4;
+}
+.recipe-ingredients ul {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0 0;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.recipe-ingredients li.ok {
+  color: #8ed38e;
+}
+.recipe-ingredients li.missing {
+  color: #e58787;
+}
+.recipe-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.recipe-actions button {
+  background: #345c43;
+  border: 1px solid #6b9876;
+  color: #fcf8eb;
+  padding: 7px 18px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.recipe-actions button:hover:not(:disabled) {
+  background: #477d5b;
+}
+.recipe-actions button:disabled {
+  background: #203127;
+  border-color: #314a3a;
+  color: #7b8f80;
+  cursor: not-allowed;
+}
+

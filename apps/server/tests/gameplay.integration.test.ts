@@ -190,3 +190,44 @@ it('lets only one character collect a shared node concurrently', async () => {
   });
   expect(total._sum.quantity).toBe(3);
 });
+it('crafts planks at workbench and sword at forge atomically granting blacksmith xp', async () => {
+  const id = await fixture();
+  let s = await service.sync(id);
+  await db.inventorySlot.createMany({
+    data: [
+      { id: randomUUID(), characterId: id, index: 10, itemId: 'wood', quantity: 10 },
+      { id: randomUUID(), characterId: id, index: 11, itemId: 'stone', quantity: 5 },
+    ],
+  });
+  s = await service.sync(id);
+  s = await service.act(
+    id,
+    {
+      id: randomUUID(),
+      revision: s.revision,
+      kind: 'craft',
+      recipeId: 'plank',
+      stationId: 'workbench-plaza',
+    },
+    () => ({ x: 1120, y: 1040, direction: 'down' }),
+  );
+  expect(s.inventory.find((i) => i.itemId === 'plank')?.quantity).toBe(1);
+  expect(s.inventory.find((i) => i.itemId === 'wood')?.quantity).toBe(8);
+  expect(s.skills.find((i) => i.profession === 'blacksmith')?.xp).toBe(10);
+
+  s = await service.act(
+    id,
+    {
+      id: randomUUID(),
+      revision: s.revision,
+      kind: 'craft',
+      recipeId: 'sword',
+      stationId: 'forge-blacksmith',
+    },
+    () => ({ x: 1152, y: 1168, direction: 'down' }),
+  );
+  expect(s.inventory.find((i) => i.itemId === 'sword')?.quantity).toBe(1);
+  expect(s.inventory.find((i) => i.itemId === 'wood')?.quantity).toBe(5);
+  expect(s.inventory.find((i) => i.itemId === 'stone')?.quantity).toBe(3);
+  expect(s.skills.find((i) => i.profession === 'blacksmith')?.xp).toBe(35);
+});
