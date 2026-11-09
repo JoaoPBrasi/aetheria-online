@@ -123,7 +123,7 @@ export class WorldScene extends Phaser.Scene {
       const isForge = station.type === 'forge';
       const textureKey = isForge ? 'station-anvil' : 'station-workbench';
       this.add
-        .ellipse(station.x, station.y + 10, 36, 14, 0x132b24, 0.35)
+        .ellipse(station.x, station.y + 12, isForge ? 46 : 42, 14, 0x132b24, 0.35)
         .setDepth(station.y - 1);
       this.add
         .image(station.x, station.y, textureKey)
@@ -133,7 +133,7 @@ export class WorldScene extends Phaser.Scene {
       this.add
         .text(
           station.x,
-          station.y - 22,
+          station.y - 25,
           isForge ? '🔨 ' + station.name : '🪵 ' + station.name,
           {
             fontSize: '10px',
