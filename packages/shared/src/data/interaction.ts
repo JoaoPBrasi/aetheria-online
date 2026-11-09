@@ -9,6 +9,7 @@ import {
   type MonsterSnapshot,
 } from './gameplay.js';
 import { cropStatus, type FarmSnapshot, type CropId } from './farming.js';
+import { NPCS, type NPCDefinition } from './npcs.js';
 export function hasTool(
   s: Pick<GameplaySnapshot, 'inventory' | 'equipment'>,
   tool: ItemId,
@@ -39,6 +40,7 @@ export function interaction(
       station: undefined as
         { id: string; name: string; type: CraftingStationType } | undefined,
       monster: undefined as MonsterSnapshot | undefined,
+      npc: undefined as NPCDefinition | undefined,
     })),
     ...plots.map((p) => ({
       id: p.id,
@@ -50,6 +52,7 @@ export function interaction(
       station: undefined as
         { id: string; name: string; type: CraftingStationType } | undefined,
       monster: undefined as MonsterSnapshot | undefined,
+      npc: undefined as NPCDefinition | undefined,
     })),
     ...CRAFTING_STATIONS.map((st) => ({
       id: st.id,
@@ -60,6 +63,7 @@ export function interaction(
       plot: undefined,
       station: st,
       monster: undefined as MonsterSnapshot | undefined,
+      npc: undefined as NPCDefinition | undefined,
     })),
     ...monsters
       .filter((m) => m.state !== 'dead')
@@ -74,8 +78,20 @@ export function interaction(
           plot: undefined,
           station: undefined,
           monster: m,
+          npc: undefined as NPCDefinition | undefined,
         };
       }),
+    ...NPCS.map((npc) => ({
+      id: npc.id,
+      x: npc.x,
+      y: npc.y,
+      name: npc.name,
+      node: undefined,
+      plot: undefined,
+      station: undefined,
+      monster: undefined,
+      npc,
+    })),
   ];
   const chosen = candidates
     .filter((c) => !target || c.id === target)
@@ -139,6 +155,12 @@ export function interaction(
     payload = {
       kind: 'attack',
       targetId: chosen.monster.id,
+    };
+  } else if (chosen.npc) {
+    label = 'Conversar com ' + chosen.npc.name;
+    payload = {
+      kind: 'open_dialogue',
+      npcId: chosen.npc.id,
     };
   }
   if (tool && !hasTool(s, tool)) {

@@ -12,6 +12,8 @@ import { gameBridge } from '../../game/managers/game-bridge';
 import type { WorldConnection } from '../../game/networking/world-connection';
 import { GameplayPanel } from './gameplay-panel';
 import { CraftingPanel } from './crafting-panel';
+import { DialogueModal } from './dialogue-modal';
+import { Hotbar } from './hotbar';
 export function GameHud({
   connection,
   name,
@@ -25,11 +27,12 @@ export function GameHud({
 }) {
   const s = useSyncExternalStore(gameBridge.subscribe, gameBridge.getSnapshot);
   const [panel, setPanel] = useState<
-    'bag' | 'skills' | 'farm' | 'crafting' | null
+    'bag' | 'skills' | 'farm' | 'crafting' | 'dialogue' | null
   >(null);
   const [craftStation, setCraftStation] = useState<
     CraftingStationId | undefined
   >(undefined);
+  const [dialogueNpc, setDialogueNpc] = useState<string | null>(null);
   const [crop, setCrop] = useState<CropId>('turnip');
   const close = useRef<HTMLButtonElement>(null);
   const nearby =
@@ -75,6 +78,9 @@ export function GameHud({
         if (item.payload.kind === 'open_crafting') {
           setCraftStation(item.payload.stationId as CraftingStationId);
           setPanel('crafting');
+        } else if (item.payload.kind === 'open_dialogue') {
+          setDialogueNpc(item.payload.npcId as string);
+          setPanel('dialogue');
         } else {
           connection?.action(item.payload);
         }
@@ -95,6 +101,28 @@ export function GameHud({
       const k = e.key.toLowerCase();
       if (k === 'escape') {
         setPanel(null);
+        return;
+      }
+      const num = parseInt(k, 10);
+      if (!panel && !isNaN(num) && num >= 1 && num <= 8) {
+        e.preventDefault();
+        const slotIndex = num - 1;
+        const currentSnap = gameBridge.getSnapshot().gameplay;
+        if (currentSnap) {
+          const slotItem = currentSnap.inventory.find(
+            (i) => i.index === slotIndex,
+          );
+          const equippedTool = currentSnap.equipment.find(
+            (eq) => eq.slot === 'tool',
+          )?.itemId;
+          if (slotItem && ITEMS[slotItem.itemId]?.tool) {
+            if (slotItem.itemId === equippedTool) {
+              connection?.action({ kind: 'unequip' });
+            } else {
+              connection?.action({ kind: 'equip', from: slotIndex });
+            }
+          }
+        }
         return;
       }
       if (k === 'b' || k === 'l' || k === 'h' || k === 'c') {
@@ -207,6 +235,16 @@ export function GameHud({
           {s.gameplayError}
         </div>
       )}
+      {s.gameplay && (
+        <Hotbar
+          inventory={s.gameplay.inventory}
+          equipment={s.gameplay.equipment}
+          onEquip={(fromIndex) =>
+            connection?.action({ kind: 'equip', from: fromIndex })
+          }
+          onUnequip={() => connection?.action({ kind: 'unequip' })}
+        />
+      )}
       <nav className="hud-dock" aria-label="Atalhos do jogo">
         <button
           aria-label="Abrir mochila"
@@ -263,7 +301,7 @@ export function GameHud({
           </span>
         ))}
       </div>
-      {panel && (
+      {panel && panel !== 'dialogue' && (
         <div
           className="hud-modal"
           role="dialog"
@@ -365,6 +403,15 @@ export function GameHud({
             </section>
           )}
         </div>
+      )}
+      {panel === 'dialogue' && (
+        <DialogueModal
+          npcId={dialogueNpc ?? 'elder-eldrin'}
+          onClose={() => {
+            setPanel(null);
+            setDialogueNpc(null);
+          }}
+        />
       )}
     </div>
   );

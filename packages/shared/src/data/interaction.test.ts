@@ -75,3 +75,12 @@ it('detects live monsters within range and returns attack action payload', () =>
   expect(target?.payload).toEqual({ kind: 'attack', targetId: 'slime-1' });
   expect(target?.label).toContain('Atacar Slime Saltitante (60/60 HP)');
 });
+it('detects nearby NPCs and returns open_dialogue action payload', () => {
+  const target = interaction(s, { x: 1040, y: 980 }, [], {}, 0, 'turnip');
+  expect(target?.enabled).toBe(true);
+  expect(target?.payload).toEqual({
+    kind: 'open_dialogue',
+    npcId: 'elder-eldrin',
+  });
+  expect(target?.label).toBe('Conversar com Ancião Eldrin');
+});

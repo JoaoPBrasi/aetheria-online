@@ -18,6 +18,14 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
     - _Espada de treino_ (3x Madeira + 2x Pedra $\rightarrow$ 1x Espada + 25 XP Ferreiro) na forja.
   - Painel interativo `CraftingPanel` com atalho **`C`** e botão no dock do HUD.
   - Consumo de materiais e geração de itens de forma atômica e transacional no PostgreSQL.
+- **NPC de Diálogo e Orientação (Ancião Eldrin):**
+  - Adição do Ancião Eldrin na Praça Central de Brumavale (`X: 1040, Y: 980`) com túnica cerimonial, barba e etiquetas de identificação.
+  - Interação contextual pelo atalho **`E`** ou clique do mouse.
+  - Modal imersivo `DialogueModal` com árvore de perguntas e respostas sobre coleta, horta comunitária, oficinas de criação e perigos dos slimes.
+- **Hotbar de Acesso Rápido (8 Slots):**
+  - Barra de 8 slots na base da tela vinculada aos primeiros índices da mochila.
+  - Atalhos no teclado (**`1`** a **`8`**) para equipar e alternar ferramentas com toque direto.
+  - Indicador visual e contorno iluminado na ferramenta atualmente em uso.
 - **Sistema de Combate Corpo a Corpo e Monstros (Slimes):**
   - Adição da região do _Prado dos Slimes_ a sudeste de Brumavale com 3 slimes ativos (`slime-1`, `slime-2`, `slime-3`).
   - IA de monstros com máquina de estados autoritativa no servidor: _idle_, _chase_, _attack_, _return_ e _dead_ com respawn automático de 15 segundos.

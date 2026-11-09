@@ -731,6 +731,192 @@ footer {
 .crop-quick button[aria-pressed='true'] {
   background: #7c774e;
 }
+.hotbar-container {
+  position: absolute;
+  bottom: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  pointer-events: auto;
+}
+.hotbar {
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(18, 32, 25, 0.92);
+  border: 1px solid #3d5847;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+}
+.hotbar-slot {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #15241d;
+  border: 1px solid #2f4537;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+.hotbar-slot:hover {
+  border-color: #6a8c75;
+  background: #1c3226;
+  transform: translateY(-2px);
+}
+.hotbar-slot.equipped {
+  border: 2px solid #f2cf66 !important;
+  background: #1e3626 !important;
+  box-shadow: 0 0 10px rgba(242, 207, 102, 0.4);
+}
+.hotbar-key {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #7d9b87;
+  pointer-events: none;
+}
+.hotbar-icon {
+  font-size: 20px;
+  line-height: 1;
+  user-select: none;
+}
+.hotbar-qty {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #f7edd2;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 1px 3px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+.hotbar-equipped-badge {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  font-weight: 800;
+  color: #122019;
+  background: #f2cf66;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+/* Diálogos com NPCs */
+.dialogue-panel {
+  max-width: 580px;
+  width: 90vw;
+}
+.dialogue-header-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.dialogue-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid #c9b882;
+  background: #2a3d34;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+}
+.dialogue-header-identity h3 {
+  margin: 0;
+  font:
+    18px Georgia,
+    serif;
+  color: #faecc1;
+}
+.dialogue-title {
+  font-size: 11px;
+  color: #a3bfab;
+}
+.dialogue-speech-bubble {
+  background: #172a21;
+  border: 1px solid #3c5a47;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.dialogue-speech-bubble p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #fcf6e5;
+  font-family: Georgia, serif;
+}
+.dialogue-options-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 700;
+  color: #9cb8a5;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.dialogue-topics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dialogue-topic-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1d3329;
+  border: 1px solid #375341;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #e8eedf;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.dialogue-topic-btn:hover {
+  background: #244234;
+  border-color: #5d856b;
+  transform: translateX(4px);
+  color: #ffffff;
+}
+.dialogue-topic-btn.active {
+  border-color: #d1b45a;
+  background: #2a4738;
+  color: #faecc1;
+}
+.dialogue-topic-btn.reset-topic {
+  background: transparent;
+  border: 1px dashed #405e4c;
+  color: #97b5a1;
+}
+.dialogue-topic-btn.reset-topic:hover {
+  border-color: #77a887;
+  color: #d7e8dc;
+}
+.topic-bullet {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.dialogue-footer {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
 .hud-dock {
   position: absolute;
   bottom: 27px;

@@ -9,3 +9,4 @@ export * from './data/gameplay.js';
 export * from './data/farming.js';
 export * from './data/interaction.js';
 export * from './data/cosmetics.js';
+export * from './data/npcs.js';

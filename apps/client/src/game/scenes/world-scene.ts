@@ -11,6 +11,7 @@ import {
   cropStatus,
   interaction,
   MONSTERS,
+  NPCS,
 } from '@aetheria/shared';
 import { gameBridge } from '../managers/game-bridge';
 import { movement } from '../networking/movement';
@@ -97,6 +98,42 @@ export class WorldScene extends Phaser.Scene {
         )
         .setOrigin(0.5)
         .setDepth(station.y + 1);
+    }
+    for (const npc of NPCS) {
+      const shadow = this.add.ellipse(0, 0, 25, 10, 0x132b24, 0.4);
+      const robe = this.add.rectangle(0, -18, 22, 22, 0x2e4259);
+      const head = this.add.rectangle(0, -35, 16, 16, 0xe1b68c);
+      const hair = this.add.rectangle(0, -43, 18, 7, 0xd9d9d9);
+      const beard = this.add.rectangle(0, -28, 14, 12, 0xe8e8e8);
+      const label = this.add
+        .text(0, -56, `✦ ${npc.name}`, {
+          fontSize: '11px',
+          color: '#f7df94',
+          backgroundColor: '#1b2621',
+          padding: { x: 6, y: 3 },
+        })
+        .setOrigin(0.5);
+      const title = this.add
+        .text(0, -70, npc.title, {
+          fontSize: '9px',
+          color: '#a3bfab',
+        })
+        .setOrigin(0.5);
+
+      const npcContainer = this.add.container(npc.x, npc.y, [
+        shadow,
+        robe,
+        head,
+        beard,
+        hair,
+        label,
+        title,
+      ]);
+      npcContainer.setSize(32, 48);
+      npcContainer.setDepth(npc.y);
+      npcContainer
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => gameBridge.interact?.(npc.id));
     }
     // Code-native pixel art atlas: no external assets or runtime downloads.
     const g = this.add.graphics();
