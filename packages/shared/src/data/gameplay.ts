@@ -12,6 +12,8 @@ export const ITEMS = {
   pumpkin_seed: { name: 'Semente de abóbora', stack: 99, tool: false },
   turnip: { name: 'Nabo', stack: 99, tool: false },
   pumpkin: { name: 'Abóbora', stack: 99, tool: false },
+  plank: { name: 'Tábua de madeira', stack: 99, tool: false },
+  sword: { name: 'Espada de treino', stack: 1, tool: true },
 } as const;
 export type ItemId = keyof typeof ITEMS;
 export interface Slot {
