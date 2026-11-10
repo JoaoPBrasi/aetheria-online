@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useSyncExternalStore } from 'react';
 import { NPCS, TUTORIAL_QUEST, type NpcId } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
 
@@ -10,10 +10,12 @@ interface DialogueModalProps {
 export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
   const npc = NPCS.find((n) => n.id === npcId) ?? NPCS[0]!;
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
-  const [customResponse, setCustomResponse] = useState<string | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
-  const snapshot = gameBridge.getSnapshot();
+  const snapshot = useSyncExternalStore(
+    gameBridge.subscribe,
+    gameBridge.getSnapshot,
+  );
   const tutorialQuest = snapshot.quests?.find(
     (q) => q.questId === 'tutorial_first_steps',
   );
@@ -26,15 +28,13 @@ export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
 
   const handleTopicClick = (topic: (typeof npc.topics)[number]) => {
     setActiveTopicId(topic.id);
-    setCustomResponse(null);
-    if (topic.action === 'accept_quest' && topic.questId) {
+    if (topic.action === 'accept_quest' && topic.questId && !tutorialQuest) {
       gameBridge.acceptQuest?.(topic.questId);
     }
   };
 
   const handleTurnInQuest = (questId: string) => {
     gameBridge.turnInQuest?.(questId);
-    setCustomResponse(TUTORIAL_QUEST.dialogues.readyToTurnIn);
   };
 
   const isReadyToTurnIn = tutorialQuest?.status === 'ready_to_turn_in';
@@ -76,8 +76,17 @@ export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
         <div className="dialogue-body">
           <div className="dialogue-speech-bubble" aria-live="polite">
             <p>
-              {customResponse ??
-                (activeTopic ? activeTopic.response : npc.greeting)}
+              {activeTopic?.id === 'quest_tutorial' || isQuestCompleted
+                ? isQuestCompleted
+                  ? TUTORIAL_QUEST.dialogues.completed
+                  : isReadyToTurnIn
+                    ? TUTORIAL_QUEST.dialogues.readyToTurnIn
+                    : isQuestInProgress
+                      ? TUTORIAL_QUEST.dialogues.inProgress
+                      : TUTORIAL_QUEST.dialogues.offer
+                : activeTopic
+                  ? activeTopic.response
+                  : npc.greeting}
             </p>
           </div>
 
@@ -88,6 +97,11 @@ export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
               {isReadyToTurnIn && (
                 <button
                   className="dialogue-topic-btn quest-turn-in-btn"
+                  disabled={
+                    snapshot.actionPending ||
+                    snapshot.questPending ||
+                    snapshot.status !== 'connected'
+                  }
                   onClick={() => handleTurnInQuest('tutorial_first_steps')}
                 >
                   <span className="topic-bullet">🎁</span>
@@ -104,15 +118,22 @@ export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
                   if (isQuestInProgress) {
                     promptText = '📜 [Em Andamento] Como vão meus objetivos?';
                   } else if (isReadyToTurnIn) {
-                    promptText = '✨ [Objetivos Concluídos] Consegui tudo o que pediu!';
+                    promptText =
+                      '✨ [Objetivos Concluídos] Consegui tudo o que pediu!';
                   } else if (isQuestCompleted) {
-                    promptText = '🌟 [Missão Concluída] Obrigado pelos ensinamentos!';
+                    promptText =
+                      '🌟 [Missão Concluída] Obrigado pelos ensinamentos!';
                   }
                 }
 
                 return (
                   <button
                     key={topic.id}
+                    disabled={
+                      snapshot.actionPending ||
+                      snapshot.questPending ||
+                      snapshot.status !== 'connected'
+                    }
                     className={`dialogue-topic-btn ${activeTopicId === topic.id ? 'active' : ''}`}
                     onClick={() => handleTopicClick(topic)}
                   >
@@ -126,7 +147,6 @@ export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
                   className="dialogue-topic-btn reset-topic"
                   onClick={() => {
                     setActiveTopicId(null);
-                    setCustomResponse(null);
                   }}
                 >
                   <span className="topic-bullet">↩</span>
@@ -138,6 +158,10 @@ export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
         </div>
 
         <div className="dialogue-footer">
+          {snapshot.questPending && <p role="status">Confirmando missão…</p>}
+          {snapshot.gameplayError && (
+            <p role="alert">{snapshot.gameplayError}</p>
+          )}
           <button className="primary" onClick={onClose}>
             Até logo, Ancião (ESC)
           </button>

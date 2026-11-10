@@ -47,10 +47,7 @@ export class WorldRoom extends Room<{
         client.send('resources', this.gameplay.resources());
         client.send('plots', await this.gameplay.plots());
         client.send('monsters', this.gameplay.monsters());
-        client.send(
-          'quests',
-          this.gameplay.questsManager.getQuests(p.characterId),
-        );
+        client.send('quests', await this.gameplay.quests(p.characterId));
       } catch {
         client.send('gameplayError', 'Banco indisponível. Tente novamente.');
       }
@@ -65,10 +62,7 @@ export class WorldRoom extends Room<{
           return { x: p.x, y: p.y, direction: p.direction };
         });
         client.send('gameplay', snapshot);
-        client.send(
-          'quests',
-          this.gameplay.questsManager.getQuests(p.characterId),
-        );
+        client.send('quests', await this.gameplay.quests(p.characterId));
         this.broadcast('resources', this.gameplay.resources());
         if (
           raw &&
@@ -138,64 +132,46 @@ export class WorldRoom extends Room<{
       if (this.state.players.get(client.sessionId)?.connected)
         this.inputs.get(client.sessionId)?.accept(message);
     });
-    this.onMessage('quest:accept', (client, raw: unknown) => {
-      const p = this.state.players.get(client.sessionId);
-      if (!p?.connected) return;
-      if (
-        raw &&
-        typeof raw === 'object' &&
-        'questId' in raw &&
-        typeof raw.questId === 'string'
-      ) {
+    for (const kind of ['quest:accept', 'quest:turn_in'] as const) {
+      this.onMessage(kind, async (client, raw: unknown) => {
+        const player = this.state.players.get(client.sessionId);
+        if (!player?.connected) return;
+        const position = () =>
+          player.connected && this.state.players.has(client.sessionId)
+            ? { x: player.x, y: player.y, direction: player.direction }
+            : undefined;
         try {
-          this.gameplay.questsManager.acceptQuest(
-            p.characterId,
-            raw.questId as any,
-          );
-          client.send(
-            'quests',
-            this.gameplay.questsManager.getQuests(p.characterId),
-          );
-        } catch (e) {
+          if (kind === 'quest:accept') {
+            await this.gameplay.acceptQuest(player.characterId, raw, position);
+          } else {
+            client.send(
+              'gameplay',
+              await this.gameplay.turnInQuest(
+                player.characterId,
+                raw,
+                position,
+              ),
+            );
+          }
+          client.send('quests', await this.gameplay.quests(player.characterId));
+        } catch (error) {
+          const safe = [
+            'Comando de missão inválido.',
+            'Aproxime-se do Ancião Eldrin.',
+            'Entre na vila para agir.',
+            'Você ainda não aceitou esta missão.',
+            'Você ainda não cumpriu todos os objetivos da missão.',
+            'Inventário cheio.',
+          ];
           client.send(
             'gameplayError',
-            e instanceof Error ? e.message : 'Falha ao aceitar missão.',
+            error instanceof Error && safe.includes(error.message)
+              ? error.message
+              : 'Não foi possível confirmar a missão. Tente novamente.',
           );
         }
-      }
-    });
-    this.onMessage('quest:turn_in', async (client, raw: unknown) => {
-      const p = this.state.players.get(client.sessionId);
-      if (!p?.connected) return;
-      if (
-        raw &&
-        typeof raw === 'object' &&
-        'questId' in raw &&
-        typeof raw.questId === 'string'
-      ) {
-        try {
-          const snapshot = await this.gameplay.turnInQuest(
-            p.characterId,
-            raw.questId,
-            {
-              x: p.x,
-              y: p.y,
-              direction: p.direction,
-            },
-          );
-          client.send('gameplay', snapshot);
-          client.send(
-            'quests',
-            this.gameplay.questsManager.getQuests(p.characterId),
-          );
-        } catch (e) {
-          client.send(
-            'gameplayError',
-            e instanceof Error ? e.message : 'Falha ao entregar missão.',
-          );
-        }
-      }
-    });
+      });
+    }
     let monsterBroadcastCounter = 0;
     this.setSimulationInterval(() => {
       for (const [id, player] of this.state.players) {

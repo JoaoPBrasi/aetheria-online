@@ -12,6 +12,7 @@ export interface GameSnapshot {
   gameplay?: import('../data/gameplay.js').GameplaySnapshot;
   gameplayError?: string | null;
   actionPending?: boolean;
+  questPending?: boolean;
   resources?: Record<string, number>;
   monsters?: import('../data/gameplay.js').MonsterSnapshot[];
   health?: number;

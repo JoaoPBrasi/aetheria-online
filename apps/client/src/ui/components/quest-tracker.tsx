@@ -102,3 +102,4 @@ export function QuestTracker({ quests = [] }: QuestTrackerProps) {
     </div>
   );
 }
+

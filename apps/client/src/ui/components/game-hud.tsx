@@ -148,7 +148,7 @@ export function GameHud({
       window.removeEventListener('keydown', key);
       gameBridge.interact = undefined;
     };
-  }, [connection, crop]);
+  }, [connection, crop, panel]);
   return (
     <div className="game-hud">
       <div className="hud-identity">

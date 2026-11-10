@@ -38,7 +38,7 @@ export const NPCS: readonly NPCDefinition[] = [
         id: 'gather',
         prompt: 'Como consigo recursos básicos como madeira e pedra?',
         response:
-          'Na praça e arredores você encontrará troncos caídos, rochas e arbustos de fibra. Equipe a ferramenta adequada na sua mochila (B ou atalhos 1 a 8) e aproxime-se para coletar com a tecla E. Cada coleta concede experiência para sua profissão.',
+          'Na praça e arredores você encontrará troncos caídos, rochas e arbustos de fibra. Basta ter a ferramenta adequada na mochila ou equipada e se aproximar para coletar com a tecla E. Cada coleta concede experiência para sua profissão.',
       },
       {
         id: 'farm',

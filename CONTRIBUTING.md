@@ -11,3 +11,4 @@ Para manter a consistência, integridade e estabilidade do projeto tanto para de
 2. **Homologação:** Apenas após testes e validação com o usuário as mudanças são promovidas para a branch `beta`.
 3. **Qualidade:** Nenhum commit deve ser realizado com falhas em `pnpm test` ou erros de TypeScript (`tsc --noEmit`).
 4. **Base de Conhecimento:** Consulte e mantenha sincronizadas as notas no **Obsidian** em `C:\Dev\Projeto RPG\projeto RPG`.
+

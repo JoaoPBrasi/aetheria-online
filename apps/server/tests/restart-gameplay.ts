@@ -1,7 +1,11 @@
 import { Client } from '@colyseus/sdk';
 import { randomUUID } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
-import type { GameplaySnapshot, WorldState } from '@aetheria/shared';
+import type {
+  CharacterQuestState,
+  GameplaySnapshot,
+  WorldState,
+} from '@aetheria/shared';
 const base = process.env.TEST_SERVER_URL!,
   path = process.env.GAMEPLAY_FIXTURE_FILE!;
 if (!base || !path || !process.env.DATABASE_URL?.includes('/aetheria_test_'))
@@ -42,6 +46,10 @@ const room = await new Client(base).consumeSeatReservation<WorldState>(
 );
 room.reconnection.enabled = false;
 let snapshot: GameplaySnapshot | undefined;
+let quests: CharacterQuestState[] | undefined;
+room.onMessage('quests', (value: CharacterQuestState[]) => {
+  quests = value;
+});
 room.onMessage('gameplay', (s: GameplaySnapshot) => {
   snapshot = s;
 });
@@ -65,11 +73,15 @@ try {
   room.send('sync');
   await wait(() => !!snapshot);
   if (prepare) {
+    room.send('quest:accept', { questId: 'tutorial_first_steps' });
+    await wait(() => quests?.[0]?.status === 'in_progress');
     const act = async (payload: Record<string, unknown>) => {
       const rev = snapshot!.revision;
       room.send('action', { ...payload, id: randomUUID(), revision: rev });
       await wait(() => snapshot!.revision > rev);
     };
+    await act({ kind: 'gather', node: 'wood-plaza' });
+    await wait(() => quests?.[0]?.progress.gather_wood === 3);
     await act({ kind: 'equip', from: 2 });
     await act({ kind: 'gather', node: 'fiber-plaza' });
     for (let seq = 1; seq <= 4; seq++) room.send('move', { seq, dx: 1, dy: 0 });
@@ -114,6 +126,9 @@ try {
       { mode: 0o600 },
     );
   } else {
+    await wait(() => quests?.[0]?.progress.gather_wood === 3);
+    if (quests?.[0]?.status !== 'in_progress')
+      throw new Error('Quest status changed on restart');
     await wait(
       () => !!plots.find((p) => p.id === 'brumavale-farm-16')?.harvestAt,
     );
@@ -132,7 +147,7 @@ try {
     )
       throw new Error('Gameplay was not restored after restart');
     console.info(
-      'PASS: position, inventory, XP and crop deadline restored after actual server restart',
+      'PASS: quest progress, position, inventory, XP and crop deadline restored after actual server restart',
     );
   }
 } finally {

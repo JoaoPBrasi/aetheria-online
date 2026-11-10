@@ -42,6 +42,18 @@ model Character {
   skills            CharacterSkill[]
   equipment         CharacterEquipment[]
   plots             FarmPlot[]
+  quests            CharacterQuest[]
+}
+
+model CharacterQuest {
+  characterId String    @db.Uuid
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  questId     String
+  status      String    @default("in_progress")
+  progress    Json      @default("{}")
+  completedAt DateTime?
+
+  @@id([characterId, questId])
 }
 
 model InventorySlot {

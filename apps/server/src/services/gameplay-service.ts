@@ -4,16 +4,17 @@ import {
   hasTool,
   type GameplaySnapshot,
   type ItemId,
+  QuestCommandSchema,
+  QUESTS,
+  NPCS,
 } from '@aetheria/shared';
 import type { GameplayRepository } from '../repositories/gameplay-repository.js';
 import { MonsterManager } from './monster-manager.js';
-import { QuestManager } from './quest-manager.js';
 export class GameplayService {
   private queues = new Map<string, Promise<unknown>>();
   private cooldowns = new Map<string, number>();
   private attackCooldowns = new Map<string, number>();
   readonly monstersManager = new MonsterManager();
-  readonly questsManager = new QuestManager();
   constructor(private repository: GameplayRepository) {}
   resources() {
     return Object.fromEntries(this.cooldowns);
@@ -82,10 +83,6 @@ export class GameplayService {
           id,
         );
 
-        if (killed) {
-          this.questsManager.advanceObjective(id, 'defeat', 'slime', 1);
-        }
-
         const reward = killed
           ? {
               item: monster.drop.itemId as ItemId,
@@ -104,7 +101,6 @@ export class GameplayService {
           undefined,
           position,
         );
-        this.questsManager.advanceObjective(id, 'craft', action.recipeId, 1);
         return result;
       }
       if (action.kind !== 'gather')
@@ -125,49 +121,46 @@ export class GameplayService {
           current,
         );
         this.cooldowns.set(node.id, Date.now() + 5000);
-        this.questsManager.advanceObjective(id, 'gather', node.item, 1);
         return result;
       });
     });
   }
-  async turnInQuest(
+  quests(id: string) {
+    return this.repository.quests().list(id);
+  }
+  private questAt(raw: unknown, position: { x: number; y: number }) {
+    const parsed = QuestCommandSchema.safeParse(raw);
+    if (!parsed.success) throw new Error('Comando de missão inválido.');
+    const questId = parsed.data.questId;
+    const npc = NPCS.find((n) => n.id === QUESTS[questId]?.giverNpcId);
+    if (!npc || Math.hypot(npc.x - position.x, npc.y - position.y) > 72)
+      throw new Error('Aproxime-se do Ancião Eldrin.');
+    return questId;
+  }
+  acceptQuest(
     id: string,
-    questId: string,
-    position: { x: number; y: number; direction: string },
+    raw: unknown,
+    getPosition: () => { x: number; y: number } | undefined,
   ) {
-    const outcome = this.questsManager.turnInQuest(id, questId);
-    if (!outcome.success || !outcome.rewards) {
-      throw new Error(outcome.error ?? 'Não foi possível entregar a missão.');
-    }
-    const rewards = outcome.rewards;
     return this.serial(id, async () => {
-      let snapshot = await this.repository.execute(id);
-      if (rewards.xp) {
-        snapshot = await this.repository.execute(
-          id,
-          undefined,
-          {
-            item: rewards.items[0]?.itemId ?? 'turnip_seed',
-            profession: rewards.xp.profession,
-            xp: rewards.xp.amount,
-            quantity: 0,
-          },
-          position,
-        );
-      }
-      for (const it of rewards.items) {
-        snapshot = await this.repository.execute(
-          id,
-          undefined,
-          {
-            item: it.itemId,
-            profession: rewards.xp.profession,
-            quantity: it.quantity,
-          },
-          position,
-        );
-      }
-      return snapshot;
+      const position = getPosition();
+      if (!position) throw new Error('Entre na vila para agir.');
+      const questId = this.questAt(raw, position);
+      await this.repository.quests().accept(id, questId);
+      return this.quests(id);
+    });
+  }
+  turnInQuest(
+    id: string,
+    raw: unknown,
+    getPosition: () => { x: number; y: number } | undefined,
+  ) {
+    return this.serial(id, async () => {
+      const position = getPosition();
+      if (!position) throw new Error('Entre na vila para agir.');
+      const questId = this.questAt(raw, position);
+      await this.repository.quests().turnIn(id, questId);
+      return this.repository.execute(id);
     });
   }
 }

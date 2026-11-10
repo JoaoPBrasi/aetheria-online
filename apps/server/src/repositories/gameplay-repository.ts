@@ -1,4 +1,5 @@
 import type { Database } from '../database/client.js';
+import { QuestRepository, advanceQuests } from './quest-repository.js';
 import {
   addItem,
   ITEMS,
@@ -18,6 +19,9 @@ import {
 type Position = { x: number; y: number; direction: string };
 export class GameplayRepository {
   constructor(private db: Database) {}
+  quests() {
+    return new QuestRepository(this.db);
+  }
   async execute(
     characterId: string,
     action?: GameAction,
@@ -216,6 +220,7 @@ export class GameplayRepository {
         if (!hasTool({ inventory: slots, equipment }, needed))
           throw new Error('Equipe a ferramenta adequada.');
         slots = addItem(slots, reward.item, 3);
+        await advanceQuests(tx, characterId, 'gather', reward.item, 3);
         await tx.characterSkill.update({
           where: {
             characterId_profession: {
@@ -242,6 +247,13 @@ export class GameplayRepository {
         )
           throw new Error('Estação de trabalho fora de alcance.');
         slots = craftItem(slots, recipe);
+        await advanceQuests(
+          tx,
+          characterId,
+          'craft',
+          recipe.output.itemId,
+          recipe.output.quantity,
+        );
         await tx.characterSkill.update({
           where: {
             characterId_profession: {
@@ -256,6 +268,7 @@ export class GameplayRepository {
       if (action?.kind === 'attack') {
         if (reward) {
           slots = addItem(slots, reward.item, reward.quantity ?? 1);
+          await advanceQuests(tx, characterId, 'defeat', 'slime', 1);
           await tx.characterSkill.update({
             where: {
               characterId_profession: {

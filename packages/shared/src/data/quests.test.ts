@@ -5,9 +5,24 @@ import {
   isQuestObjectivesMet,
   advanceQuestObjective,
   CharacterQuestStateSchema,
+  QuestCommandSchema,
 } from './quests.js';
 
 describe('Sistema de Quests - Tutorial', () => {
+  it('rejeita missões desconhecidas e campos de identidade enviados pelo cliente', () => {
+    expect(
+      QuestCommandSchema.safeParse({ questId: TUTORIAL_QUEST.id }).success,
+    ).toBe(true);
+    expect(QuestCommandSchema.safeParse({ questId: 'unknown' }).success).toBe(
+      false,
+    );
+    expect(
+      QuestCommandSchema.safeParse({
+        questId: TUTORIAL_QUEST.id,
+        characterId: 'another-player',
+      }).success,
+    ).toBe(false);
+  });
   it('cria estado inicial de quest corretamente', () => {
     const state = createInitialQuestState(TUTORIAL_QUEST.id);
     expect(state.questId).toBe('tutorial_first_steps');

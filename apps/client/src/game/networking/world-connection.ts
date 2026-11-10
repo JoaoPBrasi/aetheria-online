@@ -30,6 +30,7 @@ export class WorldConnection {
     if (
       current.status !== 'connected' ||
       current.actionPending ||
+      current.questPending ||
       !current.gameplay
     )
       return;
@@ -53,6 +54,8 @@ export class WorldConnection {
       gameplay: undefined,
       gameplayError: null,
       actionPending: false,
+      questPending: false,
+      quests: undefined,
     });
     try {
       const reservation = (await request(
@@ -90,7 +93,8 @@ export class WorldConnection {
       room.onMessage(
         'quests',
         (quests: import('@aetheria/shared').CharacterQuestState[]) => {
-          if (!this.disposed) gameBridge.update({ quests });
+          if (!this.disposed)
+            gameBridge.update({ quests, questPending: false });
         },
       );
       room.onMessage('gameplay', (snapshot: GameplaySnapshot) => {
@@ -128,15 +132,34 @@ export class WorldConnection {
       });
       room.onMessage('gameplayError', (message: string) => {
         if (this.disposed) return;
-        gameBridge.update({ gameplayError: message, actionPending: false });
+        gameBridge.update({
+          gameplayError: message,
+          actionPending: false,
+          questPending: false,
+        });
         room.send('sync');
       });
       room.send('sync');
       movement.send = (input) => room.send('move', input);
-      gameBridge.acceptQuest = (questId: string) =>
-        room.send('quest:accept', { questId });
-      gameBridge.turnInQuest = (questId: string) =>
-        room.send('quest:turn_in', { questId });
+      const questCommand = (
+        kind: 'quest:accept' | 'quest:turn_in',
+        questId: string,
+      ) => {
+        const current = gameBridge.getSnapshot();
+        if (
+          this.disposed ||
+          current.status !== 'connected' ||
+          current.actionPending ||
+          current.questPending
+        )
+          return;
+        gameBridge.update({ questPending: true, gameplayError: null });
+        room.send(kind, { questId });
+      };
+      gameBridge.acceptQuest = (questId) =>
+        questCommand('quest:accept', questId);
+      gameBridge.turnInQuest = (questId) =>
+        questCommand('quest:turn_in', questId);
       room.onDrop(() => {
         if (this.disposed) return;
         movement.send = undefined;
@@ -215,6 +238,13 @@ export class WorldConnection {
     movement.pending = [];
     movement.remotes.clear();
     if (this.room) void this.room.leave();
-    gameBridge.update({ status: 'offline', players: 0 });
+    gameBridge.acceptQuest = undefined;
+    gameBridge.turnInQuest = undefined;
+    gameBridge.update({
+      status: 'offline',
+      players: 0,
+      quests: undefined,
+      questPending: false,
+    });
   }
 }

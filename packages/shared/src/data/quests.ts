@@ -59,9 +59,9 @@ export const TUTORIAL_QUEST: QuestDefinition = {
     offer:
       'Jovem aventureiro! Vejo grande potencial em você, mas Brumavale exige preparo. Tenho uma missão introdutória: colha 5 madeiras, fabrique 2 tábuas na bancada e derrote 2 slimes no prado ao sul. Posso contar com você?',
     inProgress:
-      'Como vão os preparativos? Lembre-se: equipe seu machado para colher madeira, use a Bancada de Trabalho para fazer tábuas e enfrente os slimes com cautela.',
+      'Como vão os preparativos? Lembre-se: basta ter o machado na mochila para colher madeira, use a Bancada de Trabalho para fazer tábuas e enfrente os slimes com cautela.',
     readyToTurnIn:
-      'Extraordinário! Você provou sua coragem e capacidade de trabalho. Aqui estão sementes para sua horta e a recompensa em experiência que você merece. Seja oficialmente bem-vindo a Brumavale!',
+      'Extraordinário! Você cumpriu os objetivos. Conclua a missão para receber 50 XP de Guerreiro, 5 sementes de nabo e 2 de abóbora.',
     completed:
       'Você já concluiu meus primeiros ensinamentos com louvor. Continue explorando, cuidando da horta e protegendo nossa vila!',
   },
@@ -105,6 +105,12 @@ export const QUESTS: Record<string, QuestDefinition> = {
 };
 
 export type QuestId = keyof typeof QUESTS;
+
+export const QuestCommandSchema = z
+  .object({
+    questId: z.literal('tutorial_first_steps'),
+  })
+  .strict();
 
 export interface CharacterQuestState {
   questId: QuestId;
