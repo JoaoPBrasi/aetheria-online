@@ -7,11 +7,13 @@ import {
 } from '@aetheria/shared';
 import type { GameplayRepository } from '../repositories/gameplay-repository.js';
 import { MonsterManager } from './monster-manager.js';
+import { QuestManager } from './quest-manager.js';
 export class GameplayService {
   private queues = new Map<string, Promise<unknown>>();
   private cooldowns = new Map<string, number>();
   private attackCooldowns = new Map<string, number>();
   readonly monstersManager = new MonsterManager();
+  readonly questsManager = new QuestManager();
   constructor(private repository: GameplayRepository) {}
   resources() {
     return Object.fromEntries(this.cooldowns);
@@ -80,6 +82,10 @@ export class GameplayService {
           id,
         );
 
+        if (killed) {
+          this.questsManager.advanceObjective(id, 'defeat', 'slime', 1);
+        }
+
         const reward = killed
           ? {
               item: monster.drop.itemId as ItemId,
@@ -90,6 +96,16 @@ export class GameplayService {
           : undefined;
 
         return this.repository.execute(id, action, reward, position);
+      }
+      if (action.kind === 'craft') {
+        const result = await this.repository.execute(
+          id,
+          action,
+          undefined,
+          position,
+        );
+        this.questsManager.advanceObjective(id, 'craft', action.recipeId, 1);
+        return result;
       }
       if (action.kind !== 'gather')
         return this.repository.execute(id, action, undefined, position);
@@ -109,8 +125,49 @@ export class GameplayService {
           current,
         );
         this.cooldowns.set(node.id, Date.now() + 5000);
+        this.questsManager.advanceObjective(id, 'gather', node.item, 1);
         return result;
       });
+    });
+  }
+  async turnInQuest(
+    id: string,
+    questId: string,
+    position: { x: number; y: number; direction: string },
+  ) {
+    const outcome = this.questsManager.turnInQuest(id, questId);
+    if (!outcome.success || !outcome.rewards) {
+      throw new Error(outcome.error ?? 'Não foi possível entregar a missão.');
+    }
+    const rewards = outcome.rewards;
+    return this.serial(id, async () => {
+      let snapshot = await this.repository.execute(id);
+      if (rewards.xp) {
+        snapshot = await this.repository.execute(
+          id,
+          undefined,
+          {
+            item: rewards.items[0]?.itemId ?? 'turnip_seed',
+            profession: rewards.xp.profession,
+            xp: rewards.xp.amount,
+            quantity: 0,
+          },
+          position,
+        );
+      }
+      for (const it of rewards.items) {
+        snapshot = await this.repository.execute(
+          id,
+          undefined,
+          {
+            item: it.itemId,
+            profession: rewards.xp.profession,
+            quantity: it.quantity,
+          },
+          position,
+        );
+      }
+      return snapshot;
     });
   }
 }

@@ -47,6 +47,10 @@ export class WorldRoom extends Room<{
         client.send('resources', this.gameplay.resources());
         client.send('plots', await this.gameplay.plots());
         client.send('monsters', this.gameplay.monsters());
+        client.send(
+          'quests',
+          this.gameplay.questsManager.getQuests(p.characterId),
+        );
       } catch {
         client.send('gameplayError', 'Banco indisponível. Tente novamente.');
       }
@@ -61,6 +65,10 @@ export class WorldRoom extends Room<{
           return { x: p.x, y: p.y, direction: p.direction };
         });
         client.send('gameplay', snapshot);
+        client.send(
+          'quests',
+          this.gameplay.questsManager.getQuests(p.characterId),
+        );
         this.broadcast('resources', this.gameplay.resources());
         if (
           raw &&
@@ -129,6 +137,64 @@ export class WorldRoom extends Room<{
     this.onMessage('move', (client, message: unknown) => {
       if (this.state.players.get(client.sessionId)?.connected)
         this.inputs.get(client.sessionId)?.accept(message);
+    });
+    this.onMessage('quest:accept', (client, raw: unknown) => {
+      const p = this.state.players.get(client.sessionId);
+      if (!p?.connected) return;
+      if (
+        raw &&
+        typeof raw === 'object' &&
+        'questId' in raw &&
+        typeof raw.questId === 'string'
+      ) {
+        try {
+          this.gameplay.questsManager.acceptQuest(
+            p.characterId,
+            raw.questId as any,
+          );
+          client.send(
+            'quests',
+            this.gameplay.questsManager.getQuests(p.characterId),
+          );
+        } catch (e) {
+          client.send(
+            'gameplayError',
+            e instanceof Error ? e.message : 'Falha ao aceitar missão.',
+          );
+        }
+      }
+    });
+    this.onMessage('quest:turn_in', async (client, raw: unknown) => {
+      const p = this.state.players.get(client.sessionId);
+      if (!p?.connected) return;
+      if (
+        raw &&
+        typeof raw === 'object' &&
+        'questId' in raw &&
+        typeof raw.questId === 'string'
+      ) {
+        try {
+          const snapshot = await this.gameplay.turnInQuest(
+            p.characterId,
+            raw.questId,
+            {
+              x: p.x,
+              y: p.y,
+              direction: p.direction,
+            },
+          );
+          client.send('gameplay', snapshot);
+          client.send(
+            'quests',
+            this.gameplay.questsManager.getQuests(p.characterId),
+          );
+        } catch (e) {
+          client.send(
+            'gameplayError',
+            e instanceof Error ? e.message : 'Falha ao entregar missão.',
+          );
+        }
+      }
     });
     let monsterBroadcastCounter = 0;
     this.setSimulationInterval(() => {
