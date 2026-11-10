@@ -147,3 +147,23 @@ aberta, multiplayer, coleta e agricultura completa com prazo real de crescimento
 O gerenciador antigo e seus 3 testes exclusivamente em memória foram removidos;
 foram adicionados 4 testes de integração persistente e 1 teste de contrato Zod.
 Consulte `docs/quests.md` para o escopo restante do combate.
+
+## Diário de missões e prioridades no HUD — 10/11/2026
+
+33 testes unitários e os 7 cenários completos de navegador passaram.
+TypeScript do cliente, servidor e ferramentas, build do cliente, lint e formatação
+dos arquivos alterados passaram. Sem mudança de backend ou migração de banco.
+
+O teste com servidor real confirmou aceite com Eldrin, ocultação pelo diário,
+movimento com a janela aberta e foco na seleção, persistência da preferência
+após recarregar e voltar ao personagem, e reativação do acompanhamento.
+Uma fixture de estado na UI verificou prontidão para entrega, remoção imediata
+de uma missão confirmada como concluída, histórico, objetivos, recompensas,
+data de conclusão, ausência de opção para acompanhar concluídas e busca vazia.
+As regras reais de entrega continuam cobertas pelos testes de integração da
+entrega anterior; a fixture visual não simula uma nova concessão de recompensa.
+
+Screenshots `quest-journal-active`, `quest-journal-completed`,
+`quest-journal-1024` e `quest-journal-compact` foram geradas. Layouts de
+1440×1000 e 560×820 foram inspecionados visualmente; o teste também verificou
+1024×768 e ausência de overflow horizontal na janela compacta.

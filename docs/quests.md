@@ -30,6 +30,24 @@ O cliente aguarda a resposta e mostra erros no diálogo. Reabrir o jogo ou
 reiniciar o servidor recupera o estado do PostgreSQL. Progresso antigo que
 existia apenas no gerenciador em memória não pode ser recuperado automaticamente.
 
+## Diário e prioridades no HUD
+
+O atalho `J` e o botão **Missões** abrem o diário dentro do jogo. As abas
+**Em andamento** e **Concluídas** separam missões ativas e histórico. A lista
+permite buscar por nome e consultar objetivos, recompensas, NPC e data de entrega.
+
+Uma missão aceita é acompanhada automaticamente. O jogador pode desmarcá-la
+na lista, no painel de detalhes ou no próprio rastreador do HUD. Se não houver
+missões acompanhadas, o rastreador desaparece. A conclusão confirmada pelo
+servidor remove a missão imediatamente do HUD e a mantém somente no histórico.
+Objetivos completos com entrega pendente continuam em andamento.
+
+As preferências são armazenadas em `localStorage`, sob a chave
+`aetheria:quests:hidden:<characterId>`. São independentes por personagem e
+restritas a este navegador; não alteram o progresso persistido no servidor.
+Se o armazenamento do navegador não estiver disponível, a escolha vale para
+a sessão. Não foi necessária migração de banco nesta entrega.
+
 ## Escopo restante
 
 O dano em monstros ainda é aplicado em memória antes da transação econômica;

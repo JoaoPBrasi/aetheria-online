@@ -7,6 +7,15 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 
 ## [Unreleased]
 
+### Diário de missões e acompanhamento do HUD
+
+- Janela de missões pelo atalho `J` ou pelo botão Missões, com abas Em andamento e Concluídas.
+- Lista com busca, objetivos, recompensas, estado de entrega e data de conclusão.
+- Escolha de quais missões acompanhar, salva por personagem neste navegador.
+- Novas missões aceitas são acompanhadas inicialmente; podem ser ocultadas no diário ou no HUD.
+- Missões entregues desaparecem do HUD e ficam apenas no histórico, sem aviso permanente de conclusão.
+- Layout responsivo inspirado em janelas clássicas de MMORPG, com navegação por teclado.
+
 ### Missões persistentes e recompensas transacionais
 
 - Missão do Eldrin salva em `CharacterQuest`, com progresso e data de conclusão por personagem.

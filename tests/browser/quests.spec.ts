@@ -118,8 +118,11 @@ test('archives confirmed completed quest snapshots and keeps the journal usable 
   };
   const snapshot = async (quest: typeof ready & { completedAt?: number }) =>
     page.evaluate(async (state) => {
-        const modulePath = performance.getEntriesByType('resource').map((entry) => entry.name).find((url) => url.includes('/src/game/managers/game-bridge.ts'));
-        if (!modulePath) throw new Error('Game bridge module was not loaded');
+      const modulePath = performance
+        .getEntriesByType('resource')
+        .map((entry) => entry.name)
+        .find((url) => url.includes('/src/game/managers/game-bridge.ts'));
+      if (!modulePath) throw new Error('Game bridge module was not loaded');
       const { gameBridge } = await import(modulePath);
       gameBridge.update({ quests: [state] });
     }, quest);
