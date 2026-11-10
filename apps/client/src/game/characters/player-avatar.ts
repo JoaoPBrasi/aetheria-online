@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { makeNameplate } from '../ui/nameplate';
 import type { Cosmetics } from '@aetheria/shared';
 import {
   appearanceLayers,
@@ -30,16 +31,7 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
       this.add(sprite);
       this.layers.set(layer, sprite);
     }
-    if (name)
-      this.add(
-        scene.add
-          .text(0, -66, name, {
-            fontSize: '11px',
-            color: '#fff5d0',
-            backgroundColor: '#253c32',
-          })
-          .setOrigin(0.5),
-      );
+    if (name) this.add(makeNameplate(scene, name, 'player', 0, -72));
     scene.add.existing(this);
   }
   playGesture(state: PlayerAnimation, time: number) {

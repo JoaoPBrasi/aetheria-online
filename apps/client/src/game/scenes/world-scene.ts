@@ -18,6 +18,7 @@ import {
 import { gameBridge } from '../managers/game-bridge';
 import { movement } from '../networking/movement';
 import { PlayerAvatar } from '../characters/player-avatar';
+import { makeNameplate } from '../ui/nameplate';
 import type { Cosmetics } from '@aetheria/shared';
 
 export class WorldScene extends Phaser.Scene {
@@ -30,6 +31,8 @@ export class WorldScene extends Phaser.Scene {
   private plots = new Map<string, Phaser.GameObjects.Rectangle>();
   private accumulator = 0;
   private remoteSprites = new Map<string, PlayerAvatar>();
+  private coverCells = new Map<string, Set<Phaser.GameObjects.Image>>();
+  private fadingCover = new Set<Phaser.GameObjects.Image>();
   private monsterSprites = new Map<
     string,
     {
@@ -84,11 +87,14 @@ export class WorldScene extends Phaser.Scene {
     this.game.canvas.dataset.worldWidth = String(artwork.width);
     this.game.canvas.dataset.worldHeight = String(artwork.height);
     this.add.image(0, 0, 'world-ground').setOrigin(0).setDepth(-1);
-    for (const p of artwork.props)
-      this.add
+    for (const p of artwork.props) {
+      const prop = this.add
         .image(p.x, p.y, 'world-props', p.frame)
         .setOrigin(0)
         .setDepth(p.depth);
+      if (p.frame.startsWith('tree:') || p.frame.startsWith('house:'))
+        this.registerCover(prop);
+    }
     for (const kind of ['orc', 'skeleton'])
       if (!this.anims.exists(`${kind}-idle`))
         this.anims.create({
@@ -184,14 +190,9 @@ export class WorldScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => gameBridge.interact?.(node.id));
 
-      this.add
-        .text(node.x, node.y - 25, node.name, {
-          fontSize: '10px',
-          color: '#f6e7bc',
-          backgroundColor: '#21372b',
-        })
-        .setOrigin(0.5)
-        .setDepth(node.y + 1);
+      makeNameplate(this, node.name, 'object', node.x, node.y - 29).setDepth(
+        node.y + 1,
+      );
     }
     for (const station of CRAFTING_STATIONS) {
       const isForge = station.type === 'forge';
@@ -221,35 +222,21 @@ export class WorldScene extends Phaser.Scene {
           .setDepth(station.y);
       }
 
-      this.add
-        .text(
-          station.x,
-          station.y - 25,
-          isForge ? '🔨 ' + station.name : '🪵 ' + station.name,
-          {
-            fontSize: '10px',
-            color: '#f6e7bc',
-            backgroundColor: '#21372b',
-            padding: { x: 4, y: 2 },
-          },
-        )
-        .setOrigin(0.5)
-        .setDepth(station.y + 1);
+      makeNameplate(
+        this,
+        station.name,
+        'object',
+        station.x,
+        station.y - 29,
+      ).setDepth(station.y + 1);
     }
     for (const npc of NPCS) {
       const shadow = this.add.ellipse(0, 4, 25, 10, 0x132b24, 0.4);
       const sprite = this.add.sprite(0, -10, 'npc-wizard').setScale(1.1);
       sprite.play('npc-wizard-idle');
-      const label = this.add
-        .text(0, -38, `✦ ${npc.name}`, {
-          fontSize: '11px',
-          color: '#f7df94',
-          backgroundColor: '#1b2621',
-          padding: { x: 6, y: 3 },
-        })
-        .setOrigin(0.5);
+      const label = makeNameplate(this, `✦ ${npc.name}`, 'npc', 0, -42);
       const title = this.add
-        .text(0, -52, npc.title, {
+        .text(0, -66, npc.title, {
           fontSize: '9px',
           color: '#a3bfab',
         })
@@ -386,16 +373,59 @@ export class WorldScene extends Phaser.Scene {
     });
   }
   private label(text: string, x: number, y: number) {
-    this.add
-      .text(x, y, text, {
-        fontFamily: 'Georgia',
-        fontSize: '14px',
-        color: '#eee1ba',
-        backgroundColor: '#253c32cc',
-        padding: { x: 10, y: 5 },
-      })
-      .setOrigin(0.5)
-      .setDepth(5000);
+    makeNameplate(this, text, 'place', x, y).setDepth(5000);
+  }
+  private registerCover(prop: Phaser.GameObjects.Image) {
+    const size = 128;
+    const left = Math.floor(prop.x / size);
+    const right = Math.floor((prop.x + prop.displayWidth) / size);
+    const top = Math.floor(prop.y / size);
+    const bottom = Math.floor((prop.y + prop.displayHeight) / size);
+    for (let cy = top; cy <= bottom; cy++)
+      for (let cx = left; cx <= right; cx++) {
+        const key = `${cx}:${cy}`;
+        let cell = this.coverCells.get(key);
+        if (!cell) this.coverCells.set(key, (cell = new Set()));
+        cell.add(prop);
+      }
+  }
+  private updateCover() {
+    const covered = new Set<Phaser.GameObjects.Image>();
+    const players = [
+      ...(this.avatar.visible ? [this.avatar] : []),
+      ...this.remoteSprites.values(),
+    ];
+    for (const player of players) {
+      const { x, y } = player;
+      const left = Math.floor((x - 14) / 128);
+      const right = Math.floor((x + 14) / 128);
+      const top = Math.floor((y - 68) / 128);
+      const bottom = Math.floor((y - 5) / 128);
+      for (let cy = top; cy <= bottom; cy++)
+        for (let cx = left; cx <= right; cx++)
+          for (const prop of this.coverCells.get(`${cx}:${cy}`) ?? [])
+            if (
+              prop.depth > y &&
+              prop.x < x + 14 &&
+              prop.x + prop.displayWidth > x - 14 &&
+              prop.y < y - 5 &&
+              prop.y + prop.displayHeight > y - 68
+            )
+              covered.add(prop);
+    }
+    for (const prop of covered) this.fadingCover.add(prop);
+    for (const prop of this.fadingCover) {
+      const target = covered.has(prop)
+        ? prop.frame.name.toString().startsWith('tree:')
+          ? 0.25
+          : 0.4
+        : 1;
+      const alpha = Phaser.Math.Linear(prop.alpha, target, 0.28);
+      if (Math.abs(alpha - target) < 0.015) {
+        prop.setAlpha(target);
+        if (target === 1) this.fadingCover.delete(prop);
+      } else prop.setAlpha(alpha);
+    }
   }
   update(time: number, delta: number) {
     const farmState = gameBridge.getSnapshot();
@@ -498,6 +528,7 @@ export class WorldScene extends Phaser.Scene {
         sprite.destroy();
         this.remoteSprites.delete(id);
       }
+    this.updateCover();
 
     const liveMonsters = new Set<string>();
     for (const m of farmState.monsters ?? []) {
@@ -527,13 +558,13 @@ export class WorldScene extends Phaser.Scene {
         const pupilRight = this.add
           .ellipse(6, -15, 2, 2, 0xffffff)
           .setVisible(!hostile);
-        const label = this.add
-          .text(0, hostile ? -68 : -32, name, {
-            fontSize: '10px',
-            color: hostile ? '#efd0af' : '#bbf2b6',
-            backgroundColor: '#183820',
-          })
-          .setOrigin(0.5);
+        const label = makeNameplate(
+          this,
+          name,
+          hostile ? 'enemy' : 'object',
+          0,
+          hostile ? -70 : -37,
+        );
         const hpBg = this.add.rectangle(
           0,
           hostile ? -54 : -22,
