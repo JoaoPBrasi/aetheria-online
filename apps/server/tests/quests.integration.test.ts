@@ -107,7 +107,11 @@ it('persists actual gather/craft/kill progress and grants exact rewards once acr
   for (let n = 0; n < 2; n++)
     await act(
       { kind: 'craft', recipeId: 'plank', stationId: 'workbench-plaza' },
-      () => ({ ...CRAFTING_STATIONS[0]!, direction: 'down' }),
+      () => ({
+        x: CRAFTING_STATIONS[0]!.x,
+        y: CRAFTING_STATIONS[0]!.y,
+        direction: 'down',
+      }),
     );
   for (const monsterId of ['slime-1', 'slime-2']) {
     const m = s.monstersManager.get(monsterId)!;

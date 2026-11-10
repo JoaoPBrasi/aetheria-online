@@ -7,6 +7,17 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 
 ## [Unreleased]
 
+### Missões persistentes e recompensas transacionais
+
+- Missão do Eldrin salva em `CharacterQuest`, com progresso e data de conclusão por personagem.
+- Coleta, fabricação e abate atualizam os objetivos na mesma transação dos itens e XP.
+- Entrega concede exatamente 50 XP de Guerreiro, 5 sementes de nabo e 2 de abóbora.
+- Recompensas e conclusão são atômicas; mochila cheia ou falha no banco permitem tentar novamente.
+- Bloqueio por personagem impede recompensas duplicadas em entregas simultâneas ou repetidas.
+- Aceite e entrega validam o comando e exigem proximidade do NPC no servidor.
+- Diálogo aguarda confirmação e apresenta erros; coleta conta a quantidade de madeira recebida.
+- Removido o gerenciador de missões em memória e corrigida a dependência do painel nos atalhos do HUD.
+
 ### Criação de Itens (Crafting), Combate Corpo a Corpo e Slimes
 
 #### Adicionado

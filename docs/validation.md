@@ -123,3 +123,27 @@ resolução real igual ao viewport. Screenshots immersive-hud, immersive-invento
 immersive-1024 foram revisadas. Build, TypeScript e lint passaram.
 A imagem de referência orientou composição do HUD; a arte do mundo continua no estágio
 geométrico do protótipo. Sem migração de banco ou alteração dos dados dos personagens.
+
+## Missões persistentes — 10/11/2026
+
+33 testes unitários, 24 testes de integração e 6 cenários de navegador passaram.
+Build, TypeScript (cliente, servidor e ferramentas) e lint passaram.
+A migração `20261110000500_quests` foi aplicada ao banco local e validada em
+banco temporário com todas as cinco migrações desde zero.
+
+Os testes cobrem o ciclo real de coleta, fabricação e abate, contagem por quantidade,
+recibos repetidos, rejeição de comandos inválidos, isolamento entre personagens,
+proximidade do NPC, entrega antes dos objetivos e entrega concorrente em duas
+instâncias de serviço. Conferem os incrementos exatos de 50 XP, 5 sementes de nabo
+e 2 de abóbora, sem duplicação em nova tentativa ou reaceite.
+
+Mochila sem espaço para a segunda recompensa e overflow de XP no PostgreSQL
+provam que falhas não consomem a missão nem deixam itens parcialmente entregues.
+Progresso da missão foi recuperado após reinício real do servidor, junto de
+posição, inventário, XP e prazo de cultivo. O navegador verificou confirmação
+do aceite, restauração após sair/reentrar, personalização, movimento com mochila
+aberta, multiplayer, coleta e agricultura completa com prazo real de crescimento.
+
+O gerenciador antigo e seus 3 testes exclusivamente em memória foram removidos;
+foram adicionados 4 testes de integração persistente e 1 teste de contrato Zod.
+Consulte `docs/quests.md` para o escopo restante do combate.
