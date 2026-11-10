@@ -47,6 +47,7 @@ Os modelos continuam em `apps/server/prisma/schema.prisma`, com as mesmas migra�
 | Comando                             | Função                                                                  |
 | ----------------------------------- | ----------------------------------------------------------------------- |
 | `pnpm dev`                          | Cliente, servidor e shared em modo de desenvolvimento                   |
+| `pnpm world:art`                    | Exportar o mapa e gerar terreno, casas e atlas Pixel Crawler            |
 | `pnpm build`                        | Gerar Prisma Client e compilar todos os pacotes                         |
 | `pnpm lint`                         | ESLint                                                                  |
 | `pnpm format:check` / `pnpm format` | Verificar / aplicar Prettier                                            |
@@ -108,11 +109,19 @@ O proxy Vite encaminha HTTP e WebSocket para o backend. O token não aparece no 
 
 ## Limites desta entrega
 
-O mapa Tiled 64×64 tem exploração local por WASD/setas, colisões e câmera. A posição é sincronizada pelo servidor a 20 Hz, com predição local e interpolação remota de 100 ms. Reconexão automática tem janela de 15 segundos. A Etapa 4 salva a posição a cada 30 segundos, ao realizar operações de inventário/coleta e na saída normal. Itens, equipamentos e XP são confirmados em transações Prisma antes de aparecerem na mochila. Uma queda abrupta pode perder apenas o deslocamento ainda não salvo. Há mochila de 24 slots, equipamento, coleta de madeira/pedra/fibra e XP. Agricultura jogável, crafting, combate, NPC e dash pertencem às próximas etapas. Seus modelos e fronteiras arquiteturais estão preparados; cada sistema será implementado e validado na etapa correspondente.
+O mapa jogável de 96×96 tiles tem exploração por WASD/setas, colisões e câmera.
+Inclui oito construções, lago, rio, pontes, hortas, campos de monstros e cemitério.
+Veja [expansão de Brumavale](docs/world-expansion.md) para detalhes e geração dos assets.
+A posição é sincronizada pelo servidor a 20 Hz, com predição local e interpolação remota
+de 100 ms. Reconexão automática tem janela de 15 segundos. A posição é salva a cada
+30 segundos, nas operações econômicas e na saída normal. Uma queda abrupta pode perder
+o deslocamento ainda não salvo. Mochila, coleta, agricultura, crafting, combate e
+missões persistentes já são jogáveis. Dash e interiores das casas continuam pendentes.
 
 Identidade local é desabilitada por padrão e recusada em `NODE_ENV=production`. Não publicar esta versão como jogo público: ainda falta autenticação real. O projeto não realiza deploy nem usa serviços pagos.
 
-Há uma sala por processo. Não iniciar múltiplas réplicas esperando coordenação entre elas. Reconexão automática, simulação a 20 Hz e salvamento periódico pertencem às próximas etapas. Nesta etapa, as operações existentes já são gravadas no banco antes de serem confirmadas.
+Há uma sala por processo. Não iniciar múltiplas réplicas esperando coordenação entre elas.
+As operações econômicas são gravadas no banco antes de serem confirmadas.
 
 Phaser é carregado sob demanda em um chunk separado; o build informa que esse chunk ultrapassa 500 kB. Não foram introduzidas otimizações adicionais sem medição.
 
@@ -170,11 +179,11 @@ na mochila ou no equipamento: trocar de ferramenta manualmente é opcional.
 
 B abre a mochila; L abre Ofícios e a disponibilidade das ferramentas; H abre a visão
 avançada da horta. ESC fecha o painel, inclusive quando um campo está selecionado.
-Ações e movimento ficam bloqueados enquanto um painel está aberto. A interface inclui
+O movimento continua com painéis abertos; campos de texto recebem as teclas de digitação. A interface inclui
 feedback de materiais recebidos, jogadores próximos e o contexto da próxima ação.
 Na horta, E prepara, planta, rega e colhe conforme o estado. Na etapa de plantio, os
 botões rápidos escolhem nabo ou abóbora. Liberar uma parcela continua na visão H.
 
 A referência visual enviada orientou a distribuição: mundo como foco, identificação
-nos cantos, atalhos embaixo e janelas sobrepostas. A arte geométrica do mapa continua
-sendo a do protótipo; a reformulação desta entrega trata da interação e da interface.
+nos cantos, atalhos embaixo e janelas sobrepostas. A expansão posterior substituiu
+o terreno e as construções por composições Pixel Crawler.

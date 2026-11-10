@@ -3,10 +3,12 @@ import {
   canStand,
   type ItemId,
   type MonsterSnapshot,
+  type MonsterKind,
 } from '@aetheria/shared';
 
 export interface RuntimeMonster {
   id: string;
+  kind: MonsterKind;
   name: string;
   x: number;
   y: number;
@@ -43,6 +45,7 @@ export class MonsterManager {
     for (const def of MONSTERS) {
       this.monsters.set(def.id, {
         id: def.id,
+        kind: def.kind,
         name: def.name,
         x: def.spawnX,
         y: def.spawnY,

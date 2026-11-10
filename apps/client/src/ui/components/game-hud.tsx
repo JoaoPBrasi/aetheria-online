@@ -5,6 +5,8 @@ import {
   interaction,
   PROFESSION_NAMES,
   levelForXp,
+  WORLD_REGIONS,
+  TILE_SIZE,
   type CropId,
   type CraftingStationId,
 } from '@aetheria/shared';
@@ -35,6 +37,15 @@ export function GameHud({
   onExit: () => void;
 }) {
   const s = useSyncExternalStore(gameBridge.subscribe, gameBridge.getSnapshot);
+  const region =
+    s.position &&
+    WORLD_REGIONS.find(
+      (r) =>
+        s.position!.x / TILE_SIZE >= r.x &&
+        s.position!.x / TILE_SIZE < r.x + r.w &&
+        s.position!.y / TILE_SIZE >= r.y &&
+        s.position!.y / TILE_SIZE < r.y + r.h,
+    );
   const [panel, setPanel] = useState<
     'bag' | 'skills' | 'farm' | 'crafting' | 'dialogue' | 'quests' | null
   >(null);
@@ -204,7 +215,9 @@ export function GameHud({
       </div>
       <div className="hud-location">
         <span>AETHERIA / TERRAS LIVRES</span>
-        <strong>Brumavale</strong>
+        <strong data-testid="world-region">
+          {region?.name ?? 'Terras de Brumavale'}
+        </strong>
         <small>WASD · mover &nbsp; E · interagir</small>
         <button onClick={onExit}>Sair da sala</button>
       </div>

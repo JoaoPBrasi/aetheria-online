@@ -36,7 +36,12 @@ Na Etapa 4, operações econômicas serão serializadas por personagem, executad
 
 ## Escala e arte
 
-Tiles: 32×32; top-down; identidade original em português. Dash adiado. Vila planejada: Brumavale, 64×64 tiles. Camadas visuais Ground, Decoration, Obstacles e AbovePlayer; camadas de objetos Interactions e SpawnPoints. Cliente e servidor consumirão os mesmos obstáculos exportados pelo Tiled. A ilustração atual usa apenas formas geométricas originais, sem recursos de terceiros.
+Tiles: 32×32; top-down; Brumavale possui 96×96 tiles. Cliente e servidor usam
+o terreno determinístico de `packages/shared/src/data/world.ts`. O exportador
+gera a grade Tiled e o plano da arte; o compositor produz o terreno e um atlas
+Pixel Crawler. O Phaser organiza os objetos por profundidade a partir da base.
+Os assets-fonte, autoria e termos estão em `art/pixel-crawler`.
+Veja [expansão de Brumavale](world-expansion.md) para regiões e geração.
 
 ## Referências de API
 

@@ -4,7 +4,16 @@ import {
   MAP_SIZE,
   WORLD_SPAWN,
   landmarks,
+  WORLD_PATHS,
+  WORLD_REGIONS,
+  BRIDGES,
+  ROCKS,
+  VILLAGE_PROPS,
+  WORLD_ART_REVISION,
 } from '../packages/shared/src/data/world.js';
+import { CEMETERY } from '../packages/shared/src/data/cemetery.js';
+import { MONSTERS } from '../packages/shared/src/data/gameplay.js';
+import { FARM_PLOTS } from '../packages/shared/src/data/index.js';
 import { TILE_SIZE } from '../packages/shared/src/constants/index.js';
 const dir = new URL('../apps/client/public/maps/', import.meta.url);
 await mkdir(dir, { recursive: true });
@@ -104,6 +113,24 @@ const map = {
   ],
 };
 await writeFile(new URL('brumavale.tmj', dir), JSON.stringify(map));
+await writeFile(
+  new URL('world-art-plan.json', dir),
+  JSON.stringify({
+    revision: WORLD_ART_REVISION,
+    size: MAP_SIZE,
+    tileSize: TILE_SIZE,
+    tiles: worldTiles,
+    landmarks,
+    paths: WORLD_PATHS,
+    regions: WORLD_REGIONS,
+    bridges: BRIDGES,
+    rocks: ROCKS,
+    villageProps: VILLAGE_PROPS,
+    cemetery: CEMETERY,
+    monsters: MONSTERS,
+    farmPlots: FARM_PLOTS,
+  }),
+);
 await writeFile(
   new URL('world-tiles.svg', dir),
   `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="32">${['#426747', '#a49470', '#72503c', '#397c89', '#354e38'].map((fill, i) => `<rect x="${i * 32}" width="32" height="32" fill="${fill}"/>`).join('')}</svg>`,

@@ -133,6 +133,28 @@ describe.sequential('foundation against real PostgreSQL and WebSockets', () => {
     await expect.poll(() => rb.state.players.size).toBe(1);
     await rb.leave();
   });
+  it('replicates and persists movement beyond the old map boundary', async () => {
+    const a = await identity('Explorador Leste');
+    await db.query('UPDATE "Character" SET x=$1, y=$2 WHERE id=$3', [
+      2512,
+      1040,
+      a.character.id,
+    ]);
+    const room = await join(a.token);
+    await expect
+      .poll(() => room.state.players.get(room.sessionId)?.x)
+      .toBe(2512);
+    room.send('move', { seq: 1, dx: 1, dy: 0 });
+    await expect
+      .poll(() => room.state.players.get(room.sessionId)?.x)
+      .toBe(2520);
+    await room.leave();
+    const returned = await join(a.token);
+    await expect
+      .poll(() => returned.state.players.get(returned.sessionId)?.x)
+      .toBe(2520);
+    await returned.leave();
+  });
   it('reports real health and seeds idempotently', async () => {
     expect((await fetch(`${base}/health/live`)).status).toBe(200);
     expect((await fetch(`${base}/health/ready`)).status).toBe(200);

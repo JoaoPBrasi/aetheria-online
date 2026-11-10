@@ -156,6 +156,27 @@ it('persists actual gather/craft/kill progress and grants exact rewards once acr
   });
 });
 
+it('grants orc loot and XP without advancing the slime objective', async () => {
+  const { id, s } = await fixture();
+  await s.acceptQuest(id, command, near);
+  const before = await s.sync(id);
+  const monster = s.monstersManager.get('orc-1')!;
+  monster.health = 20;
+  const after = await s.act(
+    id,
+    {
+      id: randomUUID(),
+      revision: before.revision,
+      kind: 'attack',
+      targetId: monster.id,
+    },
+    () => ({ x: monster.x, y: monster.y, direction: 'down' }),
+  );
+  expect(xp(after) - xp(before)).toBe(40);
+  expect(quantity(after, 'fiber') - quantity(before, 'fiber')).toBe(2);
+  expect((await service().quests(id))[0]?.progress.defeat_slimes).toBe(0);
+});
+
 it('keeps a quest claimable when the second reward does not fit; retry grants both rewards', async () => {
   const { id, s } = await fixture();
   await ready(id, s);

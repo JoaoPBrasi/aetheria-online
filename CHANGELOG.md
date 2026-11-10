@@ -7,6 +7,15 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 
 ## [Unreleased]
 
+### Vila e campos de exploração
+
+- Mapa jogável ampliado para 96×96 tiles, com 2,25 vezes a área anterior.
+- Oito construções compostas a partir das quatro referências: madeira, casa ribeirinha, estufa e cabana.
+- Rio, duas pontes, píer, hortas, mercado, campos do sul, acampamento orc e cemitério.
+- Doze monstros entre slimes, orcs e esqueletos; objetivo inicial conta somente slimes.
+- Terreno e atlas Pixel Crawler gerados por `pnpm world:art`, com proveniência e termos preservados.
+- Regiões identificadas no HUD e posições antigas de interação preservadas.
+
 ### Diário de missões e acompanhamento do HUD
 
 - Janela de missões pelo atalho `J` ou pelo botão Missões, com abas Em andamento e Concluídas.

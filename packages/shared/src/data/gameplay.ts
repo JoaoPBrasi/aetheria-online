@@ -141,8 +141,10 @@ export const CRAFTING_RECIPES: Record<string, CraftingRecipe> = {
 };
 export type RecipeId = keyof typeof CRAFTING_RECIPES;
 
+export type MonsterKind = 'slime' | 'orc' | 'skeleton';
 export interface MonsterDefinition {
   id: string;
+  kind: MonsterKind;
   name: string;
   spawnX: number;
   spawnY: number;
@@ -159,6 +161,7 @@ export interface MonsterDefinition {
 export const MONSTERS: readonly MonsterDefinition[] = [
   {
     id: 'slime-1',
+    kind: 'slime',
     name: 'Slime Saltitante',
     spawnX: 1540,
     spawnY: 1700,
@@ -173,6 +176,7 @@ export const MONSTERS: readonly MonsterDefinition[] = [
   },
   {
     id: 'slime-2',
+    kind: 'slime',
     name: 'Slime Espinhoso',
     spawnX: 1580,
     spawnY: 1730,
@@ -187,6 +191,7 @@ export const MONSTERS: readonly MonsterDefinition[] = [
   },
   {
     id: 'slime-3',
+    kind: 'slime',
     name: 'Slime Musgoso',
     spawnX: 1500,
     spawnY: 1740,
@@ -199,6 +204,88 @@ export const MONSTERS: readonly MonsterDefinition[] = [
     xp: 30,
     drop: { itemId: 'slime_goo', quantity: 2 },
   },
+  ...[
+    {
+      id: 'south-slime-1',
+      name: 'Slime do Campo',
+      kind: 'slime' as const,
+      spawnX: 1232,
+      spawnY: 2480,
+    },
+    {
+      id: 'south-slime-2',
+      name: 'Slime do Campo',
+      kind: 'slime' as const,
+      spawnX: 1392,
+      spawnY: 2544,
+    },
+    {
+      id: 'south-slime-3',
+      name: 'Slime do Campo',
+      kind: 'slime' as const,
+      spawnX: 1456,
+      spawnY: 2640,
+    },
+    {
+      id: 'orc-1',
+      name: 'Orc Batedor',
+      kind: 'orc' as const,
+      spawnX: 2480,
+      spawnY: 1392,
+    },
+    {
+      id: 'orc-2',
+      name: 'Orc Saqueador',
+      kind: 'orc' as const,
+      spawnX: 2672,
+      spawnY: 1456,
+    },
+    {
+      id: 'orc-3',
+      name: 'Orc Batedor',
+      kind: 'orc' as const,
+      spawnX: 2544,
+      spawnY: 1648,
+    },
+    {
+      id: 'orc-4',
+      name: 'Orc Saqueador',
+      kind: 'orc' as const,
+      spawnX: 2768,
+      spawnY: 1616,
+    },
+    {
+      id: 'skeleton-1',
+      name: 'Vigia Esquecido',
+      kind: 'skeleton' as const,
+      spawnX: 2672,
+      spawnY: 624,
+    },
+    {
+      id: 'skeleton-2',
+      name: 'Vigia Esquecido',
+      kind: 'skeleton' as const,
+      spawnX: 2640,
+      spawnY: 816,
+    },
+  ].map((m) => ({
+    ...m,
+    maxHealth: m.kind === 'slime' ? 60 : 90,
+    damage: m.kind === 'slime' ? 10 : 14,
+    speed: m.kind === 'orc' ? 72 : 64,
+    aggroRange: 120,
+    attackRange: 36,
+    returnRange: 180,
+    xp: m.kind === 'slime' ? 30 : 40,
+    drop: {
+      itemId: (m.kind === 'slime'
+        ? 'slime_goo'
+        : m.kind === 'orc'
+          ? 'fiber'
+          : 'stone') as ItemId,
+      quantity: 2,
+    },
+  })),
 ] as const;
 
 export interface MonsterSnapshot {

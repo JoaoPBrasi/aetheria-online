@@ -15,6 +15,7 @@ import {
   type GameplaySnapshot,
   type ItemId,
   type Slot,
+  type MonsterKind,
 } from '@aetheria/shared';
 type Position = { x: number; y: number; direction: string };
 export class GameplayRepository {
@@ -30,6 +31,7 @@ export class GameplayRepository {
       profession: string;
       quantity?: number;
       xp?: number;
+      monster?: MonsterKind;
     },
     position?: Position,
   ): Promise<GameplaySnapshot> {
@@ -268,7 +270,13 @@ export class GameplayRepository {
       if (action?.kind === 'attack') {
         if (reward) {
           slots = addItem(slots, reward.item, reward.quantity ?? 1);
-          await advanceQuests(tx, characterId, 'defeat', 'slime', 1);
+          await advanceQuests(
+            tx,
+            characterId,
+            'defeat',
+            reward.monster ?? 'slime',
+            1,
+          );
           await tx.characterSkill.update({
             where: {
               characterId_profession: {

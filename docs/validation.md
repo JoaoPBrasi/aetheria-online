@@ -167,3 +167,33 @@ Screenshots `quest-journal-active`, `quest-journal-completed`,
 `quest-journal-1024` e `quest-journal-compact` foram geradas. Layouts de
 1440×1000 e 560×820 foram inspecionados visualmente; o teste também verificou
 1024×768 e ausência de overflow horizontal na janela compacta.
+
+## Expansão jogável e casas — 10/11/2026
+
+34 testes unitários, 26 testes de integração e 8 cenários completos de
+navegador passaram. Build, TypeScript do cliente/servidor/ferramentas e
+lint passaram. O banco temporário recebeu as cinco migrações existentes;
+esta expansão não requer nova migração.
+
+O teste de conectividade percorre a grade com o tamanho do jogador e verifica
+o acesso a todas as fachadas, parcelas e spawns, além das pontes e novas
+regiões. Todos os spawns ficam fora do alcance de perseguição da praça.
+Um teste WebSocket recupera uma posição além de 2048 pixels, movimenta e
+confere a persistência ao reentrar. Outro teste concede o loot e XP de um
+orc e confirma que isso não avança a missão de slimes.
+
+No Chrome, o personagem atravessou o rio, chegou ao Acampamento dos Orcs,
+saiu, recarregou e recuperou sua posição na região ampliada. O canvas
+informou 3072×3072 pixels de mundo; não houve erro JavaScript nesse fluxo.
+Os cenários existentes de multiplayer, personalização, coleta, agricultura
+com prazo real de 60 segundos e diário de missões continuaram passando.
+
+Foram inspecionadas visualmente a galeria das quatro casas, a composição
+geral, a vila no jogo e o campo dos orcs. O atlas contém 113 frames e
+1338 objetos estáticos; referências e limites dos recortes foram conferidos.
+Prévias em `work/house-models.png`, `work/brumavale-expanded.png`,
+`work/village-expanded.png` e `work/orc-field.png`.
+
+Limites: as construções ainda são exteriores; os novos inimigos reutilizam
+a IA e o combate atuais, com animação de repouso durante deslocamento.
+Não foi feito benchmark formal de desempenho nesta entrega.

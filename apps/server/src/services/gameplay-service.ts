@@ -89,6 +89,7 @@ export class GameplayService {
               quantity: monster.drop.quantity,
               profession: 'warrior',
               xp: monster.xp,
+              monster: monster.kind,
             }
           : undefined;
 

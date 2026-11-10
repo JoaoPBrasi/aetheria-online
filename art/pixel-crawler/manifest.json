@@ -1,0 +1,103 @@
+{
+  "pack": "Pixel Crawler - Free Pack 2.11",
+  "author": "Anokolisa",
+  "license": "Terms.txt",
+  "sprites": {
+    "floors": {
+      "file": "floors.png",
+      "source": "Environment/Tilesets/Floors_Tiles.png"
+    },
+    "water": {
+      "file": "water.png",
+      "source": "Environment/Tilesets/Water_tiles.png"
+    },
+    "dungeon": {
+      "file": "dungeon.png",
+      "source": "Environment/Tilesets/Dungeon_Tiles.png"
+    },
+    "dungeonProps": {
+      "file": "dungeonProps.png",
+      "source": "Environment/Props/Static/Dungeon_Props.png"
+    },
+    "cliff": {
+      "file": "cliff.png",
+      "source": "Environment/Tilesets/Wall_Tiles.png"
+    },
+    "walls": {
+      "file": "walls.png",
+      "source": "Environment/Structures/Buildings/Walls.png"
+    },
+    "roofs": {
+      "file": "roofs.png",
+      "source": "Environment/Structures/Buildings/Roofs.png"
+    },
+    "buildingProps": {
+      "file": "buildingProps.png",
+      "source": "Environment/Structures/Buildings/Props.png"
+    },
+    "oak": {
+      "file": "oak.png",
+      "source": "Environment/Props/Static/Trees/Model_01/Size_03.png"
+    },
+    "pine": {
+      "file": "pine.png",
+      "source": "Environment/Props/Static/Trees/Model_02/Size_03.png"
+    },
+    "vegetation": {
+      "file": "vegetation.png",
+      "source": "Environment/Props/Static/Vegetation.png"
+    },
+    "rocks": {
+      "file": "rocks.png",
+      "source": "Environment/Props/Static/Rocks.png"
+    },
+    "farm": {
+      "file": "farm.png",
+      "source": "Environment/Props/Static/Farm.png"
+    },
+    "furniture": {
+      "file": "furniture.png",
+      "source": "Environment/Props/Static/Furniture.png"
+    },
+    "resources": {
+      "file": "resources.png",
+      "source": "Environment/Props/Static/Resources.png"
+    },
+    "anvil": {
+      "file": "anvil.png",
+      "source": "Environment/Structures/Stations/Anvil/Anvil.png"
+    },
+    "workbench": {
+      "file": "workbench.png",
+      "source": "Environment/Structures/Stations/Workbench/Workbench.png"
+    },
+    "bonfire": {
+      "file": "bonfire.png",
+      "source": "Environment/Structures/Stations/Bonfire/Bonfire_01-Sheet.png"
+    },
+    "furnace": {
+      "file": "furnace.png",
+      "source": "Environment/Structures/Stations/Furnace/Stone_01-Sheet.png"
+    },
+    "wizard": {
+      "file": "wizard.png",
+      "source": "Entities/Npc's/Wizzard/Idle/Idle-Sheet.png"
+    },
+    "knight": {
+      "file": "knight.png",
+      "source": "Entities/Npc's/Knight/Idle/Idle-Sheet.png"
+    },
+    "farmer": {
+      "file": "farmer.png",
+      "source": "Entities/Npc's/Citizen_F/Peasant_A/Idle/Idle-Sheet.png"
+    },
+    "orc": {
+      "file": "orc.png",
+      "source": "Entities/Mobs/Orc Crew/Orc/Idle/Idle-Sheet.png"
+    },
+    "skeleton": {
+      "file": "skeleton.png",
+      "source": "Entities/Mobs/Skeleton Crew/Skeleton - Base/Idle/Idle-Sheet.png"
+    }
+  }
+}

@@ -4,7 +4,8 @@ import {
   MAP_SIZE,
   TILE_SIZE,
   WORLD_SPAWN,
-  worldTiles,
+  WORLD_ART_REVISION,
+  WORLD_REGIONS,
   RESOURCES,
   FARM_PLOTS,
   CRAFTING_STATIONS,
@@ -12,6 +13,7 @@ import {
   interaction,
   MONSTERS,
   NPCS,
+  type WorldArtwork,
 } from '@aetheria/shared';
 import { gameBridge } from '../managers/game-bridge';
 import { movement } from '../networking/movement';
@@ -34,16 +36,22 @@ export class WorldScene extends Phaser.Scene {
     string,
     {
       container: Phaser.GameObjects.Container;
-      body: Phaser.GameObjects.Ellipse;
+      body: Phaser.GameObjects.Ellipse | Phaser.GameObjects.Sprite;
       hpFill: Phaser.GameObjects.Rectangle;
+      barWidth: number;
     }
   >();
   constructor() {
     super('world');
   }
   preload() {
-    this.load.tilemapTiledJSON('brumavale', '/maps/brumavale.tmj');
-    this.load.image('world-tiles', '/sprites/tileset-brumavale.png');
+    this.load.image('world-ground', '/sprites/brumavale-ground.png');
+    this.load.atlas(
+      'world-props',
+      '/sprites/brumavale-props.png',
+      '/maps/brumavale-props.json',
+    );
+    this.load.json('world-art', '/maps/brumavale-art.json');
     this.load.spritesheet('npc-wizard', '/sprites/npc-wizard-idle.png', {
       frameWidth: 32,
       frameHeight: 32,
@@ -58,21 +66,37 @@ export class WorldScene extends Phaser.Scene {
     this.load.image('resource-wood-log', '/sprites/resource-wood-log.png');
     this.load.image('resource-rock', '/sprites/resource-rock.png');
     this.load.image('resource-bush', '/sprites/resource-bush.png');
-    this.load.image('tree-large', '/sprites/tree-large.png');
-    this.load.image('tree-medium', '/sprites/tree-medium.png');
     this.load.image('farm-plot-tilled', '/sprites/farm-plot-tilled.png');
-    this.load.image('farm-fence', '/sprites/farm-fence.png');
-    this.load.image('building-house', '/sprites/building-house.png');
-    this.load.image('building-warehouse', '/sprites/building-warehouse.png');
-    this.load.image('building-blacksmith', '/sprites/building-blacksmith.png');
   }
   create() {
     this.focusRing = this.add.graphics().setDepth(5001);
 
-    const map = this.make.tilemap({ key: 'brumavale' });
-    const tiles = map.addTilesetImage('world-tiles');
-    if (!tiles) throw new Error('Tileset indisponível');
-    map.createLayer('Ground', tiles, 0, 0);
+    const artwork = this.cache.json.get('world-art') as WorldArtwork;
+    if (
+      artwork.revision !== WORLD_ART_REVISION ||
+      artwork.width !== MAP_SIZE * TILE_SIZE ||
+      artwork.height !== MAP_SIZE * TILE_SIZE
+    )
+      throw new Error('O mapa visual precisa ser gerado novamente.');
+    this.game.canvas.dataset.worldWidth = String(artwork.width);
+    this.game.canvas.dataset.worldHeight = String(artwork.height);
+    this.add.image(0, 0, 'world-ground').setOrigin(0).setDepth(-1);
+    for (const p of artwork.props)
+      this.add
+        .image(p.x, p.y, 'world-props', p.frame)
+        .setOrigin(0)
+        .setDepth(p.depth);
+    for (const kind of ['orc', 'skeleton'])
+      if (!this.anims.exists(`${kind}-idle`))
+        this.anims.create({
+          key: `${kind}-idle`,
+          frames: Array.from({ length: 4 }, (_, i) => ({
+            key: 'world-props',
+            frame: `${kind}-idle-${i}`,
+          })),
+          frameRate: 5,
+          repeat: -1,
+        });
 
     if (!this.anims.exists('npc-wizard-idle')) {
       this.anims.create({
@@ -123,8 +147,13 @@ export class WorldScene extends Phaser.Scene {
     const minPlotY = Math.min(...FARM_PLOTS.map((p) => p.tileY * 32 + 16));
     const maxPlotY = Math.max(...FARM_PLOTS.map((p) => p.tileY * 32 + 16));
     for (let fx = minPlotX - 16; fx <= maxPlotX + 16; fx += 32) {
-      this.add.image(fx, minPlotY - 24, 'farm-fence').setDepth(minPlotY - 24);
-      this.add.image(fx, maxPlotY + 24, 'farm-fence').setDepth(maxPlotY + 24);
+      if (fx < minPlotX + 48 || fx > minPlotX + 112)
+        this.add
+          .image(fx, minPlotY - 24, 'world-props', 'fence:white')
+          .setDepth(minPlotY - 24);
+      this.add
+        .image(fx, maxPlotY + 24, 'world-props', 'fence:white')
+        .setDepth(maxPlotY + 24);
     }
     for (const node of RESOURCES) {
       const isWood = node.item === 'wood';
@@ -165,7 +194,14 @@ export class WorldScene extends Phaser.Scene {
       const isForge = station.type === 'forge';
       const textureKey = isForge ? 'station-anvil' : 'station-workbench';
       this.add
-        .ellipse(station.x, station.y + 12, isForge ? 46 : 42, 14, 0x132b24, 0.35)
+        .ellipse(
+          station.x,
+          station.y + 12,
+          isForge ? 46 : 42,
+          14,
+          0x132b24,
+          0.35,
+        )
         .setDepth(station.y - 1);
       this.add
         .image(station.x, station.y, textureKey)
@@ -228,57 +264,25 @@ export class WorldScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => gameBridge.interact?.(npc.id));
     }
-    for (const b of landmarks) {
-      const x = b.x * 32,
-        y = b.y * 32,
-        w = b.w * 32,
-        h = b.h * 32;
-      const key =
-        b.name === 'Casa'
-          ? 'building-house'
-          : b.name === 'Armazém'
-            ? 'building-warehouse'
-            : 'building-blacksmith';
-
-      // Sombra projetada sob a fachada
-      this.add
-        .rectangle(x + w / 2, y + h - 6, w, 16, 0x132b24, 0.35)
-        .setDepth(y + h - 1);
-
-      // Fachada em pixel art com telhado medieval
-      this.add
-        .image(x + w / 2, y + h / 2, key)
-        .setDepth(y + h);
-
-      this.label(b.name, x + w / 2, y - 28);
-    }
+    for (const b of landmarks)
+      this.label(
+        b.name,
+        (b.x + b.w / 2) * TILE_SIZE,
+        (b.y + b.h) * TILE_SIZE + 24,
+      );
     this.label('BRUMAVALE · PRAÇA', 1040, 910);
-    this.label('LAGO DOS JUNÇOS', 1600, 250);
+    this.label('LAGO DOS JUNCOS', 1600, 250);
     this.label('FAZENDA', 440, 1100);
     this.label('BOSQUE ANTIGO', 370, 300);
     this.label('PEDREIRA', 1670, 1240);
-    this.label('PRADO DOS SLIMES', 1540, 1720);
-    // Árvores com profundidade: o jogador pode passar por trás de suas copas
-    for (let ty = 1; ty < 25; ty++)
-      for (let tx = 1; tx < 22; tx++) {
-        if (worldTiles[ty]?.[tx] !== 4) continue;
-        const x = tx * 32 + 16,
-          y = ty * 32 + 16;
-        const isBig = (tx * 7 + ty * 13) % 2 === 0;
-        if (isBig) {
-          this.add.ellipse(x, y + 4, 38, 14, 0x132b24, 0.35).setDepth(y - 1);
-          this.add.image(x, y - 40, 'tree-large').setDepth(y);
-        } else {
-          this.add.ellipse(x, y + 2, 28, 10, 0x132b24, 0.35).setDepth(y - 1);
-          this.add.image(x, y - 16, 'tree-medium').setDepth(y);
-        }
-      }
-    for (let i = 0; i < 13; i++) {
-      const x = 1490 + ((i * 53) % 350),
-        y = 1320 + ((i * 71) % 230);
-      this.add.ellipse(x, y + 8, 26, 10, 0x132b24, 0.35).setDepth(y - 1);
-      this.add.image(x, y, 'resource-rock').setDepth(y);
-    }
+    for (const r of WORLD_REGIONS.filter((r) => r.danger !== 'safe'))
+      this.label(
+        r.name.toUpperCase(),
+        (r.x + r.w / 2) * TILE_SIZE,
+        r.y * TILE_SIZE - 24,
+      );
+    this.label('CAMPOS DO SUL ↓', 1040, 2030);
+    this.label('ORCS →', 2260, 1040);
     const shadow = this.add.ellipse(0, 0, 25, 10, 0x132b24, 0.4);
     const legs = this.add.rectangle(0, -6, 14, 12, 0x35434c);
     this.bodyShape = this.add.rectangle(0, -18, 22, 19, 0xc4d597);
@@ -530,23 +534,44 @@ export class WorldScene extends Phaser.Scene {
       let entry = this.monsterSprites.get(m.id);
       if (!entry) {
         const def = MONSTERS.find((d) => d.id === m.id);
-        const name = def?.name ?? 'Slime';
+        const name = def?.name ?? 'Monstro';
+        const hostile = !!def && def.kind !== 'slime';
+        const barWidth = hostile ? 36 : 26;
         const shadow = this.add.ellipse(0, 0, 26, 10, 0x132b24, 0.4);
-        const body = this.add.ellipse(0, -12, 28, 22, 0x5cd65c);
-        const eyeLeft = this.add.ellipse(-5, -14, 4, 6, 0x132b24);
-        const eyeRight = this.add.ellipse(5, -14, 4, 6, 0x132b24);
-        const pupilLeft = this.add.ellipse(-4, -15, 2, 2, 0xffffff);
-        const pupilRight = this.add.ellipse(6, -15, 2, 2, 0xffffff);
+        const body = hostile
+          ? this.add
+              .sprite(0, 4, 'world-props', `${def.kind}-idle-0`)
+              .setOrigin(0.5, 1)
+              .play(`${def.kind}-idle`)
+          : this.add.ellipse(0, -12, 28, 22, 0x5cd65c);
+        const eyeLeft = this.add
+          .ellipse(-5, -14, 4, 6, 0x132b24)
+          .setVisible(!hostile);
+        const eyeRight = this.add
+          .ellipse(5, -14, 4, 6, 0x132b24)
+          .setVisible(!hostile);
+        const pupilLeft = this.add
+          .ellipse(-4, -15, 2, 2, 0xffffff)
+          .setVisible(!hostile);
+        const pupilRight = this.add
+          .ellipse(6, -15, 2, 2, 0xffffff)
+          .setVisible(!hostile);
         const label = this.add
-          .text(0, -32, name, {
+          .text(0, hostile ? -68 : -32, name, {
             fontSize: '10px',
-            color: '#bbf2b6',
+            color: hostile ? '#efd0af' : '#bbf2b6',
             backgroundColor: '#183820',
           })
           .setOrigin(0.5);
-        const hpBg = this.add.rectangle(0, -22, 26, 4, 0x222222);
+        const hpBg = this.add.rectangle(
+          0,
+          hostile ? -54 : -22,
+          barWidth,
+          4,
+          0x222222,
+        );
         const hpFill = this.add
-          .rectangle(-13, -22, 26, 4, 0x33cc33)
+          .rectangle(-barWidth / 2, hostile ? -54 : -22, barWidth, 4, 0x33cc33)
           .setOrigin(0, 0.5);
 
         const container = this.add.container(m.x, m.y, [
@@ -560,12 +585,12 @@ export class WorldScene extends Phaser.Scene {
           hpBg,
           hpFill,
         ]);
-        container.setSize(32, 32);
+        container.setSize(hostile ? 48 : 32, hostile ? 64 : 32);
         container
           .setInteractive({ useHandCursor: true })
           .on('pointerdown', () => gameBridge.interact?.(m.id));
 
-        entry = { container, body, hpFill };
+        entry = { container, body, hpFill, barWidth };
         this.monsterSprites.set(m.id, entry);
       }
 
@@ -575,9 +600,10 @@ export class WorldScene extends Phaser.Scene {
         entry.container.setVisible(true);
         entry.container.setPosition(m.x, m.y).setDepth(m.y);
         const squish = 1 + Math.sin(time / 150 + m.x) * 0.12;
-        entry.body.setScale(1 / squish, squish);
+        if (entry.body instanceof Phaser.GameObjects.Ellipse)
+          entry.body.setScale(1 / squish, squish);
         const pct = Math.max(0, Math.min(1, m.health / m.maxHealth));
-        entry.hpFill.width = 26 * pct;
+        entry.hpFill.width = entry.barWidth * pct;
         entry.hpFill.setFillStyle(pct > 0.3 ? 0x33cc33 : 0xcc3333);
       }
     }
