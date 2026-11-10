@@ -1,0 +1,185 @@
+import { z } from 'zod';
+import type { ItemId } from './gameplay.js';
+import type { NpcId } from './npcs.js';
+
+export const QUEST_STATUSES = [
+  'not_started',
+  'in_progress',
+  'ready_to_turn_in',
+  'completed',
+] as const;
+
+export type QuestStatus = (typeof QUEST_STATUSES)[number];
+
+export const QuestStatusSchema = z.enum(QUEST_STATUSES);
+
+export type QuestObjectiveType = 'gather' | 'craft' | 'defeat';
+
+export interface QuestObjective {
+  id: string;
+  type: QuestObjectiveType;
+  targetId: string;
+  description: string;
+  required: number;
+}
+
+export interface QuestReward {
+  xp: {
+    profession: string;
+    amount: number;
+  };
+  items: {
+    itemId: ItemId;
+    quantity: number;
+  }[];
+}
+
+export interface QuestDefinition {
+  id: string;
+  title: string;
+  description: string;
+  giverNpcId: NpcId;
+  dialogues: {
+    offer: string;
+    inProgress: string;
+    readyToTurnIn: string;
+    completed: string;
+  };
+  objectives: QuestObjective[];
+  rewards: QuestReward;
+}
+
+export const TUTORIAL_QUEST: QuestDefinition = {
+  id: 'tutorial_first_steps',
+  title: 'Primeiros Passos em Brumavale',
+  description:
+    'O Ancião Eldrin pediu que você aprenda os fundamentos de sobrevivência: colha madeira, fabrique tábuas e derrote slimes que ameaçam a vila.',
+  giverNpcId: 'elder-eldrin',
+  dialogues: {
+    offer:
+      'Jovem aventureiro! Vejo grande potencial em você, mas Brumavale exige preparo. Tenho uma missão introdutória: colha 5 madeiras, fabrique 2 tábuas na bancada e derrote 2 slimes no prado ao sul. Posso contar com você?',
+    inProgress:
+      'Como vão os preparativos? Lembre-se: equipe seu machado para colher madeira, use a Bancada de Trabalho para fazer tábuas e enfrente os slimes com cautela.',
+    readyToTurnIn:
+      'Extraordinário! Você provou sua coragem e capacidade de trabalho. Aqui estão sementes para sua horta e a recompensa em experiência que você merece. Seja oficialmente bem-vindo a Brumavale!',
+    completed:
+      'Você já concluiu meus primeiros ensinamentos com louvor. Continue explorando, cuidando da horta e protegendo nossa vila!',
+  },
+  objectives: [
+    {
+      id: 'gather_wood',
+      type: 'gather',
+      targetId: 'wood',
+      description: 'Coletar madeira nos troncos caídos',
+      required: 5,
+    },
+    {
+      id: 'craft_planks',
+      type: 'craft',
+      targetId: 'plank',
+      description: 'Fabricar tábuas de madeira na Bancada',
+      required: 2,
+    },
+    {
+      id: 'defeat_slimes',
+      type: 'defeat',
+      targetId: 'slime',
+      description: 'Derrotar slimes no Prado Sul',
+      required: 2,
+    },
+  ],
+  rewards: {
+    xp: {
+      profession: 'warrior',
+      amount: 50,
+    },
+    items: [
+      { itemId: 'turnip_seed', quantity: 5 },
+      { itemId: 'pumpkin_seed', quantity: 2 },
+    ],
+  },
+};
+
+export const QUESTS: Record<string, QuestDefinition> = {
+  [TUTORIAL_QUEST.id]: TUTORIAL_QUEST,
+};
+
+export type QuestId = keyof typeof QUESTS;
+
+export interface CharacterQuestState {
+  questId: QuestId;
+  status: QuestStatus;
+  progress: Record<string, number>;
+  completedAt?: number;
+}
+
+export const CharacterQuestStateSchema = z.object({
+  questId: z.string(),
+  status: QuestStatusSchema,
+  progress: z.record(z.string(), z.number().int().min(0)),
+  completedAt: z.number().optional(),
+});
+
+export function createInitialQuestState(questId: QuestId): CharacterQuestState {
+  const quest = QUESTS[questId];
+  const progress: Record<string, number> = {};
+  if (quest) {
+    for (const obj of quest.objectives) {
+      progress[obj.id] = 0;
+    }
+  }
+  return {
+    questId,
+    status: 'in_progress',
+    progress,
+  };
+}
+
+export function isQuestObjectivesMet(
+  quest: QuestDefinition,
+  progress: Record<string, number>,
+): boolean {
+  return quest.objectives.every(
+    (obj) => (progress[obj.id] ?? 0) >= obj.required,
+  );
+}
+
+export function advanceQuestObjective(
+  state: CharacterQuestState,
+  quest: QuestDefinition,
+  objectiveType: QuestObjectiveType,
+  targetId: string,
+  amount = 1,
+): { updatedState: CharacterQuestState; changed: boolean } {
+  if (state.status !== 'in_progress') {
+    return { updatedState: state, changed: false };
+  }
+
+  let changed = false;
+  const nextProgress = { ...state.progress };
+
+  for (const obj of quest.objectives) {
+    if (obj.type === objectiveType && obj.targetId === targetId) {
+      const current = nextProgress[obj.id] ?? 0;
+      if (current < obj.required) {
+        const nextValue = Math.min(obj.required, current + amount);
+        nextProgress[obj.id] = nextValue;
+        changed = true;
+      }
+    }
+  }
+
+  if (!changed) {
+    return { updatedState: state, changed: false };
+  }
+
+  const allMet = isQuestObjectivesMet(quest, nextProgress);
+  return {
+    updatedState: {
+      ...state,
+      progress: nextProgress,
+      status: allMet ? 'ready_to_turn_in' : 'in_progress',
+    },
+    changed: true,
+  };
+}

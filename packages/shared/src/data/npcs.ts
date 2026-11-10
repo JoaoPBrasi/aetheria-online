@@ -2,6 +2,8 @@ export interface DialogueTopic {
   id: string;
   prompt: string;
   response: string;
+  action?: 'accept_quest' | 'turn_in_quest';
+  questId?: string;
 }
 
 export interface NPCDefinition {
@@ -24,6 +26,14 @@ export const NPCS: readonly NPCDefinition[] = [
     greeting:
       'Saudações, nobre viajante! Bem-vindo a Brumavale. Sou Eldrin, o guardião desta vila. Como posso orientar sua jornada hoje?',
     topics: [
+      {
+        id: 'quest_tutorial',
+        prompt: '📜 Tenho coragem! Que tarefa você tem para mim?',
+        response:
+          'Jovem aventureiro! Vejo grande potencial em você, mas Brumavale exige preparo. Tenho uma missão introdutória: colha 5 madeiras, fabrique 2 tábuas na bancada e derrote 2 slimes no prado ao sul. Posso contar com você?',
+        action: 'accept_quest',
+        questId: 'tutorial_first_steps',
+      },
       {
         id: 'gather',
         prompt: 'Como consigo recursos básicos como madeira e pedra?',
