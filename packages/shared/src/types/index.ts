@@ -21,6 +21,7 @@ export interface GameSnapshot {
   feedback?: string;
   feedbackAt?: number;
   plots?: import('../data/farming.js').FarmSnapshot[];
+  quests?: import('../data/quests.js').CharacterQuestState[];
   status: ConnectionStatus;
   players: number;
   error: string | null;

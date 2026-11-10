@@ -1562,3 +1562,174 @@ footer {
   color: #7b8f80;
   cursor: not-allowed;
 }
+
+/* ==========================================================================
+   Rastreador de Missões (Quest Tracker) e Diálogos de Missões
+   ========================================================================== */
+.quest-tracker-shell {
+  position: absolute;
+  top: 130px;
+  right: 20px;
+  z-index: 45;
+  width: 280px;
+  background: rgba(18, 30, 24, 0.92);
+  border: 1px solid rgba(194, 173, 121, 0.35);
+  border-radius: 8px;
+  backdrop-filter: blur(6px);
+  color: #e9ece4;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  transition: all 0.2s ease-in-out;
+  overflow: hidden;
+}
+.quest-tracker-shell.ready {
+  border-color: #f7df94;
+  box-shadow: 0 0 16px rgba(247, 223, 148, 0.4);
+}
+.quest-tracker-shell.completed {
+  border-color: #7bc488;
+}
+.quest-tracker-shell.empty {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.quest-hint-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(22, 38, 29, 0.85);
+  border: 1px dashed rgba(194, 173, 121, 0.5);
+  padding: 6px 12px;
+  border-radius: 20px;
+  color: #cfd9c8;
+  font-size: 11px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+.quest-hint-pill:hover {
+  background: rgba(30, 52, 40, 0.95);
+  border-color: #f7df94;
+  color: #fcf8eb;
+}
+.quest-tracker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  background: rgba(29, 47, 38, 0.85);
+  border-bottom: 1px solid rgba(194, 173, 121, 0.2);
+  cursor: pointer;
+  user-select: none;
+}
+.quest-tracker-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.quest-tracker-title h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #f7df94;
+  letter-spacing: 0.3px;
+}
+.quest-toggle-button {
+  background: none;
+  border: none;
+  color: #a4bfae;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.quest-tracker-body {
+  padding: 10px 12px;
+}
+.quest-objectives-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.quest-objective-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #d1ded4;
+}
+.quest-objective-item.done {
+  color: #8ed38e;
+}
+.objective-checkbox {
+  font-weight: bold;
+  font-size: 12px;
+  color: #a4bfae;
+  min-width: 14px;
+}
+.quest-objective-item.done .objective-checkbox {
+  color: #8ed38e;
+}
+.objective-text {
+  flex: 1;
+}
+.objective-counter {
+  margin-left: 5px;
+  color: #f7df94;
+  font-weight: normal;
+}
+.quest-ready-banner {
+  margin-top: 10px;
+  padding: 7px 10px;
+  background: rgba(85, 71, 23, 0.6);
+  border: 1px solid rgba(247, 223, 148, 0.7);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: pulse-gold 2s infinite alternate;
+}
+.quest-ready-banner p {
+  margin: 0;
+  font-size: 10px;
+  color: #fff4d1;
+  font-weight: 600;
+}
+.quest-completed-banner {
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: rgba(30, 68, 41, 0.6);
+  border: 1px solid #7bc488;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.quest-completed-banner p {
+  margin: 0;
+  font-size: 10px;
+  color: #aff0bc;
+}
+@keyframes pulse-gold {
+  0% {
+    box-shadow: 0 0 4px rgba(247, 223, 148, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 12px rgba(247, 223, 148, 0.6);
+  }
+}
+.dialogue-topic-btn.quest-turn-in-btn {
+  background: linear-gradient(135deg, rgba(82, 69, 21, 0.9), rgba(39, 64, 47, 0.9));
+  border: 1px solid #f7df94;
+  color: #fff5d1;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(247, 223, 148, 0.3);
+}
+.dialogue-topic-btn.quest-turn-in-btn:hover {
+  background: linear-gradient(135deg, rgba(110, 93, 29, 0.95), rgba(49, 82, 59, 0.95));
+  border-color: #ffea9f;
+  box-shadow: 0 0 16px rgba(247, 223, 148, 0.6);
+}
+

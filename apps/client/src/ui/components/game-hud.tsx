@@ -14,6 +14,7 @@ import { GameplayPanel } from './gameplay-panel';
 import { CraftingPanel } from './crafting-panel';
 import { DialogueModal } from './dialogue-modal';
 import { Hotbar } from './hotbar';
+import { QuestTracker } from './quest-tracker';
 export function GameHud({
   connection,
   name,
@@ -187,6 +188,7 @@ export function GameHud({
         <small>WASD · mover &nbsp; E · interagir</small>
         <button onClick={onExit}>Sair da sala</button>
       </div>
+      <QuestTracker quests={s.quests} />
       <div className="hud-context" aria-live="polite">
         {s.status !== 'connected' ? (
           <p>Reconectando… As ações estão pausadas.</p>

@@ -87,6 +87,12 @@ export class WorldConnection {
           if (!this.disposed) gameBridge.update({ monsters });
         },
       );
+      room.onMessage(
+        'quests',
+        (quests: import('@aetheria/shared').CharacterQuestState[]) => {
+          if (!this.disposed) gameBridge.update({ quests });
+        },
+      );
       room.onMessage('gameplay', (snapshot: GameplaySnapshot) => {
         if (this.disposed) return;
         const old = gameBridge.getSnapshot().gameplay;
@@ -127,6 +133,10 @@ export class WorldConnection {
       });
       room.send('sync');
       movement.send = (input) => room.send('move', input);
+      gameBridge.acceptQuest = (questId: string) =>
+        room.send('quest:accept', { questId });
+      gameBridge.turnInQuest = (questId: string) =>
+        room.send('quest:turn_in', { questId });
       room.onDrop(() => {
         if (this.disposed) return;
         movement.send = undefined;

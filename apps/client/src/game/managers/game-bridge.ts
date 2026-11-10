@@ -2,6 +2,8 @@ import type { GameSnapshot } from '@aetheria/shared';
 /** External store: React receives coarse snapshots, never frame-by-frame updates. */
 export class GameBridge {
   interact?: (target?: string) => void;
+  acceptQuest?: (questId: string) => void;
+  turnInQuest?: (questId: string) => void;
   private snapshot: GameSnapshot = {
     status: 'offline',
     players: 0,
