@@ -89,7 +89,7 @@ Consulte as notas antes de iniciar grandes mudanças:
 - `04 - ⚔️ Sistema de Combate, Slimes e Habilidades.md`
 - `05 - 🧙 NPCs, Diálogos e Narrativa de Brumavale.md`
 - `06 - 🎒 Interface de Usuário (HUD), Hotbar e Controles.md`
-- `07 - 🎨 Arte, Sprites e Assets (Pixel Crawler).md`
+- `07 - 🎨 Arte, Sprites e Assets de Brumavale.md`
 - `08 - 🚀 Versionamento, Branches e Changelog.md`
 
 ---

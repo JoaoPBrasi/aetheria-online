@@ -39,8 +39,8 @@ Na Etapa 4, operações econômicas serão serializadas por personagem, executad
 Tiles: 32×32; top-down; Brumavale possui 96×96 tiles. Cliente e servidor usam
 o terreno determinístico de `packages/shared/src/data/world.ts`. O exportador
 gera a grade Tiled e o plano da arte; o compositor produz o terreno e um atlas
-Pixel Crawler. O Phaser organiza os objetos por profundidade a partir da base.
-Os assets-fonte, autoria e termos estão em `art/pixel-crawler`.
+em pixel art 16-bit. O Phaser organiza os objetos por profundidade a partir da base.
+Os assets-fonte, autoria e termos estão em `art/sprites`.
 Veja [expansão de Brumavale](world-expansion.md) para regiões e geração.
 
 ## Referências de API

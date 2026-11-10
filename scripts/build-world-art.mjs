@@ -8,7 +8,7 @@ const plan = JSON.parse(
     'utf8',
   ),
 );
-const source = new URL('art/pixel-crawler/', root);
+const source = new URL('art/sprites/', root);
 const manifest = JSON.parse(
   await readFile(new URL('manifest.json', source), 'utf8'),
 );

@@ -1,7 +1,7 @@
 # Personagem animado e personalização
 
 O jogador local e os jogadores remotos utilizam o corpo `Body_A` do pacote
-Pixel Crawler - Free Pack 2.11, enviado pelo usuário. O corpo geométrico
+de sprites em pixel art 16-bit. O corpo geométrico
 anterior e o retrato SVG foram substituídos por sprites.
 
 ## Aparência e criação
@@ -14,7 +14,7 @@ As seis opções por paleta e os seletores de cores livres continuam disponívei
 O pacote oferece o corpo-base, sem folhas modulares de roupa ou cabelo.
 As camadas complementares foram compostas em pixels inteiros e seguem
 a cabeça e o corpo em cada quadro. A proveniência dos arquivos está em
-`art/pixel-crawler/character/manifest.json`, com os termos originais preservados.
+`art/sprites/character/manifest.json`, com os termos originais preservados.
 
 Personagens existentes podem ser editados no lobby. A aparência utiliza
 os campos persistentes existentes, sem migração de banco.

@@ -9,7 +9,7 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 
 ### Personagem com sprites e criação animada
 
-- Corpo Pixel Crawler animado substitui os retângulos do jogador local e remoto.
+- Corpo em pixel art 16-bit animado substitui os retângulos do jogador local e remoto.
 - Repouso e caminhada em quatro direções, com direção preservada ao parar.
 - Camadas independentes para roupa, pele e quatro estilos de cabelo.
 - Prévia do sprite real no criador, rotação e teste de caminhada; respeita movimento reduzido.
@@ -22,7 +22,7 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 - Oito construções compostas a partir das quatro referências: madeira, casa ribeirinha, estufa e cabana.
 - Rio, duas pontes, píer, hortas, mercado, campos do sul, acampamento orc e cemitério.
 - Doze monstros entre slimes, orcs e esqueletos; objetivo inicial conta somente slimes.
-- Terreno e atlas Pixel Crawler gerados por `pnpm world:art`, com proveniência e termos preservados.
+- Terreno e atlas em pixel art 16-bit gerados por `pnpm world:art`, com proveniência e termos preservados.
 - Regiões identificadas no HUD e posições antigas de interação preservadas.
 
 ### Diário de missões e acompanhamento do HUD

@@ -2,7 +2,7 @@ import { chromium } from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 const root = new URL('../', import.meta.url),
-  directory = new URL('art/pixel-crawler/character/', root);
+  directory = new URL('art/sprites/character/', root);
 const states = {
   Idle: 'idle',
   Walk: 'walk',

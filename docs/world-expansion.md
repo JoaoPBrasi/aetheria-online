@@ -6,7 +6,7 @@ com 2,25 vezes a área anterior. A praça permanece em (1040, 1040).
 ## Construções e exploração
 
 As quatro referências enviadas orientam as fachadas compostas com os assets
-Pixel Crawler: madeira e alvenaria com telhado marrom, casa ribeirinha com
+em pixel art 16-bit: madeira e alvenaria com telhado marrom, casa ribeirinha com
 telhado verde, estufa envidraçada e cabana de troncos com telhado de ardósia.
 Há oito construções: Casa, Armazém, Ferreiro, Estalagem, Casa do Pescador,
 Estufa, Casa da Horta e Cabana do Caminho. As fachadas têm janelas, portas,
@@ -38,9 +38,9 @@ A posição nas novas regiões utiliza o salvamento e a reconexão existentes.
 
 ## Assets e geração
 
-As folhas-fonte estão em `art/pixel-crawler`, com origem por arquivo no
+As folhas-fonte estão em `art/sprites`, com origem por arquivo no
 `manifest.json` e termos originais em `Terms.txt`. Autoria: Anokolisa,
-Pixel Crawler - Free Pack 2.11. As referências orientam a composição;
+pacote de arte 16-bit. As referências orientam a composição;
 seus pixels não foram extraídos para o jogo.
 
 ```powershell
