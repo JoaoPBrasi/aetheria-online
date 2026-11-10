@@ -10,6 +10,7 @@ import {
   ROCKS,
   VILLAGE_PROPS,
   WORLD_ART_REVISION,
+  QUARRY,
 } from '../packages/shared/src/data/world.js';
 import { CEMETERY } from '../packages/shared/src/data/cemetery.js';
 import { MONSTERS } from '../packages/shared/src/data/gameplay.js';
@@ -125,6 +126,7 @@ await writeFile(
     regions: WORLD_REGIONS,
     bridges: BRIDGES,
     rocks: ROCKS,
+    quarry: QUARRY,
     villageProps: VILLAGE_PROPS,
     cemetery: CEMETERY,
     monsters: MONSTERS,

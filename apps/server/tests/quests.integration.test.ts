@@ -2,6 +2,7 @@ import { afterAll, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import {
   CRAFTING_STATIONS,
+  GROVE_RESOURCES,
   type GameAction,
   type GameplaySnapshot,
 } from '@aetheria/shared';
@@ -90,26 +91,30 @@ it('persists actual gather/craft/kill progress and grants exact rewards once acr
     state = await s.act(id, action, position);
     return action;
   };
-  const first = await act({ kind: 'gather', node: 'wood-plaza' }, () => ({
-    x: 1080,
-    y: 1080,
+  const [firstTree, secondTree] = GROVE_RESOURCES.slice(2, 4);
+  const first = await act({ kind: 'gather', node: firstTree!.id }, () => ({
+    x: firstTree!.x,
+    y: firstTree!.y,
     direction: 'down',
   }));
   expect((await s.quests(id))[0]?.progress.gather_wood).toBe(3);
   await s.act(id, first, near); // retry must not count twice
   expect((await s.quests(id))[0]?.progress.gather_wood).toBe(3);
-  await act({ kind: 'gather', node: 'wood-forest' }, () => ({
-    x: 600,
-    y: 990,
+  await act({ kind: 'gather', node: secondTree!.id }, () => ({
+    x: secondTree!.x,
+    y: secondTree!.y,
     direction: 'down',
   }));
   expect((await s.quests(id))[0]?.progress.gather_wood).toBe(5);
+  const workbench = CRAFTING_STATIONS.find(
+    (station) => station.type === 'workbench',
+  )!;
   for (let n = 0; n < 2; n++)
     await act(
       { kind: 'craft', recipeId: 'plank', stationId: 'workbench-plaza' },
       () => ({
-        x: CRAFTING_STATIONS[0]!.x,
-        y: CRAFTING_STATIONS[0]!.y,
+        x: workbench.x,
+        y: workbench.y,
         direction: 'down',
       }),
     );

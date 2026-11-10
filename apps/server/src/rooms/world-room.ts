@@ -44,7 +44,7 @@ export class WorldRoom extends Room<{
       if (!p?.connected) return;
       try {
         client.send('gameplay', await this.gameplay.sync(p.characterId));
-        client.send('resources', this.gameplay.resources());
+        client.send('resources', await this.gameplay.resources());
         client.send('plots', await this.gameplay.plots());
         client.send('monsters', this.gameplay.monsters());
         client.send('quests', await this.gameplay.quests(p.characterId));
@@ -62,8 +62,14 @@ export class WorldRoom extends Room<{
           return { x: p.x, y: p.y, direction: p.direction };
         });
         client.send('gameplay', snapshot);
+        if (
+          raw &&
+          typeof raw === 'object' &&
+          'kind' in raw &&
+          raw.kind === 'gather'
+        )
+          this.broadcast('resources', await this.gameplay.resources());
         client.send('quests', await this.gameplay.quests(p.characterId));
-        this.broadcast('resources', this.gameplay.resources());
         if (
           raw &&
           typeof raw === 'object' &&

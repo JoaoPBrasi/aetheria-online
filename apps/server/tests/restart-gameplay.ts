@@ -1,10 +1,12 @@
 import { Client } from '@colyseus/sdk';
 import { randomUUID } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
-import type {
-  CharacterQuestState,
-  GameplaySnapshot,
-  WorldState,
+import {
+  GROVE_RESOURCES,
+  type CharacterQuestState,
+  type GameplaySnapshot,
+  type ResourceStates,
+  type WorldState,
 } from '@aetheria/shared';
 const base = process.env.TEST_SERVER_URL!,
   path = process.env.GAMEPLAY_FIXTURE_FILE!;
@@ -29,12 +31,14 @@ const fixture = prepare
       x?: number;
       y?: number;
       harvestAt?: number;
+      treeReadyAt?: number;
     })
   : (JSON.parse(await readFile(path, 'utf8')) as {
       token: string;
       x: number;
       y: number;
       harvestAt?: number;
+      treeReadyAt?: number;
     });
 if (prepare)
   await post('/api/characters', fixture.token, {
@@ -53,7 +57,11 @@ room.onMessage('quests', (value: CharacterQuestState[]) => {
 room.onMessage('gameplay', (s: GameplaySnapshot) => {
   snapshot = s;
 });
-room.onMessage('resources', () => undefined);
+const tree = GROVE_RESOURCES.find(({ x, y }) => x === 592 && y === 720)!;
+let resources: ResourceStates = {};
+room.onMessage('resources', (state: ResourceStates) => {
+  resources = state;
+});
 room.onMessage('monsters', () => undefined);
 let plots: import('@aetheria/shared').FarmSnapshot[] = [];
 room.onMessage('plots', (p: import('@aetheria/shared').FarmSnapshot[]) => {
@@ -80,14 +88,7 @@ try {
       room.send('action', { ...payload, id: randomUUID(), revision: rev });
       await wait(() => snapshot!.revision > rev);
     };
-    await act({ kind: 'gather', node: 'wood-plaza' });
-    await wait(() => quests?.[0]?.progress.gather_wood === 3);
-    await act({ kind: 'equip', from: 2 });
-    await act({ kind: 'gather', node: 'fiber-plaza' });
-    for (let seq = 1; seq <= 4; seq++) room.send('move', { seq, dx: 1, dy: 0 });
-    await wait(() => room.state.players.get(room.sessionId)?.ack === 4);
-    await act({ kind: 'unequip' });
-    let seq = 4;
+    let seq = 0;
     const move = async (dx: number, dy: number, count: number) => {
       for (let i = 0; i < count; i += 4) {
         for (let j = 0; j < Math.min(4, count - i); j++)
@@ -95,7 +96,14 @@ try {
         await wait(() => room.state.players.get(room.sessionId)?.ack === seq);
       }
     };
-    await move(-1, 0, 68);
+    await move(-1, 0, 56);
+    await move(0, -1, 40);
+    await act({ kind: 'gather', node: tree.id });
+    await wait(
+      () => quests?.[0]?.progress.gather_wood === 3 && !!resources[tree.id],
+    );
+    await move(0, 1, 40);
+    await move(-1, 0, 8);
     await move(0, 1, 48);
     await act({ kind: 'equip', from: 3 });
     await act({
@@ -122,10 +130,14 @@ try {
         x: p.x,
         y: p.y,
         harvestAt: plots.find((p) => p.id === 'brumavale-farm-16')?.harvestAt,
+        treeReadyAt: resources[tree.id]!.readyAt,
       }),
       { mode: 0o600 },
     );
   } else {
+    await wait(() => !!resources[tree.id]);
+    if (resources[tree.id]!.readyAt !== fixture.treeReadyAt)
+      throw new Error('Tree growth deadline changed on restart');
     await wait(() => quests?.[0]?.progress.gather_wood === 3);
     if (quests?.[0]?.status !== 'in_progress')
       throw new Error('Quest status changed on restart');
@@ -142,12 +154,12 @@ try {
     if (
       p.x !== fixture.x ||
       p.y !== fixture.y ||
-      snapshot!.inventory.find((s) => s.itemId === 'fiber')?.quantity !== 3 ||
-      snapshot!.skills.find((s) => s.profession === 'farmer')?.xp !== 10
+      snapshot!.inventory.find((s) => s.itemId === 'wood')?.quantity !== 3 ||
+      snapshot!.skills.find((s) => s.profession === 'lumberjack')?.xp !== 10
     )
       throw new Error('Gameplay was not restored after restart');
     console.info(
-      'PASS: quest progress, position, inventory, XP and crop deadline restored after actual server restart',
+      'PASS: quest progress, position, inventory, XP and crop/tree deadlines restored after actual server restart',
     );
   }
 } finally {

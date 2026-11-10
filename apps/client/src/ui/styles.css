@@ -686,7 +686,7 @@ footer {
 }
 .hud-context {
   position: absolute;
-  bottom: 130px;
+  bottom: 176px;
   left: 50%;
   transform: translateX(-50%);
   text-align: center;
@@ -1151,9 +1151,6 @@ footer {
     bottom: 110px;
     width: calc(100vw - 24px);
   }
-  .hud-context {
-    bottom: 120px;
-  }
   .hud-party {
     left: 10px;
     top: 90px;
@@ -1475,6 +1472,7 @@ footer {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 16px;
 }
 .crafting-panel h2 {
   font-family: Georgia, serif;
@@ -1517,8 +1515,6 @@ footer {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: 380px;
-  overflow-y: auto;
 }
 .recipe-card {
   background: #172a21;
@@ -1589,7 +1585,8 @@ footer {
 .recipe-actions button:disabled {
   background: #203127;
   border-color: #314a3a;
-  color: #7b8f80;
+  color: #bac8bc;
+  opacity: 1;
   cursor: not-allowed;
 }
 

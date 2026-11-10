@@ -4,6 +4,7 @@ import {
   hasTool,
   type GameplaySnapshot,
   type ItemId,
+  type ResourceStates,
   QuestCommandSchema,
   QUESTS,
   NPCS,
@@ -16,8 +17,17 @@ export class GameplayService {
   private attackCooldowns = new Map<string, number>();
   readonly monstersManager = new MonsterManager();
   constructor(private repository: GameplayRepository) {}
-  resources() {
-    return Object.fromEntries(this.cooldowns);
+  async resources(): Promise<ResourceStates> {
+    const trees = await this.repository.growingTrees();
+    const now = Date.now();
+    for (const [id, readyAt] of this.cooldowns)
+      if (readyAt <= now) this.cooldowns.delete(id);
+    return {
+      ...Object.fromEntries(
+        [...this.cooldowns].map(([id, readyAt]) => [id, { readyAt }]),
+      ),
+      ...trees,
+    };
   }
   plots() {
     return this.repository.plots();
@@ -75,7 +85,11 @@ export class GameplayService {
 
         const currentSnapshot = await this.repository.execute(id);
         const hasSword = hasTool(currentSnapshot, 'sword');
-        const damage = hasSword ? 30 : 20;
+        const damage = hasTool(currentSnapshot, 'iron_sword')
+          ? 40
+          : hasSword
+            ? 30
+            : 20;
 
         const { killed } = this.monstersManager.takeDamage(
           action.targetId,
@@ -118,10 +132,11 @@ export class GameplayService {
         const result = await this.repository.execute(
           id,
           action,
-          { item: node.item, profession: node.profession },
+          undefined,
           current,
         );
-        this.cooldowns.set(node.id, Date.now() + 5000);
+        if (node.kind !== 'tree')
+          this.cooldowns.set(node.id, Date.now() + 5000);
         return result;
       });
     });

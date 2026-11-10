@@ -90,8 +90,7 @@ export function CraftingPanel({
             >
               <div className="recipe-header">
                 <strong>
-                  {outputItem.name}{' '}
-                  {r.output.quantity > 1 ? `x${r.output.quantity}` : ''}
+                  {r.output.quantity} × {outputItem.name}
                 </strong>
                 <span className="recipe-xp">+{r.xp} XP Ferreiro</span>
               </div>

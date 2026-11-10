@@ -70,7 +70,7 @@ export const TUTORIAL_QUEST: QuestDefinition = {
       id: 'gather_wood',
       type: 'gather',
       targetId: 'wood',
-      description: 'Coletar madeira nos troncos caídos',
+      description: 'Cortar carvalhos no Bosque Antigo para coletar madeira',
       required: 5,
     },
     {

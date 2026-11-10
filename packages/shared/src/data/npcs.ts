@@ -38,7 +38,7 @@ export const NPCS: readonly NPCDefinition[] = [
         id: 'gather',
         prompt: 'Como consigo recursos básicos como madeira e pedra?',
         response:
-          'Na praça e arredores você encontrará troncos caídos, rochas e arbustos de fibra. Basta ter a ferramenta adequada na mochila ou equipada e se aproximar para coletar com a tecla E. Cada coleta concede experiência para sua profissão.',
+          'Corte os carvalhos adultos do Bosque Antigo, a noroeste, para obter madeira. A Pedreira, a sudeste, tem pedra, minério de ferro, fibras e flores. Aproxime-se com a ferramenta adequada na mochila ou equipada e pressione E. Flores podem ser colhidas à mão.',
       },
       {
         id: 'farm',
@@ -50,7 +50,7 @@ export const NPCS: readonly NPCDefinition[] = [
         id: 'craft',
         prompt: 'Onde posso forjar e fabricar novos equipamentos?',
         response:
-          'Temos duas oficinas: a Bancada de Trabalho ao lado da praça (para cortar tábuas de madeira) e a Forja do Ferreiro a sudeste (para forjar espadas e ferramentas de metal). Você pode abrir o menu de criação com a tecla C.',
+          'Use a Bancada da praça para fazer tábuas. Perto do Ferreiro, transforme madeira em carvão e funda minério em lingotes na Fornalha. Leve os lingotes à Forja para fazer machados e espadas. Consulte as receitas com a tecla C.',
       },
       {
         id: 'combat',

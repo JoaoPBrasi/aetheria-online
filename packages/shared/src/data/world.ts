@@ -1,7 +1,16 @@
 import { TILE_SIZE } from '../constants/index.js';
 import { CEMETERY } from './cemetery.js';
 export const MAP_SIZE = 96;
-export const WORLD_ART_REVISION = 'brumavale-houses-v3';
+export const WORLD_ART_REVISION = 'brumavale-quarry-grove-v4';
+export const QUARRY = { x: 44, y: 35, w: 15, h: 14 };
+export const ANCIENT_GROVE = { x: 1, y: 1, w: 21, h: 24 };
+// As copas ultrapassam o tile do tronco em até 1 tile na lateral e 6 ao norte.
+const quarryTreeClearance = {
+  x: QUARRY.x - 1,
+  y: QUARRY.y,
+  w: QUARRY.w + 2,
+  h: QUARRY.h + 6,
+};
 export const WORLD_SPAWN = { x: 1040, y: 1040 };
 export const landmarks = [
   { name: 'Casa', model: 'timber', x: 23, y: 24, w: 6, h: 4 },
@@ -203,13 +212,14 @@ export function terrainAt(x: number, y: number) {
   if (WORLD_PATHS.some((path) => nearPath(x + 0.5, y + 0.5, path, 1.1)))
     return 1;
   if (ROCKS.some(([rx, ry]) => x === rx && y === ry)) return 4;
+  if (inRect(x, y, quarryTreeClearance) || inRect(x, y, ANCIENT_GROVE))
+    return 0;
   const field = WORLD_REGIONS.some(
     (r) => r.danger !== 'safe' && inRect(x, y, r),
   );
   if (field) return 0;
   if (x >= 73 && x <= 93 && y >= 3 && y <= 27) return 0;
   if (
-    (x < 22 && y < 25 && (x * 7 + y * 13) % 17 < 3) ||
     (x > 44 && y > 39 && (x * 7 + y * 3) % 19 < 3) ||
     ((x > 70 || y > 66) && (x * 17 + y * 7) % 31 < 4)
   )

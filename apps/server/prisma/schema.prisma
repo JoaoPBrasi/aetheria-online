@@ -112,3 +112,9 @@ model FarmPlot {
   @@unique([mapId, tileX, tileY])
   @@index([ownerId])
 }
+
+model GroveTree {
+  nodeId    String   @id
+  cutAt     DateTime
+  maturesAt DateTime
+}

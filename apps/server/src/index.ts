@@ -20,7 +20,9 @@ class ConfiguredWorldRoom extends WorldRoom {
       identities,
       presence,
       env.DEV_IDENTITY_ENABLED,
-      new GameplayService(new GameplayRepository(db)),
+      new GameplayService(
+        new GameplayRepository(db, env.TREE_GROWTH_SECONDS * 1000),
+      ),
     );
   }
 }

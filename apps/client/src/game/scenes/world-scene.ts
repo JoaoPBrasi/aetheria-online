@@ -6,7 +6,9 @@ import {
   WORLD_SPAWN,
   WORLD_ART_REVISION,
   WORLD_REGIONS,
+  QUARRY,
   RESOURCES,
+  treeStage,
   FARM_PLOTS,
   CRAFTING_STATIONS,
   cropStatus,
@@ -14,6 +16,7 @@ import {
   MONSTERS,
   NPCS,
   type WorldArtwork,
+  type ResourceStates,
 } from '@aetheria/shared';
 import { gameBridge } from '../managers/game-bridge';
 import { movement } from '../networking/movement';
@@ -33,6 +36,14 @@ export class WorldScene extends Phaser.Scene {
   private remoteSprites = new Map<string, PlayerAvatar>();
   private coverCells = new Map<string, Set<Phaser.GameObjects.Image>>();
   private fadingCover = new Set<Phaser.GameObjects.Image>();
+  private groveSprites = new Map<
+    string,
+    Record<ReturnType<typeof treeStage>, Phaser.GameObjects.Image>
+  >();
+  private quarrySprites = new Map<
+    string,
+    { image: Phaser.GameObjects.Image; label: Phaser.GameObjects.Container }
+  >();
   private monsterSprites = new Map<
     string,
     {
@@ -69,9 +80,9 @@ export class WorldScene extends Phaser.Scene {
     this.load.image('station-workbench', '/sprites/station-workbench.png');
     this.load.image('station-anvil', '/sprites/station-anvil.png');
     this.load.image('furnace-stone', '/sprites/furnace-stone.png');
-    this.load.image('resource-wood-log', '/sprites/resource-wood-log.png');
     this.load.image('resource-rock', '/sprites/resource-rock.png');
     this.load.image('resource-bush', '/sprites/resource-bush.png');
+    this.load.image('tree-young', '/sprites/tree-medium.png');
     this.load.image('farm-plot-tilled', '/sprites/farm-plot-tilled.png');
   }
   create() {
@@ -164,70 +175,36 @@ export class WorldScene extends Phaser.Scene {
         .image(fx, maxPlotY + 24, 'world-props', 'fence:white')
         .setDepth(maxPlotY + 24);
     }
-    for (const node of RESOURCES) {
-      const isWood = node.item === 'wood';
-      const isStone = node.item === 'stone';
-      const spriteKey = isWood
-        ? 'resource-wood-log'
-        : isStone
-          ? 'resource-rock'
-          : 'resource-bush';
-
-      this.add
-        .ellipse(
-          node.x,
-          node.y + (isWood ? 6 : isStone ? 8 : 10),
-          isWood ? 28 : isStone ? 26 : 24,
-          10,
-          0x132b24,
-          0.35,
-        )
-        .setDepth(node.y - 1);
-
-      this.add
-        .image(node.x, node.y, spriteKey)
-        .setDepth(node.y)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => gameBridge.interact?.(node.id));
-
-      makeNameplate(this, node.name, 'object', node.x, node.y - 29).setDepth(
-        node.y + 1,
-      );
-    }
+    this.createResources();
     for (const station of CRAFTING_STATIONS) {
-      const isForge = station.type === 'forge';
-      const textureKey = isForge ? 'station-anvil' : 'station-workbench';
+      const isFurnace = station.type === 'furnace';
+      const textureKey = {
+        forge: 'station-anvil',
+        furnace: 'furnace-stone',
+        workbench: 'station-workbench',
+      }[station.type];
       this.add
         .ellipse(
           station.x,
           station.y + 12,
-          isForge ? 46 : 42,
+          isFurnace ? 30 : 42,
           14,
           0x132b24,
           0.35,
         )
         .setDepth(station.y - 1);
       this.add
-        .image(station.x, station.y, textureKey)
+        .image(station.x, station.y - (isFurnace ? 6 : 0), textureKey)
         .setDepth(station.y)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => gameBridge.interact?.(station.id));
-
-      if (isForge) {
-        this.add
-          .ellipse(station.x + 32, station.y + 14, 30, 12, 0x132b24, 0.35)
-          .setDepth(station.y - 1);
-        this.add
-          .image(station.x + 32, station.y - 6, 'furnace-stone')
-          .setDepth(station.y);
-      }
 
       makeNameplate(
         this,
         station.name,
         'object',
         station.x,
-        station.y - 29,
+        station.y - (isFurnace ? 55 : 29),
       ).setDepth(station.y + 1);
     }
     for (const npc of NPCS) {
@@ -264,7 +241,11 @@ export class WorldScene extends Phaser.Scene {
     this.label('LAGO DOS JUNCOS', 1600, 250);
     this.label('FAZENDA', 440, 1100);
     this.label('BOSQUE ANTIGO', 370, 300);
-    this.label('PEDREIRA', 1670, 1240);
+    this.label(
+      'PEDREIRA',
+      (QUARRY.x + QUARRY.w / 2) * TILE_SIZE,
+      QUARRY.y * TILE_SIZE - 20,
+    );
     for (const r of WORLD_REGIONS.filter((r) => r.danger !== 'safe'))
       this.label(
         r.name.toUpperCase(),
@@ -282,7 +263,7 @@ export class WorldScene extends Phaser.Scene {
           ? 'water'
           : kind === 'gather' && resource?.item === 'wood'
             ? 'chop'
-            : kind === 'gather' && resource?.item === 'stone'
+            : kind === 'gather' && resource?.tool === 'pickaxe'
               ? 'mine'
               : 'collect',
         this.time.now,
@@ -389,6 +370,94 @@ export class WorldScene extends Phaser.Scene {
         cell.add(prop);
       }
   }
+  private createResources() {
+    if (!this.textures.exists('resource-flower')) {
+      const flower = this.make.graphics({ x: 0, y: 0 }, false);
+      for (const [x, y, color] of [
+        [5, 6, 0xffd477],
+        [12, 2, 0xf3a6b8],
+        [17, 9, 0xffe8bb],
+      ] as const) {
+        flower.fillStyle(0x466c32).fillRect(x + 2, y + 5, 2, 18 - y);
+        flower.fillStyle(0x6c9845).fillRect(x, y + 8, 4, 2);
+        flower
+          .fillStyle(color)
+          .fillRect(x, y + 2, 6, 2)
+          .fillRect(x + 2, y, 2, 6);
+        flower.fillStyle(0xc28035).fillRect(x + 2, y + 2, 2, 2);
+      }
+      flower.generateTexture('resource-flower', 24, 24);
+      flower.destroy();
+    }
+    for (const node of RESOURCES) {
+      if (node.kind === 'tree') {
+        const adult = this.add
+          .image(0, 0, 'world-props', 'tree:oak')
+          .setOrigin(0);
+        adult
+          .setPosition(node.x - adult.width / 2, node.y - adult.height)
+          .setDepth(node.y);
+        this.registerCover(adult);
+        const young = this.add
+          .image(node.x, node.y, 'tree-young')
+          .setOrigin(0.5, 1)
+          .setScale(0.8)
+          .setDepth(node.y)
+          .setVisible(false);
+        const seedling = this.add
+          .image(node.x, node.y, 'tree-young')
+          .setOrigin(0.5, 1)
+          .setScale(0.28)
+          .setDepth(node.y)
+          .setVisible(false);
+        for (const tree of [adult, young, seedling])
+          tree
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => gameBridge.interact?.(node.id));
+        this.groveSprites.set(node.id, { adult, young, seedling });
+        continue;
+      }
+      const texture = {
+        ore: 'resource-rock',
+        rock: 'resource-rock',
+        fiber: 'resource-bush',
+        flower: 'resource-flower',
+      }[node.kind];
+      this.add
+        .ellipse(node.x, node.y + 8, 26, 8, 0x132b24, 0.32)
+        .setDepth(node.y - 1);
+      const image = this.add
+        .image(node.x, node.y, texture)
+        .setDepth(node.y)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => gameBridge.interact?.(node.id));
+      if (node.kind === 'ore') image.setTint(0xd8a786);
+      const label = makeNameplate(
+        this,
+        node.name,
+        'object',
+        node.x,
+        node.y - 29,
+      )
+        .setDepth(node.y + 1)
+        .setVisible(false);
+      this.quarrySprites.set(node.id, { image, label });
+    }
+  }
+  private updateResources(resources: ResourceStates, now: number) {
+    for (const [id, trees] of this.groveSprites) {
+      const stage = treeStage(resources[id], now);
+      for (const key of ['adult', 'young', 'seedling'] as const)
+        trees[key].setVisible(key === stage);
+    }
+    for (const [id, { image, label }] of this.quarrySprites) {
+      image.setAlpha((resources[id]?.readyAt ?? 0) > now ? 0.35 : 1);
+      label.setVisible(
+        this.active &&
+          Math.hypot(this.avatar.x - image.x, this.avatar.y - image.y) < 92,
+      );
+    }
+  }
   private updateCover() {
     const covered = new Set<Phaser.GameObjects.Image>();
     const players = [
@@ -405,6 +474,7 @@ export class WorldScene extends Phaser.Scene {
         for (let cx = left; cx <= right; cx++)
           for (const prop of this.coverCells.get(`${cx}:${cy}`) ?? [])
             if (
+              prop.visible &&
               prop.depth > y &&
               prop.x < x + 14 &&
               prop.x + prop.displayWidth > x - 14 &&
@@ -528,6 +598,7 @@ export class WorldScene extends Phaser.Scene {
         sprite.destroy();
         this.remoteSprites.delete(id);
       }
+    this.updateResources(farmState.resources ?? {}, Date.now());
     this.updateCover();
 
     const liveMonsters = new Set<string>();

@@ -13,7 +13,7 @@ export interface GameSnapshot {
   gameplayError?: string | null;
   actionPending?: boolean;
   questPending?: boolean;
-  resources?: Record<string, number>;
+  resources?: import('../data/resources.js').ResourceStates;
   monsters?: import('../data/gameplay.js').MonsterSnapshot[];
   health?: number;
   maxHealth?: number;

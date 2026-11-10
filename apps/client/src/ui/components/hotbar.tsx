@@ -16,6 +16,12 @@ const ITEM_ICONS: Record<ItemId, string> = {
   pumpkin: '🎃',
   plank: '🪵',
   slime_goo: '🟢',
+  flower: '🌼',
+  iron_ore: '🪨',
+  iron_ingot: '🔩',
+  charcoal: '⚫',
+  iron_axe: '🪓',
+  iron_sword: '⚔️',
 };
 
 interface HotbarProps {

@@ -246,7 +246,12 @@ window.WorldArtRenderer = async (plan, sourceURLs) => {
     }
   for (let y = 2; y < size - 2; y += 3)
     for (let x = 2; x < size - 2; x += 3) {
-      if (plan.tiles[y][x] !== 0 || inCemetery(x, y) || hash(x, y) % 5 > 1)
+      if (
+        plan.tiles[y][x] !== 0 ||
+        inside(x, y, plan.quarry) ||
+        inCemetery(x, y) ||
+        hash(x, y) % 5 > 1
+      )
         continue;
       const crop = hash(x, y) % 2 ? [16, 384, 16, 16] : [96, 176, 16, 16];
       simple(

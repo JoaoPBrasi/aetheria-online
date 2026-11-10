@@ -1,5 +1,6 @@
 import { config } from 'dotenv';
 import { z } from 'zod';
+import { DEFAULT_TREE_GROWTH_MS } from '@aetheria/shared';
 config({ path: new URL('../../../../.env', import.meta.url), quiet: true });
 export const EnvironmentSchema = z
   .object({
@@ -8,6 +9,12 @@ export const EnvironmentSchema = z
       .default('development'),
     HOST: z.string().default('127.0.0.1'),
     PORT: z.coerce.number().int().min(1).max(65535).default(2567),
+    TREE_GROWTH_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(2)
+      .max(604800)
+      .default(DEFAULT_TREE_GROWTH_MS / 1000),
     DEV_IDENTITY_ENABLED: z
       .enum(['true', 'false'])
       .default('false')

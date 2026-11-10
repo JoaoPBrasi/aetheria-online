@@ -56,6 +56,7 @@ export class WorldConnection {
       actionPending: false,
       questPending: false,
       quests: undefined,
+      resources: undefined,
     });
     try {
       const reservation = (await request(
@@ -81,9 +82,12 @@ export class WorldConnection {
           if (!this.disposed) gameBridge.update({ plots });
         },
       );
-      room.onMessage('resources', (resources: Record<string, number>) => {
-        if (!this.disposed) gameBridge.update({ resources });
-      });
+      room.onMessage(
+        'resources',
+        (resources: import('@aetheria/shared').ResourceStates) => {
+          if (!this.disposed) gameBridge.update({ resources });
+        },
+      );
       room.onMessage(
         'monsters',
         (monsters: import('@aetheria/shared').MonsterSnapshot[]) => {

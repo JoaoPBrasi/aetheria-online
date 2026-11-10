@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 import { hasTool, interaction } from './interaction.js';
-import type { GameplaySnapshot } from './gameplay.js';
+import { GROVE_RESOURCES, type GameplaySnapshot } from './gameplay.js';
+const tree = GROVE_RESOURCES[0]!;
 const s: GameplaySnapshot = {
   characterId: 'a',
   revision: 0,
@@ -11,9 +12,9 @@ const s: GameplaySnapshot = {
 it('uses tools carried in the bag and requires proximity', () => {
   expect(hasTool(s, 'axe')).toBe(true);
   expect(hasTool(s, 'pickaxe')).toBe(false);
-  const c = interaction(s, { x: 1080, y: 1080 }, [], {}, 0, 'turnip');
+  const c = interaction(s, tree, [], {}, 0, 'turnip');
   expect(c?.enabled).toBe(true);
-  expect(c?.payload).toEqual({ kind: 'gather', node: 'wood-plaza' });
+  expect(c?.payload).toEqual({ kind: 'gather', node: tree.id });
   expect(
     interaction(s, { x: 1800, y: 1800 }, [], {}, 0, 'turnip'),
   ).toBeUndefined();
@@ -22,9 +23,9 @@ it('blocks cooldown and plots belonging to others', () => {
   expect(
     interaction(
       s,
-      { x: 1080, y: 1080 },
+      tree,
       [],
-      { 'wood-plaza': 5000 },
+      { [tree.id]: { cutAt: 0, readyAt: 5000 } },
       100,
       'turnip',
     )?.enabled,

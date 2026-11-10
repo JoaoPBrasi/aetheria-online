@@ -1,12 +1,14 @@
 import {
   ITEMS,
   RESOURCES,
+  treeStage,
   CRAFTING_STATIONS,
   MONSTERS,
   type GameplaySnapshot,
   type ItemId,
   type CraftingStationType,
   type MonsterSnapshot,
+  type ResourceStates,
 } from './gameplay.js';
 import { cropStatus, type FarmSnapshot, type CropId } from './farming.js';
 import { NPCS, type NPCDefinition } from './npcs.js';
@@ -14,16 +16,18 @@ export function hasTool(
   s: Pick<GameplaySnapshot, 'inventory' | 'equipment'>,
   tool: ItemId,
 ) {
+  const matches = (itemId: ItemId) =>
+    itemId === tool || (tool === 'axe' && itemId === 'iron_axe');
   return (
-    s.inventory.some((i) => i.itemId === tool && i.quantity > 0) ||
-    s.equipment.some((i) => i.itemId === tool)
+    s.inventory.some((i) => matches(i.itemId) && i.quantity > 0) ||
+    s.equipment.some((i) => matches(i.itemId))
   );
 }
 export function interaction(
   s: GameplaySnapshot,
   position: { x: number; y: number },
   plots: FarmSnapshot[],
-  cooldowns: Record<string, number>,
+  resources: ResourceStates,
   now: number,
   crop: CropId,
   target?: string,
@@ -108,11 +112,16 @@ export function interaction(
   if (chosen.node) {
     const r = chosen.node;
     tool = r.tool;
-    label = 'Coletar ' + r.name;
+    label = r.kind === 'tree' ? 'Cortar ' + r.name : 'Coletar ' + r.name;
     payload = { kind: 'gather', node: r.id };
-    if ((cooldowns[r.id] ?? 0) > now) {
+    const state = resources[r.id];
+    if (state && state.readyAt > now) {
       enabled = false;
-      label = 'Recurso se recuperando';
+      if (r.kind === 'tree') {
+        const stage =
+          treeStage(state, now) === 'seedling' ? 'Muda' : 'Árvore jovem';
+        label = `${stage} · ${Math.ceil((state.readyAt - now) / 1000)} s até amadurecer`;
+      } else label = 'Recurso se recuperando';
     }
   } else if (chosen.plot) {
     const p = chosen.plot,
@@ -163,9 +172,11 @@ export function interaction(
       npcId: chosen.npc.id,
     };
   }
-  if (tool && !hasTool(s, tool)) {
+  if (enabled && tool && !hasTool(s, tool)) {
     enabled = false;
-    label = ITEMS[tool].name + ' necessária na mochila';
+    label =
+      (tool === 'axe' ? 'Machado' : ITEMS[tool].name) +
+      ' necessário para esta ação';
   }
   return { ...chosen, label, enabled, payload, tool };
 }

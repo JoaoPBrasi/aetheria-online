@@ -8,8 +8,14 @@ import {
   landmarks,
   worldTiles,
   BRIDGES,
+  QUARRY,
 } from './world.js';
-import { MONSTERS, RESOURCES, CRAFTING_STATIONS } from './gameplay.js';
+import {
+  MONSTERS,
+  RESOURCES,
+  QUARRY_RESOURCES,
+  CRAFTING_STATIONS,
+} from './gameplay.js';
 import { FARM_PLOTS } from './index.js';
 describe('world movement', () => {
   it('has a walkable spawn and blocks water, buildings and boundaries', () => {
@@ -57,12 +63,42 @@ describe('world movement', () => {
       ).toBe(true);
     for (const p of FARM_PLOTS)
       expect(reached.has(`${p.tileX},${p.tileY}`), p.id).toBe(true);
-    for (const p of [...RESOURCES, ...CRAFTING_STATIONS])
+    for (const p of [...RESOURCES, ...CRAFTING_STATIONS]) {
       expect(canStand(p.x, p.y), p.id).toBe(true);
+      expect(
+        reached.has(`${Math.floor(p.x / 32)},${Math.floor(p.y / 32)}`),
+        p.id,
+      ).toBe(true);
+    }
     expect(reached.has('80,44')).toBe(true);
     expect(reached.has('40,80')).toBe(true);
     for (const b of BRIDGES)
       expect(reached.has(`${b.x + 2},${b.y + 1}`)).toBe(true);
+  });
+  it('keeps quarry nodes apart on reachable terrain and clear of the main routes', () => {
+    expect(new Set(QUARRY_RESOURCES.map((node) => node.kind))).toEqual(
+      new Set(['ore', 'rock', 'fiber', 'flower']),
+    );
+    for (const [i, node] of QUARRY_RESOURCES.entries()) {
+      const x = Math.floor(node.x / 32);
+      const y = Math.floor(node.y / 32);
+      expect(x).toBeGreaterThanOrEqual(QUARRY.x + 3);
+      expect(x).toBeLessThan(QUARRY.x + QUARRY.w);
+      expect(y).toBeGreaterThanOrEqual(QUARRY.y);
+      expect(y).toBeLessThan(QUARRY.y + QUARRY.h);
+      expect(terrainAt(x, y)).toBe(0);
+      expect(x).not.toBe(52);
+      expect(y).not.toBe(43);
+      for (const other of QUARRY_RESOURCES.slice(i + 1))
+        expect(
+          Math.hypot(node.x - other.x, node.y - other.y),
+        ).toBeGreaterThanOrEqual(64);
+    }
+    expect(
+      RESOURCES.some(
+        ({ x, y }) => x >= 600 && x <= 1120 && y >= 960 && y <= 1120,
+      ),
+    ).toBe(false);
   });
   it('normalizes diagonals and caps a stalled frame', () => {
     const { x, y } = WORLD_SPAWN;

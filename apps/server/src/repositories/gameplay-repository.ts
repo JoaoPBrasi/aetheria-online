@@ -9,6 +9,8 @@ import {
   CRAFTING_RECIPES,
   CRAFTING_STATIONS,
   craftItem,
+  RESOURCES,
+  DEFAULT_TREE_GROWTH_MS,
   type CropId,
   type FarmSnapshot,
   type GameAction,
@@ -16,10 +18,14 @@ import {
   type ItemId,
   type Slot,
   type MonsterKind,
+  type ResourceStates,
 } from '@aetheria/shared';
 type Position = { x: number; y: number; direction: string };
 export class GameplayRepository {
-  constructor(private db: Database) {}
+  constructor(
+    private db: Database,
+    private treeGrowthMs = DEFAULT_TREE_GROWTH_MS,
+  ) {}
   quests() {
     return new QuestRepository(this.db);
   }
@@ -212,22 +218,33 @@ export class GameplayRepository {
         changed = true;
       }
       if (action?.kind === 'gather') {
-        if (!reward) throw new Error('Recurso indisponível.');
-        const needed =
-          reward.item === 'wood'
-            ? 'axe'
-            : reward.item === 'stone'
-              ? 'pickaxe'
-              : 'sickle';
-        if (!hasTool({ inventory: slots, equipment }, needed))
+        const node = RESOURCES.find((r) => r.id === action.node);
+        if (!node) throw new Error('Recurso indisponível.');
+        if (
+          !position ||
+          Math.hypot(node.x - position.x, node.y - position.y) > 72
+        )
+          throw new Error('Recurso fora de alcance.');
+        if (node.tool && !hasTool({ inventory: slots, equipment }, node.tool))
           throw new Error('Equipe a ferramenta adequada.');
-        slots = addItem(slots, reward.item, 3);
-        await advanceQuests(tx, characterId, 'gather', reward.item, 3);
+        if (node.kind === 'tree') {
+          const affected = await tx.$executeRaw`
+            INSERT INTO "GroveTree" ("nodeId", "cutAt", "maturesAt")
+            VALUES (${node.id}, statement_timestamp() AT TIME ZONE 'UTC',
+              (statement_timestamp() AT TIME ZONE 'UTC') + (${this.treeGrowthMs}::double precision * INTERVAL '1 millisecond'))
+            ON CONFLICT ("nodeId") DO UPDATE
+            SET "cutAt" = EXCLUDED."cutAt", "maturesAt" = EXCLUDED."maturesAt"
+            WHERE "GroveTree"."maturesAt" <= EXCLUDED."cutAt"
+          `;
+          if (!affected) throw new Error('Recurso se recuperando. Aguarde.');
+        }
+        slots = addItem(slots, node.item, 3);
+        await advanceQuests(tx, characterId, 'gather', node.item, 3);
         await tx.characterSkill.update({
           where: {
             characterId_profession: {
               characterId,
-              profession: reward.profession,
+              profession: node.profession,
             },
           },
           data: { xp: { increment: 10 } },
@@ -305,7 +322,9 @@ export class GameplayRepository {
         await tx.character.update({
           where: { id: characterId },
           data: {
-            ...position,
+            x: position?.x,
+            y: position?.y,
+            direction: position?.direction,
             starterGranted: true,
             farmingKitGranted: kitGranted,
             revision: { increment: 1 },
@@ -342,6 +361,17 @@ export class GameplayRepository {
     return this.db.gameActionReceipt.findUnique({
       where: { characterId_actionId: { characterId, actionId } },
     });
+  }
+  async growingTrees(): Promise<ResourceStates> {
+    const trees = await this.db.groveTree.findMany({
+      where: { maturesAt: { gt: new Date() } },
+    });
+    return Object.fromEntries(
+      trees.map(({ nodeId, cutAt, maturesAt }) => [
+        nodeId,
+        { cutAt: cutAt.getTime(), readyAt: maturesAt.getTime() },
+      ]),
+    );
   }
   async plots(): Promise<FarmSnapshot[]> {
     const plots = await this.db.farmPlot.findMany({

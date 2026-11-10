@@ -416,6 +416,7 @@ export function GameHud({
             <GameplayPanel connection={connection} section="farm" />
           ) : panel === 'crafting' ? (
             <CraftingPanel
+              key={craftStation}
               connection={connection}
               initialStation={craftStation}
             />

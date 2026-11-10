@@ -2,6 +2,7 @@ import { useState, useSyncExternalStore } from 'react';
 import {
   ITEMS,
   RESOURCES,
+  interaction,
   PROFESSION_NAMES,
   levelForXp,
   XP_PER_LEVEL,
@@ -129,34 +130,29 @@ export function GameplayPanel({
       {section === 'all' && (
         <>
           <h3>Coleta</h3>
-          <p>
-            Equipe a ferramenta, aproxime-se do recurso e colete. Cada coleta
-            rende 3 itens e 10 XP; o recurso se recupera em 5 segundos.
-          </p>
+          <p>Aproxime-se de um recurso e use a ferramenta indicada.</p>
           <div className="resource-controls">
             {RESOURCES.map((r) => {
-              const inReach =
-                state.position &&
-                Math.hypot(r.x - state.position.x, r.y - state.position.y) <=
-                  72;
+              if (!state.position) return null;
+              const target = interaction(
+                snapshot,
+                state.position,
+                [],
+                state.resources ?? {},
+                state.worldTime ?? 0,
+                'turnip',
+                r.id,
+              );
+              if (!target) return null;
               return (
                 <button
                   key={r.id}
-                  disabled={
-                    disabled ||
-                    !inReach ||
-                    (state.resources?.[r.id] ?? 0) > (state.worldTime ?? 0)
-                  }
-                  title={`${r.x}, ${r.y} · ${ITEMS[r.tool].name}`}
+                  disabled={disabled || !target.enabled}
                   onClick={() =>
                     connection?.action({ kind: 'gather', node: r.id })
                   }
                 >
-                  {r.name}
-                  {!inReach ? ' · longe' : ''}
-                  {(state.resources?.[r.id] ?? 0) > (state.worldTime ?? 0)
-                    ? ' · recuperando'
-                    : ''}
+                  {target.label}
                 </button>
               );
             })}

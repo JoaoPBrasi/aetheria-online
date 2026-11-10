@@ -1,9 +1,15 @@
 import { z } from 'zod';
+export * from './resources.js';
 export const ITEMS = {
   wood: { name: 'Madeira', stack: 99, tool: false },
   stone: { name: 'Pedra', stack: 99, tool: false },
   fiber: { name: 'Fibra', stack: 99, tool: false },
+  flower: { name: 'Flor silvestre', stack: 99, tool: false },
+  iron_ore: { name: 'Minério de ferro', stack: 99, tool: false },
+  iron_ingot: { name: 'Lingote de ferro', stack: 99, tool: false },
+  charcoal: { name: 'Carvão vegetal', stack: 99, tool: false },
   axe: { name: 'Machado inicial', stack: 1, tool: true },
+  iron_axe: { name: 'Machado de ferro', stack: 1, tool: true },
   pickaxe: { name: 'Picareta inicial', stack: 1, tool: true },
   sickle: { name: 'Foice inicial', stack: 1, tool: true },
   hoe: { name: 'Enxada', stack: 1, tool: true },
@@ -14,6 +20,7 @@ export const ITEMS = {
   pumpkin: { name: 'Abóbora', stack: 99, tool: false },
   plank: { name: 'Tábua de madeira', stack: 99, tool: false },
   sword: { name: 'Espada de treino', stack: 1, tool: true },
+  iron_sword: { name: 'Espada de ferro', stack: 1, tool: true },
   slime_goo: { name: 'Gosma de slime', stack: 99, tool: false },
 } as const;
 export type ItemId = keyof typeof ITEMS;
@@ -39,54 +46,6 @@ export const PROFESSION_NAMES: Record<string, string> = {
 export const XP_PER_LEVEL = 100;
 export const levelForXp = (xp: number) =>
   1 + Math.floor(Math.sqrt(xp / XP_PER_LEVEL));
-export const RESOURCES = [
-  {
-    id: 'wood-plaza',
-    name: 'Tronco caído',
-    x: 1080,
-    y: 1080,
-    item: 'wood',
-    tool: 'axe',
-    profession: 'lumberjack',
-  },
-  {
-    id: 'stone-plaza',
-    name: 'Rocha',
-    x: 1000,
-    y: 1080,
-    item: 'stone',
-    tool: 'pickaxe',
-    profession: 'miner',
-  },
-  {
-    id: 'fiber-plaza',
-    name: 'Fibras silvestres',
-    x: 1040,
-    y: 1112,
-    item: 'fiber',
-    tool: 'sickle',
-    profession: 'farmer',
-  },
-  {
-    id: 'wood-forest',
-    name: 'Tronco do bosque',
-    x: 600,
-    y: 990,
-    item: 'wood',
-    tool: 'axe',
-    profession: 'lumberjack',
-  },
-  {
-    id: 'stone-quarry',
-    name: 'Veio da pedreira',
-    x: 1488,
-    y: 1120,
-    item: 'stone',
-    tool: 'pickaxe',
-    profession: 'miner',
-  },
-] as const;
-
 export const CRAFTING_STATIONS = [
   {
     id: 'workbench-plaza',
@@ -94,6 +53,13 @@ export const CRAFTING_STATIONS = [
     type: 'workbench',
     x: 1120,
     y: 1040,
+  },
+  {
+    id: 'furnace-blacksmith',
+    name: 'Fornalha',
+    type: 'furnace',
+    x: 1184,
+    y: 1168,
   },
   {
     id: 'forge-blacksmith',
@@ -106,8 +72,18 @@ export const CRAFTING_STATIONS = [
 export type CraftingStationId = (typeof CRAFTING_STATIONS)[number]['id'];
 export type CraftingStationType = (typeof CRAFTING_STATIONS)[number]['type'];
 
+const recipeIds = [
+  'plank',
+  'sword',
+  'charcoal',
+  'iron_ingot',
+  'iron_axe',
+  'iron_sword',
+] as const;
+export type RecipeId = (typeof recipeIds)[number];
+
 export interface CraftingRecipe {
-  id: 'plank' | 'sword';
+  id: RecipeId;
   name: string;
   station: CraftingStationType;
   inputs: { itemId: ItemId; quantity: number }[];
@@ -116,7 +92,7 @@ export interface CraftingRecipe {
   xp: number;
 }
 
-export const CRAFTING_RECIPES: Record<string, CraftingRecipe> = {
+export const CRAFTING_RECIPES: Record<RecipeId, CraftingRecipe> = {
   plank: {
     id: 'plank',
     name: 'Tábua de madeira',
@@ -138,8 +114,52 @@ export const CRAFTING_RECIPES: Record<string, CraftingRecipe> = {
     profession: 'blacksmith',
     xp: 25,
   },
+  charcoal: {
+    id: 'charcoal',
+    name: 'Carvão vegetal',
+    station: 'furnace',
+    inputs: [{ itemId: 'wood', quantity: 2 }],
+    output: { itemId: 'charcoal', quantity: 2 },
+    profession: 'blacksmith',
+    xp: 10,
+  },
+  iron_ingot: {
+    id: 'iron_ingot',
+    name: 'Lingote de ferro',
+    station: 'furnace',
+    inputs: [
+      { itemId: 'iron_ore', quantity: 2 },
+      { itemId: 'charcoal', quantity: 1 },
+    ],
+    output: { itemId: 'iron_ingot', quantity: 1 },
+    profession: 'blacksmith',
+    xp: 15,
+  },
+  iron_axe: {
+    id: 'iron_axe',
+    name: 'Machado de ferro',
+    station: 'forge',
+    inputs: [
+      { itemId: 'iron_ingot', quantity: 1 },
+      { itemId: 'wood', quantity: 2 },
+    ],
+    output: { itemId: 'iron_axe', quantity: 1 },
+    profession: 'blacksmith',
+    xp: 30,
+  },
+  iron_sword: {
+    id: 'iron_sword',
+    name: 'Espada de ferro',
+    station: 'forge',
+    inputs: [
+      { itemId: 'iron_ingot', quantity: 2 },
+      { itemId: 'wood', quantity: 1 },
+    ],
+    output: { itemId: 'iron_sword', quantity: 1 },
+    profession: 'blacksmith',
+    xp: 40,
+  },
 };
-export type RecipeId = keyof typeof CRAFTING_RECIPES;
 
 export type MonsterKind = 'slime' | 'orc' | 'skeleton';
 export interface MonsterDefinition {
@@ -328,7 +348,7 @@ export const GameActionSchema = z.discriminatedUnion('kind', [
     .object({
       ...base,
       kind: z.literal('craft'),
-      recipeId: z.enum(['plank', 'sword']),
+      recipeId: z.enum(recipeIds),
       stationId: z.string().max(40),
     })
     .strict(),
