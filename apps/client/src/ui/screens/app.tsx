@@ -118,6 +118,8 @@ export function App() {
             <WorldPreview />
             {playing ? (
               <GameHud
+                key={session!.character!.id}
+                characterId={session!.character!.id}
                 connection={connection}
                 name={session!.character!.name}
                 ready={ready}

@@ -43,6 +43,7 @@ export class WorldScene extends Phaser.Scene {
   }
   preload() {
     this.load.tilemapTiledJSON('brumavale', '/maps/brumavale.tmj');
+    this.load.image('world-tiles', '/sprites/tileset-brumavale.png');
     this.load.spritesheet('npc-wizard', '/sprites/npc-wizard-idle.png', {
       frameWidth: 32,
       frameHeight: 32,
@@ -53,9 +54,25 @@ export class WorldScene extends Phaser.Scene {
     });
     this.load.image('station-workbench', '/sprites/station-workbench.png');
     this.load.image('station-anvil', '/sprites/station-anvil.png');
+    this.load.image('furnace-stone', '/sprites/furnace-stone.png');
+    this.load.image('resource-wood-log', '/sprites/resource-wood-log.png');
+    this.load.image('resource-rock', '/sprites/resource-rock.png');
+    this.load.image('resource-bush', '/sprites/resource-bush.png');
+    this.load.image('tree-large', '/sprites/tree-large.png');
+    this.load.image('tree-medium', '/sprites/tree-medium.png');
+    this.load.image('farm-plot-tilled', '/sprites/farm-plot-tilled.png');
+    this.load.image('farm-fence', '/sprites/farm-fence.png');
+    this.load.image('building-house', '/sprites/building-house.png');
+    this.load.image('building-warehouse', '/sprites/building-warehouse.png');
+    this.load.image('building-blacksmith', '/sprites/building-blacksmith.png');
   }
   create() {
     this.focusRing = this.add.graphics().setDepth(5001);
+
+    const map = this.make.tilemap({ key: 'brumavale' });
+    const tiles = map.addTilesetImage('world-tiles');
+    if (!tiles) throw new Error('Tileset indisponível');
+    map.createLayer('Ground', tiles, 0, 0);
 
     if (!this.anims.exists('npc-wizard-idle')) {
       this.anims.create({
@@ -80,17 +97,20 @@ export class WorldScene extends Phaser.Scene {
       });
     }
 
-    // Fogueira animada no centro da vila
-    this.add.ellipse(1040, 1018, 28, 12, 0x132b24, 0.4).setDepth(1015);
+    // Fogueira animada no centro da vila (lado oeste da praça)
+    this.add.ellipse(990, 1042, 28, 12, 0x132b24, 0.4).setDepth(1031);
     const bonfire = this.add
-      .sprite(1040, 1008, 'bonfire')
+      .sprite(990, 1032, 'bonfire')
       .setScale(1.2)
-      .setDepth(1016);
+      .setDepth(1032);
     bonfire.play('bonfire-burn');
 
     for (const plot of FARM_PLOTS) {
+      const px = plot.tileX * 32 + 16;
+      const py = plot.tileY * 32 + 16;
+      this.add.image(px, py, 'farm-plot-tilled').setDepth(0.5);
       const shape = this.add
-        .rectangle(plot.tileX * 32 + 16, plot.tileY * 32 + 16, 28, 28, 0x775037)
+        .rectangle(px, py, 28, 28, 0x775037, 0.45)
         .setStrokeStyle(2, 0xc2ad79)
         .setDepth(1);
       this.plots.set(plot.id, shape);
@@ -98,18 +118,40 @@ export class WorldScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => gameBridge.interact?.(plot.id));
     }
+    const minPlotX = Math.min(...FARM_PLOTS.map((p) => p.tileX * 32 + 16));
+    const maxPlotX = Math.max(...FARM_PLOTS.map((p) => p.tileX * 32 + 16));
+    const minPlotY = Math.min(...FARM_PLOTS.map((p) => p.tileY * 32 + 16));
+    const maxPlotY = Math.max(...FARM_PLOTS.map((p) => p.tileY * 32 + 16));
+    for (let fx = minPlotX - 16; fx <= maxPlotX + 16; fx += 32) {
+      this.add.image(fx, minPlotY - 24, 'farm-fence').setDepth(minPlotY - 24);
+      this.add.image(fx, maxPlotY + 24, 'farm-fence').setDepth(maxPlotY + 24);
+    }
     for (const node of RESOURCES) {
-      const color =
-        node.item === 'wood'
-          ? 0x9d744b
-          : node.item === 'stone'
-            ? 0x9cacb5
-            : 0x91b360;
+      const isWood = node.item === 'wood';
+      const isStone = node.item === 'stone';
+      const spriteKey = isWood
+        ? 'resource-wood-log'
+        : isStone
+          ? 'resource-rock'
+          : 'resource-bush';
+
       this.add
-        .ellipse(node.x, node.y, 28, 24, color)
+        .ellipse(
+          node.x,
+          node.y + (isWood ? 6 : isStone ? 8 : 10),
+          isWood ? 28 : isStone ? 26 : 24,
+          10,
+          0x132b24,
+          0.35,
+        )
+        .setDepth(node.y - 1);
+
+      this.add
+        .image(node.x, node.y, spriteKey)
         .setDepth(node.y)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => gameBridge.interact?.(node.id));
+
       this.add
         .text(node.x, node.y - 25, node.name, {
           fontSize: '10px',
@@ -130,6 +172,16 @@ export class WorldScene extends Phaser.Scene {
         .setDepth(station.y)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => gameBridge.interact?.(station.id));
+
+      if (isForge) {
+        this.add
+          .ellipse(station.x + 32, station.y + 14, 30, 12, 0x132b24, 0.35)
+          .setDepth(station.y - 1);
+        this.add
+          .image(station.x + 32, station.y - 6, 'furnace-stone')
+          .setDepth(station.y);
+      }
+
       this.add
         .text(
           station.x,
@@ -176,49 +228,29 @@ export class WorldScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => gameBridge.interact?.(npc.id));
     }
-    // Code-native pixel art atlas: no external assets or runtime downloads.
-    const g = this.add.graphics();
-    const colors = [0x426747, 0xa49470, 0x72503c, 0x397c89, 0x354e38];
-    colors.forEach((color, i) => {
-      g.fillStyle(color).fillRect(i * 32, 0, 32, 32);
-      g.fillStyle(i === 3 ? 0x78afb1 : i === 1 ? 0xb5a682 : 0x547b4c);
-      for (let j = 0; j < 5; j++)
-        g.fillRect(
-          i * 32 + ((j * 7 + 3) % 29),
-          (j * 11 + 7) % 29,
-          i === 3 ? 8 : 3,
-          2,
-        );
-      if (i === 2) {
-        g.fillStyle(0x956447);
-        for (let y = 5; y < 32; y += 8) g.fillRect(i * 32, y, 32, 2);
-      }
-      if (i === 4) {
-        g.fillStyle(0x243b30).fillRect(i * 32 + 3, 5, 27, 24);
-        g.fillStyle(0x52734b).fillRect(i * 32 + 5, 3, 22, 12);
-      }
-    });
-    g.generateTexture('world-tiles', 160, 32);
-    g.destroy();
-    const map = this.make.tilemap({ key: 'brumavale' });
-    const tiles = map.addTilesetImage('world-tiles');
-    if (!tiles) throw new Error('Tileset indisponível');
-    map.createLayer('Ground', tiles, 0, 0);
-    const props = this.add.graphics();
     for (const b of landmarks) {
       const x = b.x * 32,
         y = b.y * 32,
         w = b.w * 32,
         h = b.h * 32;
-      props.fillStyle(0x192d25, 0.4).fillRect(x + 8, y + 12, w, h);
-      props.fillStyle(0xb19b71).fillRect(x, y, w, h);
-      props
-        .fillStyle(b.name === 'Ferreiro' ? 0x646b68 : 0x945c47)
-        .fillRect(x - 8, y - 24, w + 16, h - 20);
-      props.fillStyle(0xbf8360).fillRect(x - 8, y - 24, w + 16, 6);
-      props.fillStyle(0x3c342d).fillRect(x + w / 2 - 12, y + h - 34, 24, 34);
-      props.fillStyle(0xe4c584).fillRect(x + 15, y + h - 38, 20, 18);
-      this.label(b.name, x + w / 2, y - 42);
+      const key =
+        b.name === 'Casa'
+          ? 'building-house'
+          : b.name === 'Armazém'
+            ? 'building-warehouse'
+            : 'building-blacksmith';
+
+      // Sombra projetada sob a fachada
+      this.add
+        .rectangle(x + w / 2, y + h - 6, w, 16, 0x132b24, 0.35)
+        .setDepth(y + h - 1);
+
+      // Fachada em pixel art com telhado medieval
+      this.add
+        .image(x + w / 2, y + h / 2, key)
+        .setDepth(y + h);
+
+      this.label(b.name, x + w / 2, y - 28);
     }
     this.label('BRUMAVALE · PRAÇA', 1040, 910);
     this.label('LAGO DOS JUNÇOS', 1600, 250);
@@ -226,20 +258,26 @@ export class WorldScene extends Phaser.Scene {
     this.label('BOSQUE ANTIGO', 370, 300);
     this.label('PEDREIRA', 1670, 1240);
     this.label('PRADO DOS SLIMES', 1540, 1720);
-    // Depth-sorted trees: the player can pass behind their crowns.
+    // Árvores com profundidade: o jogador pode passar por trás de suas copas
     for (let ty = 1; ty < 25; ty++)
       for (let tx = 1; tx < 22; tx++) {
         if (worldTiles[ty]?.[tx] !== 4) continue;
         const x = tx * 32 + 16,
           y = ty * 32 + 16;
-        this.add.rectangle(x, y - 9, 12, 28, 0x79583c).setDepth(y);
-        this.add.ellipse(x, y - 36, 53, 53, 0x284b36).setDepth(y + 1);
-        this.add.ellipse(x - 5, y - 43, 35, 29, 0x608354).setDepth(y + 2);
+        const isBig = (tx * 7 + ty * 13) % 2 === 0;
+        if (isBig) {
+          this.add.ellipse(x, y + 4, 38, 14, 0x132b24, 0.35).setDepth(y - 1);
+          this.add.image(x, y - 40, 'tree-large').setDepth(y);
+        } else {
+          this.add.ellipse(x, y + 2, 28, 10, 0x132b24, 0.35).setDepth(y - 1);
+          this.add.image(x, y - 16, 'tree-medium').setDepth(y);
+        }
       }
     for (let i = 0; i < 13; i++) {
       const x = 1490 + ((i * 53) % 350),
         y = 1320 + ((i * 71) % 230);
-      this.add.ellipse(x, y, 34, 24, 0x84918b).setDepth(y);
+      this.add.ellipse(x, y + 8, 26, 10, 0x132b24, 0.35).setDepth(y - 1);
+      this.add.image(x, y, 'resource-rock').setDepth(y);
     }
     const shadow = this.add.ellipse(0, 0, 25, 10, 0x132b24, 0.4);
     const legs = this.add.rectangle(0, -6, 14, 12, 0x35434c);

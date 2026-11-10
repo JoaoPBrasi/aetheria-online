@@ -15,21 +15,39 @@ import { CraftingPanel } from './crafting-panel';
 import { DialogueModal } from './dialogue-modal';
 import { Hotbar } from './hotbar';
 import { QuestTracker } from './quest-tracker';
+import { QuestJournal } from './quest-journal';
+import {
+  activeQuests,
+  readHiddenQuests,
+  saveHiddenQuests,
+} from '../quest-tracking';
 export function GameHud({
   connection,
   name,
+  characterId,
   ready,
   onExit,
 }: {
   connection: WorldConnection | null;
   name: string;
+  characterId: string;
   ready: boolean | null;
   onExit: () => void;
 }) {
   const s = useSyncExternalStore(gameBridge.subscribe, gameBridge.getSnapshot);
   const [panel, setPanel] = useState<
-    'bag' | 'skills' | 'farm' | 'crafting' | 'dialogue' | null
+    'bag' | 'skills' | 'farm' | 'crafting' | 'dialogue' | 'quests' | null
   >(null);
+  const [hiddenQuests, setHiddenQuests] = useState(() =>
+    readHiddenQuests(characterId),
+  );
+  const toggleQuest = (questId: string) => {
+    const next = hiddenQuests.includes(questId)
+      ? hiddenQuests.filter((id) => id !== questId)
+      : [...hiddenQuests, questId];
+    setHiddenQuests(next);
+    saveHiddenQuests(characterId, next);
+  };
   const [craftStation, setCraftStation] = useState<
     CraftingStationId | undefined
   >(undefined);
@@ -126,7 +144,7 @@ export function GameHud({
         }
         return;
       }
-      if (k === 'b' || k === 'l' || k === 'h' || k === 'c') {
+      if (k === 'b' || k === 'l' || k === 'h' || k === 'c' || k === 'j') {
         e.preventDefault();
         const next =
           k === 'b'
@@ -135,7 +153,9 @@ export function GameHud({
               ? 'skills'
               : k === 'h'
                 ? 'farm'
-                : 'crafting';
+                : k === 'j'
+                  ? 'quests'
+                  : 'crafting';
         setPanel((p) => (p === next ? null : next));
       }
       if (k === 'e' || k === ' ') {
@@ -188,7 +208,13 @@ export function GameHud({
         <small>WASD · mover &nbsp; E · interagir</small>
         <button onClick={onExit}>Sair da sala</button>
       </div>
-      <QuestTracker quests={s.quests} />
+      <QuestTracker
+        quests={activeQuests(s.quests ?? []).filter(
+          (q) => !hiddenQuests.includes(q.questId),
+        )}
+        onOpenJournal={() => setPanel('quests')}
+        onUntrack={toggleQuest}
+      />
       <div className="hud-context" aria-live="polite">
         {s.status !== 'connected' ? (
           <p>Reconectando… As ações estão pausadas.</p>
@@ -280,6 +306,14 @@ export function GameHud({
           <span>🔨</span>Criação
         </button>
         <div className="dock-divider" />
+        <button
+          aria-label="Abrir diário de missões"
+          aria-expanded={panel === 'quests'}
+          onClick={() => setPanel((p) => (p === 'quests' ? null : 'quests'))}
+        >
+          <kbd>J</kbd>
+          <span>◇</span>Missões
+        </button>
         <span className="dock-note">
           FERRAMENTAS AUTOMÁTICAS
           <br />
@@ -305,7 +339,7 @@ export function GameHud({
       </div>
       {panel && panel !== 'dialogue' && (
         <div
-          className="hud-modal"
+          className={`hud-modal ${panel === 'quests' ? 'quest-journal-window' : ''}`}
           role="dialog"
           aria-modal="true"
           aria-label={
@@ -313,12 +347,16 @@ export function GameHud({
               ? 'Mochila'
               : panel === 'skills'
                 ? 'Ofícios'
-                : 'Horta'
+                : panel === 'quests'
+                  ? 'Diário de missões'
+                  : panel === 'crafting'
+                    ? 'Criação e Forja'
+                    : 'Horta'
           }
           onKeyDown={(e) => {
             if (e.key === 'Tab') {
               const buttons = e.currentTarget.querySelectorAll<HTMLElement>(
-                'button:not(:disabled),input,select',
+                'button:not(:disabled):not([tabindex="-1"]),input,select',
               );
               const first = buttons[0],
                 last = buttons[buttons.length - 1];
@@ -341,7 +379,9 @@ export function GameHud({
                   ? 'OFÍCIOS'
                   : panel === 'farm'
                     ? 'AGRICULTURA'
-                    : 'CRIAÇÃO & FORJA'}
+                    : panel === 'quests'
+                      ? 'DIÁRIO DE MISSÕES'
+                      : 'CRIAÇÃO & FORJA'}
             </span>
             <button
               ref={close}
@@ -351,7 +391,13 @@ export function GameHud({
               ✕ <kbd>ESC</kbd>
             </button>
           </header>
-          {panel === 'bag' ? (
+          {panel === 'quests' ? (
+            <QuestJournal
+              quests={s.quests ?? []}
+              hiddenIds={hiddenQuests}
+              onToggle={toggleQuest}
+            />
+          ) : panel === 'bag' ? (
             <GameplayPanel connection={connection} section="bag" />
           ) : panel === 'farm' ? (
             <GameplayPanel connection={connection} section="farm" />
