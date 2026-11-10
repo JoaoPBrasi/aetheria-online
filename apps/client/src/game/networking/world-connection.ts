@@ -101,6 +101,8 @@ export class WorldConnection {
         if (this.disposed) return;
         const old = gameBridge.getSnapshot().gameplay;
         if (old && snapshot.revision > old.revision) {
+          if (gameBridge.getSnapshot().actionPending && this.lastAction)
+            gameBridge.animateCharacter?.(this.lastAction);
           const gains = Object.keys(ITEMS)
             .map((id) => {
               const count = (snap: GameplaySnapshot) =>

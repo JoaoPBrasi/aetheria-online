@@ -27,3 +27,37 @@ it('interpolates remote snapshots 100 ms in the past without extrapolation', () 
   expect(movement.interpolate(samples, 250).x).toBe(4);
   expect(movement.interpolate(samples, 500).x).toBe(8);
 });
+it('restores facing and preserves the last predicted direction through idle inputs', () => {
+  const state = new WorldState(),
+    player = new PlayerPresence();
+  player.direction = 'left';
+  state.players.set('self', player);
+  movement.reconcile(state, 'self');
+  expect(movement.direction).toBe('left');
+  movement.send = () => undefined;
+  movement.input(0, -1);
+  movement.input(0, 0);
+  movement.reconcile(state, 'self');
+  expect(movement.direction).toBe('up');
+});
+it('updates the direction and cosmetics of an already visible remote player', () => {
+  const state = new WorldState(),
+    remote = new PlayerPresence();
+  remote.direction = 'right';
+  remote.hairStyle = 'long';
+  remote.clothingColor = '#578ba7';
+  state.players.set('other', remote);
+  movement.reconcile(state, 'self');
+  expect(movement.remotes.get('other')).toMatchObject({
+    direction: 'right',
+    hairStyle: 'long',
+    clothingColor: '#578ba7',
+  });
+  remote.direction = 'left';
+  remote.clothingColor = '#7d699a';
+  movement.reconcile(state, 'self');
+  expect(movement.remotes.get('other')).toMatchObject({
+    direction: 'left',
+    clothingColor: '#7d699a',
+  });
+});

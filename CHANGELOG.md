@@ -7,6 +7,15 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 
 ## [Unreleased]
 
+### Personagem com sprites e criação animada
+
+- Corpo Pixel Crawler animado substitui os retângulos do jogador local e remoto.
+- Repouso e caminhada em quatro direções, com direção preservada ao parar.
+- Camadas independentes para roupa, pele e quatro estilos de cabelo.
+- Prévia do sprite real no criador, rotação e teste de caminhada; respeita movimento reduzido.
+- Gestos locais após confirmação de ações e reação a dano; movimento interrompe o gesto.
+- Pipeline `pnpm character:art`, com fontes, autoria e termos preservados.
+
 ### Vila e campos de exploração
 
 - Mapa jogável ampliado para 96×96 tiles, com 2,25 vezes a área anterior.

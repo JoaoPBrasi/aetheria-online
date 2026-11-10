@@ -20,7 +20,10 @@ pnpm setup:local
 pnpm dev
 ```
 
-Abra **http://localhost:5173**. Clique em **Começar jornada**, escolha nome e afinidade visual, crie o personagem e clique em **Entrar na vila**. A interface mostra a conexão real à sala, o número de presenças e o diagnóstico do PostgreSQL. A afinidade é apenas um dado visual persistente nesta etapa; a representação atual do personagem é um protótipo geométrico.
+Abra **http://localhost:5173**. Clique em **Começar jornada**, escolha nome, cores
+e cabelo, confira a prévia animada, crie o personagem e clique em **Entrar na vila**.
+A interface mostra a conexão real à sala, o número de presenças e o diagnóstico
+do PostgreSQL. A aparência é persistida e renderizada com sprites Pixel Crawler.
 
 `pnpm dev` compila e observa o pacote shared, inicia o servidor com reinício automático e inicia o Vite. Alterações de código no servidor encerram conexões existentes; entre novamente após o reinício.
 
@@ -48,6 +51,7 @@ Os modelos continuam em `apps/server/prisma/schema.prisma`, com as mesmas migra�
 | ----------------------------------- | ----------------------------------------------------------------------- |
 | `pnpm dev`                          | Cliente, servidor e shared em modo de desenvolvimento                   |
 | `pnpm world:art`                    | Exportar o mapa e gerar terreno, casas e atlas Pixel Crawler            |
+| `pnpm character:art`                | Gerar o atlas modular de personagens com os sprites originais           |
 | `pnpm build`                        | Gerar Prisma Client e compilar todos os pacotes                         |
 | `pnpm lint`                         | ESLint                                                                  |
 | `pnpm format:check` / `pnpm format` | Verificar / aplicar Prettier                                            |
@@ -187,3 +191,15 @@ botões rápidos escolhem nabo ou abóbora. Liberar uma parcela continua na vis�
 A referência visual enviada orientou a distribuição: mundo como foco, identificação
 nos cantos, atalhos embaixo e janelas sobrepostas. A expansão posterior substituiu
 o terreno e as construções por composições Pixel Crawler.
+
+## Personagem e personalização
+
+O jogador usa o corpo animado Pixel Crawler, com repouso e caminhada em quatro
+direções. Roupa, pele e cabelo recebem cores independentes; a escolha é salva
+no personagem e vista por outros jogadores. Os estilos disponíveis são curto,
+comprido, coque e sem cabelo.
+
+No criador, use os botões de direção e Testar caminhada para conferir o sprite
+real. Personagens existentes podem ser editados em Personalizar personagem no
+lobby. A preferência de movimento reduzido mantém a prévia parada.
+Veja [personagem animado](docs/character-art.md) para geração e limites.

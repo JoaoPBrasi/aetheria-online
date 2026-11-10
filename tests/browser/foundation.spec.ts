@@ -17,7 +17,14 @@ test('two independent browsers create, join, leave and restore a persistent char
       [pb, secondName],
     ] as const) {
       await page.goto('/');
-      await expect(page.locator('canvas')).toBeVisible();
+      await expect(
+        page
+          .getByLabel(
+            'Mundo de Brumavale. Entre na vila e use WASD ou setas para andar.',
+            { exact: true },
+          )
+          .locator('canvas'),
+      ).toBeVisible();
       await expect(page.getByTestId('database-status')).toContainText(
         'Disponível',
       );
@@ -63,7 +70,14 @@ test('two independent browsers create, join, leave and restore a persistent char
       pa.getByRole('heading', { name: `Bem-vindo, ${firstName}` }),
     ).toBeVisible();
     await pa.setViewportSize({ width: 1024, height: 768 });
-    await expect(pa.locator('canvas')).toBeVisible();
+    await expect(
+      pa
+        .getByLabel(
+          'Mundo de Brumavale. Entre na vila e use WASD ou setas para andar.',
+          { exact: true },
+        )
+        .locator('canvas'),
+    ).toBeVisible();
     expect(
       await pa.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,

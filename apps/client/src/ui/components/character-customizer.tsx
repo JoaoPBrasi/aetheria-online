@@ -1,36 +1,8 @@
 import type { Cosmetics } from '@aetheria/shared';
-export function CharacterPortrait({ look }: { look: Cosmetics }) {
-  return (
-    <svg
-      viewBox="0 0 64 80"
-      role="img"
-      aria-label="Prévia do personagem"
-      data-testid="character-preview"
-    >
-      <ellipse cx="32" cy="73" rx="21" ry="5" fill="#172a23" opacity=".5" />
-      {look.hairStyle === 'long' && (
-        <rect x="18" y="10" width="28" height="39" fill={look.hairColor} />
-      )}
-      <rect x="22" y="55" width="9" height="18" fill="#35434c" />
-      <rect x="34" y="55" width="9" height="18" fill="#35434c" />
-      <rect x="17" y="31" width="30" height="27" fill={look.clothingColor} />
-      <rect x="12" y="34" width="7" height="18" fill={look.skinColor} />
-      <rect x="45" y="34" width="7" height="18" fill={look.skinColor} />
-      <rect x="22" y="10" width="22" height="24" fill={look.skinColor} />
-      <rect x="25" y="22" width="3" height="3" fill="#29382c" />
-      <rect x="38" y="22" width="3" height="3" fill="#29382c" />
-      {look.hairStyle !== 'none' && (
-        <>
-          <rect x="20" y="7" width="26" height="10" fill={look.hairColor} />
-          <rect x="20" y="15" width="5" height="10" fill={look.hairColor} />
-        </>
-      )}
-      {look.hairStyle === 'bun' && (
-        <rect x="27" y="0" width="12" height="10" fill={look.hairColor} />
-      )}
-    </svg>
-  );
-}
+import { useState } from 'react';
+import { CharacterPortrait } from './character-portrait';
+import type { Facing } from '../../game/characters/animation';
+export { CharacterPortrait } from './character-portrait';
 const palettes = {
   clothingColor: [
     '#c4d597',
@@ -50,12 +22,50 @@ export function CharacterCustomizer({
   look: Cosmetics;
   onChange: (look: Cosmetics) => void;
 }) {
+  const [direction, setDirection] = useState<Facing>('down');
+  const [walking, setWalking] = useState(false);
   return (
     <div className="character-workshop">
       <div className="portrait-stage">
         <span>SEU EXPLORADOR</span>
-        <CharacterPortrait look={look} />
-        <small>Prévia em tempo real</small>
+        <CharacterPortrait
+          look={look}
+          direction={direction}
+          walking={walking}
+        />
+        <div
+          className="portrait-directions"
+          role="group"
+          aria-label="Direção da prévia"
+        >
+          {(
+            [
+              ['down', 'Frente'],
+              ['left', 'Esquerda'],
+              ['up', 'Costas'],
+              ['right', 'Direita'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              type="button"
+              key={value}
+              aria-label={`Ver de ${label.toLowerCase()}`}
+              aria-pressed={direction === value}
+              onClick={() => setDirection(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button
+          className="portrait-motion"
+          type="button"
+          aria-pressed={walking}
+          onClick={() => setWalking(!walking)}
+        >
+          {walking ? 'Parar caminhada' : 'Testar caminhada'}
+        </button>
+        <small>O mesmo sprite utilizado no jogo</small>
       </div>
       <div className="color-options">
         {(['clothingColor', 'hairColor', 'skinColor'] as const).map(

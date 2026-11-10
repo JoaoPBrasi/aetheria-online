@@ -6,10 +6,16 @@ import {
   type MovementInput,
   type WorldState,
 } from '@aetheria/shared';
+import {
+  facingFromInput,
+  validFacing,
+  type Facing,
+} from '../characters/animation';
 type Sample = { at: number; x: number; y: number };
 export const movement = {
   cosmetics: { ...DEFAULT_COSMETICS } as Cosmetics,
   position: { ...WORLD_SPAWN },
+  direction: 'down' as Facing,
   seq: 0,
   pending: [] as MovementInput[],
   remotes: new Map<
@@ -23,6 +29,7 @@ export const movement = {
       hairColor: string;
       skinColor: string;
       hairStyle: string;
+      direction: Facing;
     }
   >(),
   send: undefined as ((input: MovementInput) => void) | undefined,
@@ -32,11 +39,14 @@ export const movement = {
     this.remotes.clear();
     this.send = undefined;
     this.position = { ...WORLD_SPAWN };
+    this.direction = 'down';
+    this.cosmetics = { ...DEFAULT_COSMETICS };
   },
   input(dx: number, dy: number) {
     if (!this.send || this.pending.length >= 8) return;
     const input = { seq: ++this.seq, dx: Math.sign(dx), dy: Math.sign(dy) };
     this.pending.push(input);
+    this.direction = facingFromInput(input.dx, input.dy, this.direction);
     this.position = moveInWorld(
       this.position.x,
       this.position.y,
@@ -58,7 +68,9 @@ export const movement = {
       this.seq = Math.max(this.seq, player.ack);
       this.pending = this.pending.filter((i) => i.seq > player.ack);
       this.position = { x: player.x, y: player.y };
-      for (const i of this.pending)
+      this.direction = validFacing(player.direction);
+      for (const i of this.pending) {
+        this.direction = facingFromInput(i.dx, i.dy, this.direction);
         this.position = moveInWorld(
           this.position.x,
           this.position.y,
@@ -66,6 +78,7 @@ export const movement = {
           i.dy,
           0.05,
         );
+      }
     }
     const seen = new Set<string>();
     state.players.forEach((p, id) => {
@@ -83,6 +96,7 @@ export const movement = {
         hairColor: p.hairColor,
         skinColor: p.skinColor,
         hairStyle: p.hairStyle,
+        direction: validFacing(p.direction),
         connected: p.connected,
         samples,
       });

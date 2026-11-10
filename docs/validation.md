@@ -197,3 +197,31 @@ Prévias em `work/house-models.png`, `work/brumavale-expanded.png`,
 Limites: as construções ainda são exteriores; os novos inimigos reutilizam
 a IA e o combate atuais, com animação de repouso durante deslocamento.
 Não foi feito benchmark formal de desempenho nesta entrega.
+
+## Personagem animado e criação — 10/11/2026
+
+40 testes unitários passaram. Foram aprovados os nove cenários de navegador,
+incluindo o novo criador com sprites e o multiplayer. Após corrigir o seletor
+genérico de canvas no teste de lobby, os três cenários de multiplayer e coleta
+foram reexecutados e passaram. Build, tipos do cliente/servidor/ferramentas,
+lint e formatação dos arquivos alterados passaram.
+
+Os testes verificam todos os recortes necessários dentro do PNG, quadros de
+64×64 sem corte do ponto dos pés, repetição das animações, espelhamento lateral,
+direção persistente ao parar e atualizações de aparência/direção remotas.
+O Chrome conferiu quatro estilos de cabelo nas quatro direções, mudança de
+pixels ao trocar a roupa, prévia animada e respeito a movimento reduzido.
+No mundo, verificou caminhada e repouso nas quatro direções e o gesto de
+machado após a confirmação real de três madeiras.
+
+Continuaram aprovados: personalização salva após recarregar, movimento com
+mochila aberta, digitação sem mover o personagem, dois navegadores, agricultura
+com crescimento real, diário de missões e exploração da área ampliada.
+Sem mudança de backend ou banco; testes de integração PostgreSQL não foram
+repetidos nesta entrega visual.
+
+Galeria dos estilos e poses, criador em 1440×1000 e 560×820 e personagens no
+multiplayer foram inspecionados visualmente. A janela compacta permite rolagem
+vertical e não apresenta overflow horizontal. Prévias em `work/character-gallery.png`,
+`work/sprite-creator.png`, `work/sprite-creator-compact.png` e
+`work/player-sprite-world.png`. Limites da implementação em `docs/character-art.md`.

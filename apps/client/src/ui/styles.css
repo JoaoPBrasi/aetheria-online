@@ -1314,9 +1314,9 @@ footer {
   letter-spacing: 2px;
   color: #c7d1ac;
 }
-.portrait-stage svg {
-  width: 145px;
-  height: 180px;
+.portrait-stage .character-portrait {
+  width: 128px;
+  height: 176px;
   image-rendering: pixelated;
 }
 .portrait-stage > small {
@@ -1328,9 +1328,38 @@ footer {
   min-height: 170px;
   margin: auto;
 }
-.returning-player .portrait-stage svg {
-  width: 110px;
-  height: 140px;
+.returning-player .portrait-stage .character-portrait {
+  width: 96px;
+  height: 132px;
+}
+.portrait-directions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  padding: 0 12px;
+}
+.portrait-directions button,
+.portrait-motion {
+  border: 1px solid #74815b;
+  background: #1b3127;
+  color: #d8dfbd;
+  border-radius: 4px;
+  padding: 5px 7px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.portrait-directions button[aria-pressed='true'],
+.portrait-motion[aria-pressed='true'] {
+  background: #62704a;
+  color: #fff3c4;
+  border-color: #cdbb7b;
+}
+.portrait-motion {
+  margin: 8px 0;
+}
+.portrait-stage > small {
+  padding: 0 8px 10px;
+  text-align: center;
 }
 .color-options fieldset {
   border: 0;
@@ -1418,8 +1447,9 @@ footer {
   .portrait-stage {
     min-height: 180px;
   }
-  .portrait-stage svg {
-    height: 140px;
+  .portrait-stage .character-portrait {
+    width: 96px;
+    height: 132px;
   }
   .lobby-brand {
     font-size: 18px;

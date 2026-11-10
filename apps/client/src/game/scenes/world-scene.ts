@@ -17,21 +17,19 @@ import {
 } from '@aetheria/shared';
 import { gameBridge } from '../managers/game-bridge';
 import { movement } from '../networking/movement';
+import { PlayerAvatar } from '../characters/player-avatar';
+import type { Cosmetics } from '@aetheria/shared';
 
 export class WorldScene extends Phaser.Scene {
-  private avatar!: Phaser.GameObjects.Container;
-  private bodyShape!: Phaser.GameObjects.Rectangle;
-  private headShape!: Phaser.GameObjects.Rectangle;
-  private hairShape!: Phaser.GameObjects.Rectangle;
-  private backHair!: Phaser.GameObjects.Rectangle;
-  private bun!: Phaser.GameObjects.Rectangle;
+  private avatar!: PlayerAvatar;
   private pressed = new Set<string>();
   private active = false;
   private focusRing!: Phaser.GameObjects.Graphics;
   private walking = false;
+  private lastHealth = 100;
   private plots = new Map<string, Phaser.GameObjects.Rectangle>();
   private accumulator = 0;
-  private remoteSprites = new Map<string, Phaser.GameObjects.Container>();
+  private remoteSprites = new Map<string, PlayerAvatar>();
   private monsterSprites = new Map<
     string,
     {
@@ -45,6 +43,11 @@ export class WorldScene extends Phaser.Scene {
     super('world');
   }
   preload() {
+    this.load.atlas(
+      'player-art',
+      '/sprites/player-atlas.png',
+      '/maps/player-atlas.json',
+    );
     this.load.image('world-ground', '/sprites/brumavale-ground.png');
     this.load.atlas(
       'world-props',
@@ -283,26 +286,24 @@ export class WorldScene extends Phaser.Scene {
       );
     this.label('CAMPOS DO SUL ↓', 1040, 2030);
     this.label('ORCS →', 2260, 1040);
-    const shadow = this.add.ellipse(0, 0, 25, 10, 0x132b24, 0.4);
-    const legs = this.add.rectangle(0, -6, 14, 12, 0x35434c);
-    this.bodyShape = this.add.rectangle(0, -18, 22, 19, 0xc4d597);
-    const head = this.add.rectangle(0, -34, 16, 16, 0xe1b68c);
-    const hair = this.add.rectangle(0, -42, 18, 7, 0x59422f);
-    this.headShape = head;
-    this.hairShape = hair;
-    this.backHair = this.add
-      .rectangle(0, -27, 24, 30, 0x59422f)
-      .setVisible(false);
-    this.bun = this.add.rectangle(0, -49, 10, 10, 0x59422f).setVisible(false);
-    this.avatar = this.add.container(WORLD_SPAWN.x, WORLD_SPAWN.y, [
-      shadow,
-      legs,
-      this.backHair,
-      this.bodyShape,
-      head,
-      hair,
-      this.bun,
-    ]);
+    this.avatar = new PlayerAvatar(this);
+    gameBridge.animateCharacter = (action) => {
+      const kind = action.kind;
+      const resource = RESOURCES.find((r) => r.id === action.node);
+      this.avatar.playGesture(
+        kind === 'water'
+          ? 'water'
+          : kind === 'gather' && resource?.item === 'wood'
+            ? 'chop'
+            : kind === 'gather' && resource?.item === 'stone'
+              ? 'mine'
+              : 'collect',
+        this.time.now,
+      );
+    };
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      gameBridge.animateCharacter = undefined;
+    });
     this.avatar.setVisible(false);
     this.cameras.main.setBounds(
       0,
@@ -443,19 +444,10 @@ export class WorldScene extends Phaser.Scene {
         );
     }
     if (!this.avatar) return;
-    const look = movement.cosmetics;
-    const color = (hex: string) => parseInt(hex.slice(1), 16);
-    this.bodyShape.setFillStyle(color(look.clothingColor));
-    this.headShape.setFillStyle(color(look.skinColor));
-    this.hairShape
-      .setFillStyle(color(look.hairColor))
-      .setVisible(look.hairStyle !== 'none');
-    this.backHair
-      .setFillStyle(color(look.hairColor))
-      .setVisible(look.hairStyle === 'long');
-    this.bun
-      .setFillStyle(color(look.hairColor))
-      .setVisible(look.hairStyle === 'bun');
+    const health = farmState.health ?? 100;
+    if (this.active && health < this.lastHealth)
+      this.avatar.playGesture('hit', time);
+    this.lastHealth = health;
     const focused = document.activeElement;
     const typing =
       focused instanceof HTMLSelectElement ||
@@ -479,48 +471,27 @@ export class WorldScene extends Phaser.Scene {
       }
     } else this.accumulator = 0;
     const next = movement.position;
-    this.walking = next.x !== this.avatar.x || next.y !== this.avatar.y;
-    this.avatar.setPosition(next.x, next.y).setDepth(next.y);
-    this.bodyShape.y = -18 + (this.walking ? Math.sin(time / 80) * 2 : 0);
+    const pose = this.avatar.updatePose(
+      time,
+      next.x,
+      next.y,
+      movement.direction,
+      movement.cosmetics,
+    );
+    this.walking = this.avatar.state === 'walk';
+    this.game.canvas.dataset.playerPose = `${this.avatar.state}:${this.avatar.facing}:${pose.frame}`;
     for (const [id, remote] of movement.remotes) {
       let sprite = this.remoteSprites.get(id);
       if (!sprite) {
-        const coat = parseInt(remote.clothingColor.slice(1), 16);
-        sprite = this.add.container(0, 0, [
-          this.add.ellipse(0, 0, 25, 10, 0x132b24, 0.4),
-          this.add.rectangle(0, -6, 14, 12, 0x35434c),
-          this.add
-            .rectangle(0, -27, 24, 30, parseInt(remote.hairColor.slice(1), 16))
-            .setVisible(remote.hairStyle === 'long'),
-          this.add.rectangle(0, -18, 22, 19, coat),
-          this.add.rectangle(
-            0,
-            -34,
-            16,
-            16,
-            parseInt(remote.skinColor.slice(1), 16),
-          ),
-          this.add
-            .rectangle(0, -42, 18, 7, parseInt(remote.hairColor.slice(1), 16))
-            .setVisible(remote.hairStyle !== 'none'),
-          this.add
-            .rectangle(0, -49, 10, 10, parseInt(remote.hairColor.slice(1), 16))
-            .setVisible(remote.hairStyle === 'bun'),
-          this.add
-            .text(0, -58, remote.name, {
-              fontSize: '12px',
-              color: '#fff5d0',
-              backgroundColor: '#253c32',
-            })
-            .setOrigin(0.5),
-        ]);
+        sprite = new PlayerAvatar(this, remote.name);
         this.remoteSprites.set(id, sprite);
       }
       const point = movement.interpolate(remote.samples, performance.now());
-      sprite
-        .setPosition(point.x, point.y)
-        .setDepth(point.y)
-        .setAlpha(remote.connected ? 1 : 0.4);
+      sprite.updatePose(time, point.x, point.y, remote.direction, {
+        ...remote,
+        hairStyle: remote.hairStyle as Cosmetics['hairStyle'],
+      });
+      sprite.setAlpha(remote.connected ? 1 : 0.4);
     }
     for (const [id, sprite] of this.remoteSprites)
       if (!movement.remotes.has(id)) {

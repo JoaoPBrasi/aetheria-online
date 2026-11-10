@@ -1,0 +1,91 @@
+﻿{
+  "license": "../Terms.txt",
+  "sprites": [
+    {
+      "file": "Collect_Down-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Collect_Base/Collect_Down-Sheet.png"
+    },
+    {
+      "file": "Collect_Side-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Collect_Base/Collect_Side-Sheet.png"
+    },
+    {
+      "file": "Collect_Up-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Collect_Base/Collect_Up-Sheet.png"
+    },
+    {
+      "file": "Crush_Down-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Crush_Base/Crush_Down-Sheet.png"
+    },
+    {
+      "file": "Crush_Side-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Crush_Base/Crush_Side-Sheet.png"
+    },
+    {
+      "file": "Crush_Up-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Crush_Base/Crush_Up-Sheet.png"
+    },
+    {
+      "file": "Hit_Down-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Hit_Base/Hit_Down-Sheet.png"
+    },
+    {
+      "file": "Hit_Side-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Hit_Base/Hit_Side-Sheet.png"
+    },
+    {
+      "file": "Hit_Up-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Hit_Base/Hit_Up-Sheet.png"
+    },
+    {
+      "file": "Idle_Down-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Idle_Base/Idle_Down-Sheet.png"
+    },
+    {
+      "file": "Idle_Side-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Idle_Base/Idle_Side-Sheet.png"
+    },
+    {
+      "file": "Idle_Up-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Idle_Base/Idle_Up-Sheet.png"
+    },
+    {
+      "file": "Slice_Down-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Slice_Base/Slice_Down-Sheet.png"
+    },
+    {
+      "file": "Slice_Side-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Slice_Base/Slice_Side-Sheet.png"
+    },
+    {
+      "file": "Slice_Up-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Slice_Base/Slice_Up-Sheet.png"
+    },
+    {
+      "file": "Walk_Down-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Walk_Base/Walk_Down-Sheet.png"
+    },
+    {
+      "file": "Walk_Side-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Walk_Base/Walk_Side-Sheet.png"
+    },
+    {
+      "file": "Walk_Up-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Walk_Base/Walk_Up-Sheet.png"
+    },
+    {
+      "file": "Watering_Down-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Watering_Base/Watering_Down-Sheet.png"
+    },
+    {
+      "file": "Watering_Side-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Watering_Base/Watering_Side-Sheet.png"
+    },
+    {
+      "file": "Watering_Up-Sheet.png",
+      "source": "Entities/Characters/Body_A/Animations/Watering_Base/Watering_Up-Sheet.png"
+    }
+  ],
+  "pack": "Pixel Crawler - Free Pack 2.11",
+  "author": "Anokolisa"
+}

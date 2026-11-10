@@ -14,6 +14,10 @@ test('collects with a carried tool and manages inventory inside the game', async
   });
   await page.keyboard.press('e');
   await expect(page.getByRole('status')).toContainText('+3 Madeira');
+  await expect(page.locator('canvas')).toHaveAttribute(
+    'data-player-pose',
+    /^chop:/,
+  );
   await page.screenshot({ path: 'work/immersive-hud.png', fullPage: true });
   await page.keyboard.press('b');
   const dialog = page.getByRole('dialog', { name: 'Mochila', exact: true });

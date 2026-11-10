@@ -4,6 +4,7 @@ export class GameBridge {
   interact?: (target?: string) => void;
   acceptQuest?: (questId: string) => void;
   turnInQuest?: (questId: string) => void;
+  animateCharacter?: (action: Record<string, unknown>) => void;
   private snapshot: GameSnapshot = {
     status: 'offline',
     players: 0,
