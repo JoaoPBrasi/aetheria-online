@@ -9,6 +9,7 @@ import { gameBridge } from '../managers/game-bridge';
 import { request, RequestError } from './api';
 import { movement } from './movement';
 import { unlockCombatAudio } from '../combat-audio';
+import { rememberConfirmedPlanting } from '../farming-preferences';
 const connectionErrors: Record<string, string> = {
   ALREADY_CONNECTED: 'Personagem já conectado em outra janela.',
   INVALID_SESSION: 'Sessão inválida. Crie uma nova identidade local.',
@@ -119,6 +120,8 @@ export class WorldConnection {
         if (this.disposed) return;
         const old = gameBridge.getSnapshot().gameplay;
         if (old && snapshot.revision > old.revision) {
+          if (this.lastAction)
+            rememberConfirmedPlanting(this.lastAction, old, snapshot);
           if (
             gameBridge.getSnapshot().actionPending &&
             this.lastAction &&

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   CROPS,
   ITEMS,
@@ -6,6 +6,7 @@ import {
   type CropId,
   type GameplaySnapshot,
 } from '@aetheria/shared';
+import { readLastPlantedCrop } from '../../game/farming-preferences';
 
 export function SeedPicker({
   plotId,
@@ -21,6 +22,7 @@ export function SeedPicker({
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLElement>(null);
+  const [lastCrop] = useState(() => readLastPlantedCrop(gameplay.characterId));
   const seeds = (Object.keys(CROPS) as CropId[])
     .map((crop) => ({ crop, count: seedCount(gameplay, crop) }))
     .filter(({ count }) => count > 0);
@@ -28,6 +30,7 @@ export function SeedPicker({
   useEffect(() => {
     const picker = dialog.current;
     (
+      picker?.querySelector<HTMLButtonElement>('button[data-recent]:enabled') ??
       picker?.querySelector<HTMLButtonElement>('li button:enabled') ??
       picker?.querySelector('button')
     )?.focus();
@@ -60,6 +63,7 @@ export function SeedPicker({
               <button
                 type="button"
                 disabled={disabled}
+                data-recent={crop === lastCrop ? '' : undefined}
                 onClick={() => onChoose(crop)}
               >
                 <span
@@ -68,7 +72,10 @@ export function SeedPicker({
                 />
                 <span>
                   <strong>{ITEMS[CROPS[crop].seed].name}</strong>
-                  <small>{CROPS[crop].growMs / 1000} s após regar</small>
+                  <small>
+                    {CROPS[crop].growMs / 1000} s após regar
+                    {crop === lastCrop && ' · Último plantio'}
+                  </small>
                 </span>
                 <span className="seed-picker-count">{count} na mochila</span>
               </button>

@@ -1001,6 +1001,10 @@ footer {
   text-align: left;
   font-size: 13px;
 }
+.seed-picker li button[data-recent] {
+  border-color: #b9a26d;
+  background: #354a33;
+}
 .seed-picker button:focus-visible {
   outline: 2px solid #e8c87b;
   outline-offset: -2px;
