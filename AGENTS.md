@@ -91,6 +91,10 @@ Consulte as notas antes de iniciar grandes mudanças:
 - `06 - 🎒 Interface de Usuário (HUD), Hotbar e Controles.md`
 - `07 - 🎨 Arte, Sprites e Assets de Brumavale.md`
 - `08 - 🚀 Versionamento, Branches e Changelog.md`
+- `09 - 📜 Sistema de Quests e Missões.md`
+- `10 - 🎨 Direção de Arte e Cenografia de Brumavale.md`
+- `11 - 🤖 Integração MCP PixelLab (Geração de Personagens e Habilidades).md`
+- `12 - 🗺️ Proposta de Evolução — Funcionalidades Essenciais de MMORPG.md`
 
 ---
 
