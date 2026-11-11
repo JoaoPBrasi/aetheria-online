@@ -22,8 +22,12 @@ export class AudioManager {
     this.loadSettings();
   }
 
+  getSnapshot = (): AudioSettings => {
+    return this.settings;
+  };
+
   getSettings(): AudioSettings {
-    return { ...this.settings };
+    return this.getSnapshot();
   }
 
   subscribe = (callback: () => void): (() => void) => {
@@ -125,13 +129,19 @@ export class AudioManager {
   }
 
   setMasterVolume(val: number): void {
-    this.settings.masterVolume = Math.max(0, Math.min(1, val));
+    this.settings = {
+      ...this.settings,
+      masterVolume: Math.max(0, Math.min(1, val)),
+    };
     this.applyGains();
     this.saveSettings();
   }
 
   setBgmVolume(val: number): void {
-    this.settings.bgmVolume = Math.max(0, Math.min(1, val));
+    this.settings = {
+      ...this.settings,
+      bgmVolume: Math.max(0, Math.min(1, val)),
+    };
     this.applyGains();
     if (this.settings.bgmVolume === 0) {
       this.stopBgm();
@@ -142,13 +152,19 @@ export class AudioManager {
   }
 
   setSfxVolume(val: number): void {
-    this.settings.sfxVolume = Math.max(0, Math.min(1, val));
+    this.settings = {
+      ...this.settings,
+      sfxVolume: Math.max(0, Math.min(1, val)),
+    };
     this.applyGains();
     this.saveSettings();
   }
 
   toggleMute(): void {
-    this.settings.muted = !this.settings.muted;
+    this.settings = {
+      ...this.settings,
+      muted: !this.settings.muted,
+    };
     this.applyGains();
     if (this.settings.muted) {
       this.stopBgm();

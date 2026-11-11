@@ -8,7 +8,7 @@ interface AudioModalProps {
 export function AudioModal({ onClose }: AudioModalProps) {
   const settings = useSyncExternalStore(
     audioManager.subscribe,
-    () => audioManager.getSettings(),
+    audioManager.getSnapshot,
   );
 
   return (
@@ -17,19 +17,21 @@ export function AudioModal({ onClose }: AudioModalProps) {
       role="dialog"
       aria-label="Configurações de Áudio"
     >
-      <div className="hud-modal-header">
-        <h3>Opções de Som & Trilha</h3>
+      <header>
+        <div>
+          <span>CONFIGURAÇÕES / ÁUDIO</span>
+          <h2>Opções de Som & Trilha</h2>
+        </div>
         <button
-          className="hud-close"
           onClick={() => {
             audioManager.playSfx('ui_close');
             onClose();
           }}
           aria-label="Fechar configurações de áudio"
         >
-          ×
+          Fechar
         </button>
-      </div>
+      </header>
 
       <div className="audio-modal-body">
         {/* Toggle Mudo */}
@@ -120,3 +122,4 @@ export function AudioModal({ onClose }: AudioModalProps) {
     </div>
   );
 }
+
