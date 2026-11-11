@@ -234,13 +234,16 @@ export class WorldScene extends Phaser.Scene {
       ).setDepth(station.y + 1);
     }
     for (const npc of NPCS) {
-      const shadow = this.add.ellipse(0, 4, 25, 10, 0x132b24, 0.4);
-      const sprite = this.add.sprite(0, -10, 'npc-wizard').setScale(1.1);
+      const shadow = this.add.ellipse(0, 6, 36, 14, 0x132b24, 0.45);
+      const sprite = this.add
+        .sprite(0, 6, 'npc-wizard')
+        .setScale(2.2)
+        .setOrigin(0.5, 1);
       sprite.play('npc-wizard-idle');
-      const label = makeNameplate(this, `✦ ${npc.name}`, 'npc', 0, -42);
+      const label = makeNameplate(this, `✦ ${npc.name}`, 'npc', 0, -76);
       const title = this.add
-        .text(0, -66, npc.title, {
-          fontSize: '9px',
+        .text(0, -100, npc.title, {
+          fontSize: '10px',
           color: '#a3bfab',
         })
         .setOrigin(0.5);
@@ -251,7 +254,7 @@ export class WorldScene extends Phaser.Scene {
         label,
         title,
       ]);
-      npcContainer.setSize(32, 48);
+      npcContainer.setSize(48, 76);
       npcContainer.setDepth(npc.y);
       npcContainer
         .setInteractive({ useHandCursor: true })
