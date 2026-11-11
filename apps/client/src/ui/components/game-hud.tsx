@@ -9,6 +9,7 @@ import {
   TILE_SIZE,
   CAMPFIRE,
   CAMPFIRE_REST_RANGE,
+  CRAFTING_STATIONS,
   type CropId,
   type CraftingStationId,
 } from '@aetheria/shared';
@@ -73,9 +74,8 @@ export function GameHud({
     setHiddenQuests(next);
     saveHiddenQuests(characterId, next);
   };
-  const [craftStation, setCraftStation] = useState<
-    CraftingStationId | undefined
-  >(undefined);
+  const [craftStation, setCraftStation] =
+    useState<CraftingStationId>('workbench-plaza');
   const [dialogueNpc, setDialogueNpc] = useState<string | null>(null);
   const [crop, setCrop] = useState<CropId>('turnip');
   const close = useRef<HTMLButtonElement>(null);
@@ -142,6 +142,24 @@ export function GameHud({
         now.monsters ?? [],
         now.forage,
       );
+
+      if (!item && target && CRAFTING_STATIONS.some((st) => st.id === target)) {
+        const station = CRAFTING_STATIONS.find((st) => st.id === target);
+        if (station && now.position) {
+          const dist = Math.hypot(
+            station.x - now.position.x,
+            station.y - now.position.y,
+          );
+          if (dist > 140) {
+            audioManager.playSfx('ui_click');
+            gameBridge.update({
+              feedback: `Aproxime-se de ${station.name} para utilizá-la.`,
+              feedbackAt: Date.now(),
+            });
+            return;
+          }
+        }
+      }
       if (item?.enabled) {
         audioManager.unlockAudio();
         if (item.payload.kind === 'gather') {
@@ -297,14 +315,7 @@ export function GameHud({
         audioManager.toggleMute();
         return;
       }
-      if (
-        k === 'b' ||
-        k === 'l' ||
-        k === 'h' ||
-        k === 'c' ||
-        k === 'j' ||
-        k === 'o'
-      ) {
+      if (k === 'b' || k === 'l' || k === 'h' || k === 'j' || k === 'o') {
         e.preventDefault();
         audioManager.unlockAudio();
         const next =
@@ -316,9 +327,7 @@ export function GameHud({
                 ? 'farm'
                 : k === 'j'
                   ? 'quests'
-                  : k === 'o'
-                    ? 'audio'
-                    : 'crafting';
+                  : 'audio';
         setPanel((p) => {
           const res = p === next ? null : next;
           audioManager.playSfx(res ? 'ui_open' : 'ui_close');
@@ -501,15 +510,6 @@ export function GameHud({
           <kbd>H</kbd>
           <span>♧</span>Horta
         </button>
-        <button
-          aria-label="Abrir criação"
-          onClick={() =>
-            setPanel((p) => (p === 'crafting' ? null : 'crafting'))
-          }
-        >
-          <kbd>C</kbd>
-          <span>🔨</span>Criação
-        </button>
         <div className="dock-divider" />
         <button
           aria-label="Abrir diário de missões"
@@ -613,7 +613,9 @@ export function GameHud({
                     ? 'AGRICULTURA'
                     : panel === 'quests'
                       ? 'DIÁRIO DE MISSÕES'
-                      : 'CRIAÇÃO & FORJA'}
+                      : (CRAFTING_STATIONS.find(
+                          (st) => st.id === craftStation,
+                        )?.name.toUpperCase() ?? 'ESTAÇÃO DE TRABALHO')}
             </span>
             <button
               ref={close}
@@ -637,7 +639,8 @@ export function GameHud({
             <CraftingPanel
               key={craftStation}
               connection={connection}
-              initialStation={craftStation}
+              stationId={craftStation}
+              onClose={() => setPanel(null)}
             />
           ) : (
             <section className="lifeskills">

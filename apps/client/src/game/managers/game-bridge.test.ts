@@ -96,3 +96,4 @@ describe('GameBridge - Sistema de Cast e Canalização', () => {
     expect(bridge.getCast()?.status).toBe('channeling');
   });
 });
+

@@ -1888,6 +1888,44 @@ footer {
   gap: 16px;
   padding: 16px;
 }
+.station-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(32, 53, 42, 0.95), rgba(18, 32, 25, 0.98));
+  border: 1px solid #6b8c75;
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.station-banner-icon {
+  font-size: 28px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+.station-banner-text h2 {
+  font-family: Georgia, serif;
+  font-size: 18px;
+  color: #eedca4;
+  margin: 0;
+}
+.station-banner-text small {
+  display: block;
+  font-size: 11px;
+  color: #a4c4b5;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.station-description {
+  color: #d1dacb;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+  background: rgba(14, 25, 19, 0.6);
+  padding: 10px 14px;
+  border-left: 3px solid #8d774e;
+  border-radius: 0 6px 6px 0;
+}
 .crafting-panel h2 {
   font-family: Georgia, serif;
   font-size: 20px;

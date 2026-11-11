@@ -284,14 +284,19 @@ export class GameplayRepository {
           recipe.output.itemId,
           recipe.output.quantity,
         );
-        await tx.characterSkill.update({
+        await tx.characterSkill.upsert({
           where: {
             characterId_profession: {
               characterId,
               profession: recipe.profession,
             },
           },
-          data: { xp: { increment: recipe.xp } },
+          update: { xp: { increment: recipe.xp } },
+          create: {
+            characterId,
+            profession: recipe.profession,
+            xp: recipe.xp,
+          },
         });
         changed = true;
       }

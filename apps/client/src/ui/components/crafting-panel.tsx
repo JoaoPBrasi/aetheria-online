@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import {
   ITEMS,
   CRAFTING_RECIPES,
@@ -11,12 +11,38 @@ import { gameBridge } from '../../game/managers/game-bridge';
 import type { WorldConnection } from '../../game/networking/world-connection';
 import { audioManager } from '../../game/audio/audio-manager';
 
+const STATION_DETAILS: Record<
+  string,
+  { icon: string; specialty: string; description: string }
+> = {
+  workbench: {
+    icon: '🪵',
+    specialty: 'Carpintaria & Artesanato Rústico',
+    description:
+      'Processe toras de madeira colhidas no bosque em tábuas nobres e outros componentes rústicos.',
+  },
+  forge: {
+    icon: '⚒️',
+    specialty: 'Armaria & Metalurgia',
+    description:
+      'Molde lingotes incandescentes de ferro na bigorna para forjar armas de combate, machados reforçados e ferramentas pesadas.',
+  },
+  furnace: {
+    icon: '🔥',
+    specialty: 'Fundição & Refino de Minérios',
+    description:
+      'Alimente o fogo com lenha para queimar carvão vegetal e purificar minério de ferro bruto em lingotes de alto valor.',
+  },
+};
+
 export function CraftingPanel({
   connection,
-  initialStation,
+  stationId,
+  onClose,
 }: {
   connection: WorldConnection | null;
-  initialStation?: CraftingStationId;
+  stationId: CraftingStationId;
+  onClose?: () => void;
 }) {
   const state = useSyncExternalStore(
     gameBridge.subscribe,
@@ -28,25 +54,26 @@ export function CraftingPanel({
   );
   const isCasting = activeCast?.status === 'channeling';
 
-  const [stationId, setStationId] = useState<CraftingStationId>(() => {
-    if (initialStation) return initialStation;
-    if (state.position) {
-      const nearest = [...CRAFTING_STATIONS].sort(
-        (a, b) =>
-          Math.hypot(a.x - state.position!.x, a.y - state.position!.y) -
-          Math.hypot(b.x - state.position!.x, b.y - state.position!.y),
-      )[0];
-      if (nearest) return nearest.id;
-    }
-    return 'workbench-plaza';
-  });
-
-  const currentStation = CRAFTING_STATIONS.find((s) => s.id === stationId);
+  const currentStation =
+    CRAFTING_STATIONS.find((s) => s.id === stationId) ?? CRAFTING_STATIONS[0];
   const snapshot = state.gameplay;
+
+  // Fecha o menu automaticamente se o jogador se afastar da estação
+  useEffect(() => {
+    if (state.position) {
+      const dist = Math.hypot(
+        currentStation.x - state.position.x,
+        currentStation.y - state.position.y,
+      );
+      if (dist > 140) {
+        onClose?.();
+      }
+    }
+  }, [state.position, currentStation, onClose]);
+
   if (!snapshot) return null;
 
   const isNear =
-    currentStation &&
     state.position &&
     Math.hypot(
       currentStation.x - state.position.x,
@@ -54,10 +81,15 @@ export function CraftingPanel({
     ) <= 140;
 
   const recipes = Object.values(CRAFTING_RECIPES).filter(
-    (r) => currentStation && r.station === currentStation.type,
+    (r) => r.station === currentStation.type,
   );
 
   const busy = state.status !== 'connected' || state.actionPending;
+  const details = STATION_DETAILS[currentStation.type] ?? {
+    icon: '🔨',
+    specialty: 'Oficina Artesanal',
+    description: 'Fabricação de suprimentos e equipamentos.',
+  };
 
   const handleCraft = (recipeId: RecipeId) => {
     const recipe = CRAFTING_RECIPES[recipeId];
@@ -94,31 +126,18 @@ export function CraftingPanel({
   };
 
   return (
-    <section className="crafting-panel" aria-label="Criação e Forja">
-      <h2>Estações de Criação</h2>
-      <p>
-        Aproxime-se da estação na vila para fabricar itens e ganhar experiência
-        de Ferreiro.
-      </p>
-
-      <div className="station-tabs" role="tablist">
-        {CRAFTING_STATIONS.map((st) => {
-          const nearThis =
-            state.position &&
-            Math.hypot(st.x - state.position.x, st.y - state.position.y) <= 140;
-          return (
-            <button
-              key={st.id}
-              role="tab"
-              aria-selected={stationId === st.id}
-              className={`station-tab ${stationId === st.id ? 'active' : ''}`}
-              onClick={() => setStationId(st.id)}
-            >
-              {st.name} {nearThis ? '🟢 (Ao alcance)' : '⚪ (Distante)'}
-            </button>
-          );
-        })}
+    <section
+      className="crafting-panel dedicated-station-panel"
+      aria-label={currentStation.name}
+    >
+      <div className="station-banner">
+        <span className="station-banner-icon">{details.icon}</span>
+        <div className="station-banner-text">
+          <h2>{currentStation.name}</h2>
+          <small>{details.specialty}</small>
+        </div>
       </div>
+      <p className="station-description">{details.description}</p>
 
       <div className="recipes-list">
         {recipes.map((r) => {
@@ -137,7 +156,7 @@ export function CraftingPanel({
               </div>
 
               <div className="recipe-ingredients">
-                <span>Materiais:</span>
+                <span>Materiais Necessários:</span>
                 <ul>
                   {r.inputs.map((inp) => {
                     const have = snapshot.inventory
@@ -163,9 +182,9 @@ export function CraftingPanel({
                   onClick={() => handleCraft(r.id)}
                 >
                   {isCasting
-                    ? 'Forjando…'
+                    ? 'Fabricando…'
                     : busy
-                      ? 'Fabricando…'
+                      ? 'Processando…'
                       : !isNear
                         ? 'Estação distante'
                         : !possible
