@@ -14,6 +14,10 @@ Todos os agentes de IA que atuarem neste repositório **DEVEM** respeitar as seg
 4. **Verificação de Saúde:** Antes de considerar qualquer entrega concluída, o agente deve garantir que:
    - A suíte de testes passa com sucesso: `pnpm test`
    - A checagem de tipos estritos do TypeScript não acusa nenhum erro: `pnpm --filter @aetheria/client exec tsc --noEmit` e `pnpm --filter @aetheria/server exec tsc --noEmit`
+5. **Anonimato Obrigatório de Assets (Proibição de Menção a Autores Terceiros):**
+   - É expressamente proibido citar ou creditar o nome de autores, artistas terceiros, pseudônimos, e-mails, links de Patreon, redes sociais ou contatos externos das sprites e pacotes de assets do jogo.
+   - Os termos de uso dos assets (`Terms.txt`) dispensam formalmente qualquer atribuição (*"It is not necessary to credit the author for any use of the arts"*).
+   - Todos os arquivos de configuração/manifesto (`manifest.json`), notas do Obsidian, arquivos de código-fonte, devlogs e mensagens de commit no GitHub devem manter anonimato absoluto quanto à autoria externa dos assets.
 
 ---
 

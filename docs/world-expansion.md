@@ -39,7 +39,7 @@ A posição nas novas regiões utiliza o salvamento e a reconexão existentes.
 ## Assets e geração
 
 As folhas-fonte estão em `art/sprites`, com origem por arquivo no
-`manifest.json` e termos originais em `Terms.txt`. Autoria: Anokolisa,
+`manifest.json` e termos de licença em `Terms.txt`.
 pacote de arte 16-bit. As referências orientam a composição;
 seus pixels não foram extraídos para o jogo.
 
