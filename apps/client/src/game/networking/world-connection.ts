@@ -57,6 +57,7 @@ export class WorldConnection {
       questPending: false,
       quests: undefined,
       resources: undefined,
+      forage: undefined,
     });
     try {
       const reservation = (await request(
@@ -86,6 +87,12 @@ export class WorldConnection {
         'resources',
         (resources: import('@aetheria/shared').ResourceStates) => {
           if (!this.disposed) gameBridge.update({ resources });
+        },
+      );
+      room.onMessage(
+        'forage',
+        (forage: import('@aetheria/shared').ForageNode[]) => {
+          if (!this.disposed) gameBridge.update({ forage });
         },
       );
       room.onMessage(

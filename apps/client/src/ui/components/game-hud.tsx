@@ -76,6 +76,7 @@ export function GameHud({
           crop,
           undefined,
           s.monsters ?? [],
+          s.forage,
         )
       : undefined;
   useEffect(() => {
@@ -103,6 +104,7 @@ export function GameHud({
         crop,
         target,
         now.monsters ?? [],
+        now.forage,
       );
       if (item?.enabled) {
         if (item.payload.kind === 'open_crafting') {

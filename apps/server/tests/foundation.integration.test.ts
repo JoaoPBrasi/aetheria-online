@@ -1,7 +1,11 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { Client, type Room } from '@colyseus/sdk';
-import type { WorldState } from '@aetheria/shared';
-import { createHash } from 'node:crypto';
+import type {
+  ForageNode,
+  GameplaySnapshot,
+  WorldState,
+} from '@aetheria/shared';
+import { createHash, randomUUID } from 'node:crypto';
 import pg from 'pg';
 const base = process.env.TEST_SERVER_URL!;
 if (!base || !process.env.DATABASE_URL?.includes('/aetheria_test_'))
@@ -45,6 +49,7 @@ async function join(token: string) {
   rooms.push(room);
   room.onMessage('gameplay', () => undefined);
   room.onMessage('resources', () => undefined);
+  room.onMessage('forage', () => undefined);
   room.onMessage('plots', () => undefined);
   room.onMessage('monsters', () => undefined);
   return room;
@@ -58,6 +63,67 @@ afterAll(async () => {
   await db.end();
 });
 describe.sequential('foundation against real PostgreSQL and WebSockets', () => {
+  it('sends the same wild plants to both players and broadcasts a new location after harvest', async () => {
+    const observer = await identity('Observa Flores');
+    const watcher = await join(observer.token);
+    let forage: ForageNode[] = [];
+    watcher.onMessage('forage', (nodes: ForageNode[]) => {
+      forage = nodes;
+    });
+    watcher.send('sync');
+    await expect.poll(() => forage.length).toBeGreaterThanOrEqual(10);
+    const initial = forage;
+    const flower = initial.find((node) => node.kind === 'flower')!;
+    const collector = await identity('Colhe Flores');
+    await db.query('UPDATE "Character" SET x=$1, y=$2 WHERE id=$3', [
+      flower.x,
+      flower.y,
+      collector.character.id,
+    ]);
+    const player = await join(collector.token);
+    try {
+      let snapshot: GameplaySnapshot | undefined;
+      let playerForage: ForageNode[] = [];
+      player.onMessage('gameplay', (value: GameplaySnapshot) => {
+        snapshot = value;
+      });
+      player.onMessage('forage', (value: ForageNode[]) => {
+        playerForage = value;
+      });
+      player.send('sync');
+      await expect.poll(() => playerForage).toEqual(initial);
+      await expect.poll(() => snapshot?.revision).toBeTypeOf('number');
+      player.send('action', {
+        id: randomUUID(),
+        revision: snapshot!.revision,
+        kind: 'gather',
+        node: flower.id,
+      });
+      await expect
+        .poll(
+          () =>
+            snapshot?.inventory.find((slot) => slot.itemId === 'flower')
+              ?.quantity,
+        )
+        .toBe(3);
+      await expect
+        .poll(() => forage.some((node) => node.id === flower.id))
+        .toBe(false);
+      const ids = new Set(initial.map((node) => node.id));
+      await expect
+        .poll(() => forage.length, { timeout: 8000 })
+        .toBe(initial.length);
+      const replacement = forage.find((node) => !ids.has(node.id))!;
+      expect(replacement.kind).toBe('flower');
+      expect(
+        Math.hypot(replacement.x - flower.x, replacement.y - flower.y),
+      ).toBeGreaterThanOrEqual(128);
+      await expect.poll(() => playerForage).toEqual(forage);
+    } finally {
+      await player.leave();
+      await watcher.leave();
+    }
+  }, 15000);
   it('persists cosmetics, rejects invalid ownership fields and replicates the appearance', async () => {
     const a = await identity('Paleta Um'),
       b = await identity('Paleta Dois');

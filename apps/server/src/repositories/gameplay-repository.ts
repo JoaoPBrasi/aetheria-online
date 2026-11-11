@@ -9,7 +9,6 @@ import {
   CRAFTING_RECIPES,
   CRAFTING_STATIONS,
   craftItem,
-  RESOURCES,
   DEFAULT_TREE_GROWTH_MS,
   type CropId,
   type FarmSnapshot,
@@ -19,6 +18,7 @@ import {
   type Slot,
   type MonsterKind,
   type ResourceStates,
+  type ResourceDefinition,
 } from '@aetheria/shared';
 type Position = { x: number; y: number; direction: string };
 export class GameplayRepository {
@@ -40,6 +40,7 @@ export class GameplayRepository {
       monster?: MonsterKind;
     },
     position?: Position,
+    gatherNode?: ResourceDefinition,
   ): Promise<GameplaySnapshot> {
     return this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "Character" WHERE "id"=${characterId}::uuid FOR UPDATE`;
@@ -218,8 +219,9 @@ export class GameplayRepository {
         changed = true;
       }
       if (action?.kind === 'gather') {
-        const node = RESOURCES.find((r) => r.id === action.node);
-        if (!node) throw new Error('Recurso indisponível.');
+        const node = gatherNode;
+        if (!node || node.id !== action.node)
+          throw new Error('Recurso indisponível.');
         if (
           !position ||
           Math.hypot(node.x - position.x, node.y - position.y) > 72

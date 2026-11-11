@@ -132,7 +132,7 @@ export function GameplayPanel({
           <h3>Coleta</h3>
           <p>Aproxime-se de um recurso e use a ferramenta indicada.</p>
           <div className="resource-controls">
-            {RESOURCES.map((r) => {
+            {[...RESOURCES, ...(state.forage ?? [])].map((r) => {
               if (!state.position) return null;
               const target = interaction(
                 snapshot,
@@ -142,6 +142,8 @@ export function GameplayPanel({
                 state.worldTime ?? 0,
                 'turnip',
                 r.id,
+                [],
+                state.forage,
               );
               if (!target) return null;
               return (

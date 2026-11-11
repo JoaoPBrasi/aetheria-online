@@ -38,7 +38,7 @@ export const NPCS: readonly NPCDefinition[] = [
         id: 'gather',
         prompt: 'Como consigo recursos básicos como madeira e pedra?',
         response:
-          'Corte os carvalhos adultos do Bosque Antigo, a noroeste, para obter madeira. A Pedreira, a sudeste, tem pedra, minério de ferro, fibras e flores. Aproxime-se com a ferramenta adequada na mochila ou equipada e pressione E. Flores podem ser colhidas à mão.',
+          'Corte os carvalhos adultos do Bosque Antigo para obter madeira. A Pedreira do Lago, a nordeste do Lago dos Juncos, tem pedra e ferro. Procure fibras e flores nas clareiras pelo mapa. Leve a ferramenta adequada e pressione E para coletar. Flores podem ser colhidas à mão.',
       },
       {
         id: 'farm',

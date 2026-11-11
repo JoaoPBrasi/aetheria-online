@@ -11,10 +11,12 @@ import {
 } from '@aetheria/shared';
 import type { GameplayRepository } from '../repositories/gameplay-repository.js';
 import { MonsterManager } from './monster-manager.js';
+import { ForageManager } from './forage-manager.js';
 export class GameplayService {
   private queues = new Map<string, Promise<unknown>>();
   private cooldowns = new Map<string, number>();
   private attackCooldowns = new Map<string, number>();
+  readonly forage = new ForageManager();
   readonly monstersManager = new MonsterManager();
   constructor(private repository: GameplayRepository) {}
   async resources(): Promise<ResourceStates> {
@@ -120,10 +122,13 @@ export class GameplayService {
       }
       if (action.kind !== 'gather')
         return this.repository.execute(id, action, undefined, position);
-      const node = RESOURCES.find((n) => n.id === action.node);
+      const wild = this.forage.get(action.node);
+      const node = wild ?? RESOURCES.find((n) => n.id === action.node);
       if (!node || Math.hypot(node.x - position.x, node.y - position.y) > 72)
         throw new Error('Recurso fora de alcance.');
       return this.serial(`node:${node.id}`, async () => {
+        if (wild && !this.forage.get(node.id))
+          throw new Error('Recurso indisponível.');
         const current = getPosition();
         if (!current || Math.hypot(node.x - current.x, node.y - current.y) > 72)
           throw new Error('Recurso fora de alcance.');
@@ -134,8 +139,10 @@ export class GameplayService {
           action,
           undefined,
           current,
+          node,
         );
-        if (node.kind !== 'tree')
+        if (wild) this.forage.collect(node.id, Date.now());
+        else if (node.kind !== 'tree')
           this.cooldowns.set(node.id, Date.now() + 5000);
         return result;
       });

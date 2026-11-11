@@ -7,6 +7,7 @@ import {
   WORLD_ART_REVISION,
   WORLD_REGIONS,
   QUARRY,
+  CAMPFIRE,
   RESOURCES,
   treeStage,
   FARM_PLOTS,
@@ -17,6 +18,8 @@ import {
   NPCS,
   type WorldArtwork,
   type ResourceStates,
+  type ResourceDefinition,
+  type ForageNode,
 } from '@aetheria/shared';
 import { gameBridge } from '../managers/game-bridge';
 import { movement } from '../networking/movement';
@@ -40,10 +43,15 @@ export class WorldScene extends Phaser.Scene {
     string,
     Record<ReturnType<typeof treeStage>, Phaser.GameObjects.Image>
   >();
-  private quarrySprites = new Map<
+  private gatherSprites = new Map<
     string,
-    { image: Phaser.GameObjects.Image; label: Phaser.GameObjects.Container }
+    {
+      image: Phaser.GameObjects.Image;
+      label: Phaser.GameObjects.Container;
+      shadow: Phaser.GameObjects.Ellipse;
+    }
   >();
+  private forage?: ForageNode[];
   private monsterSprites = new Map<
     string,
     {
@@ -141,13 +149,14 @@ export class WorldScene extends Phaser.Scene {
       });
     }
 
-    // Fogueira animada no centro da vila (lado oeste da praça)
-    this.add.ellipse(990, 1042, 28, 12, 0x132b24, 0.4).setDepth(1031);
-    const bonfire = this.add
-      .sprite(990, 1032, 'bonfire')
-      .setScale(1.2)
-      .setDepth(1032);
-    bonfire.play('bonfire-burn');
+    for (const { x, y } of [{ x: 990, y: 1032 }, CAMPFIRE]) {
+      this.add.ellipse(x, y + 10, 28, 12, 0x132b24, 0.4).setDepth(y - 1);
+      this.add
+        .sprite(x, y, 'bonfire')
+        .setScale(1.2)
+        .setDepth(y)
+        .play('bonfire-burn');
+    }
 
     for (const plot of FARM_PLOTS) {
       const px = plot.tileX * 32 + 16;
@@ -176,6 +185,15 @@ export class WorldScene extends Phaser.Scene {
         .setDepth(maxPlotY + 24);
     }
     this.createResources();
+    for (const [x, y] of [
+      [49.5, 44.5],
+      [55.5, 44.5],
+      [51.5, 40.5],
+      [54.5, 45.5],
+    ] as const)
+      this.add
+        .image(x * TILE_SIZE, y * TILE_SIZE, 'resource-flower')
+        .setDepth(y * TILE_SIZE);
     for (const station of CRAFTING_STATIONS) {
       const isFurnace = station.type === 'furnace';
       const textureKey = {
@@ -244,8 +262,9 @@ export class WorldScene extends Phaser.Scene {
     this.label(
       'PEDREIRA',
       (QUARRY.x + QUARRY.w / 2) * TILE_SIZE,
-      QUARRY.y * TILE_SIZE - 20,
+      (QUARRY.y + 0.5) * TILE_SIZE,
     );
+    this.label('ACAMPAMENTO DO BOSQUE', CAMPFIRE.x, CAMPFIRE.y - 104);
     for (const r of WORLD_REGIONS.filter((r) => r.danger !== 'safe'))
       this.label(
         r.name.toUpperCase(),
@@ -417,32 +436,45 @@ export class WorldScene extends Phaser.Scene {
         this.groveSprites.set(node.id, { adult, young, seedling });
         continue;
       }
-      const texture = {
-        ore: 'resource-rock',
-        rock: 'resource-rock',
-        fiber: 'resource-bush',
-        flower: 'resource-flower',
-      }[node.kind];
-      this.add
-        .ellipse(node.x, node.y + 8, 26, 8, 0x132b24, 0.32)
-        .setDepth(node.y - 1);
-      const image = this.add
-        .image(node.x, node.y, texture)
-        .setDepth(node.y)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => gameBridge.interact?.(node.id));
-      if (node.kind === 'ore') image.setTint(0xd8a786);
-      const label = makeNameplate(
-        this,
-        node.name,
-        'object',
-        node.x,
-        node.y - 29,
-      )
-        .setDepth(node.y + 1)
-        .setVisible(false);
-      this.quarrySprites.set(node.id, { image, label });
+      this.addCollectible(node);
     }
+  }
+  private addCollectible(node: ResourceDefinition) {
+    if (node.kind === 'tree') return;
+    const texture = {
+      ore: 'resource-rock',
+      rock: 'resource-rock',
+      fiber: 'resource-bush',
+      flower: 'resource-flower',
+    }[node.kind];
+    const shadow = this.add
+      .ellipse(node.x, node.y + 8, 26, 8, 0x132b24, 0.32)
+      .setDepth(node.y - 1);
+    const image = this.add
+      .image(node.x, node.y, texture)
+      .setDepth(node.y)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => gameBridge.interact?.(node.id));
+    if (node.kind === 'ore') image.setTint(0xd8a786);
+    const label = makeNameplate(this, node.name, 'object', node.x, node.y - 29)
+      .setDepth(node.y + 1)
+      .setVisible(false);
+    this.gatherSprites.set(node.id, { image, label, shadow });
+  }
+  private syncForage(forage?: ForageNode[]) {
+    if (forage === this.forage) return;
+    const next = new Set(forage?.map((node) => node.id));
+    for (const node of this.forage ?? []) {
+      if (next.has(node.id)) continue;
+      const sprite = this.gatherSprites.get(node.id);
+      sprite?.image.destroy();
+      sprite?.shadow.destroy();
+      sprite?.label.destroy();
+      this.gatherSprites.delete(node.id);
+    }
+    for (const node of forage ?? [])
+      if (!this.gatherSprites.has(node.id)) this.addCollectible(node);
+    this.forage = forage;
   }
   private updateResources(resources: ResourceStates, now: number) {
     for (const [id, trees] of this.groveSprites) {
@@ -450,7 +482,7 @@ export class WorldScene extends Phaser.Scene {
       for (const key of ['adult', 'young', 'seedling'] as const)
         trees[key].setVisible(key === stage);
     }
-    for (const [id, { image, label }] of this.quarrySprites) {
+    for (const [id, { image, label }] of this.gatherSprites) {
       image.setAlpha((resources[id]?.readyAt ?? 0) > now ? 0.35 : 1);
       label.setVisible(
         this.active &&
@@ -515,6 +547,7 @@ export class WorldScene extends Phaser.Scene {
         'turnip',
         undefined,
         farmState.monsters ?? [],
+        farmState.forage,
       );
       if (target)
         this.focusRing
@@ -598,6 +631,7 @@ export class WorldScene extends Phaser.Scene {
         sprite.destroy();
         this.remoteSprites.delete(id);
       }
+    this.syncForage(farmState.forage);
     this.updateResources(farmState.resources ?? {}, Date.now());
     this.updateCover();
 

@@ -276,6 +276,25 @@ window.WorldArtRenderer = async (plan, sourceURLs) => {
       draw(q, 'farm', 80, 48, 16, 16, 12, 6);
       draw(q, 'farm', 112, 112, 16, 16, 35, 6);
       place(p.id, 'stall', c, x - 32, foot - 28, foot);
+    } else if (p.kind === 'bench') {
+      const c = document.createElement('canvas');
+      c.width = 28;
+      c.height = 14;
+      const q = c.getContext('2d');
+      q.fillStyle = '#283528';
+      q.fillRect(2, 10, 24, 4);
+      q.fillStyle = '#48301f';
+      q.fillRect(3, 2, 3, 12);
+      q.fillRect(22, 2, 3, 12);
+      q.fillRect(1, 0, 26, 5);
+      q.fillRect(0, 6, 28, 5);
+      q.fillStyle = '#976138';
+      q.fillRect(2, 1, 24, 2);
+      q.fillRect(1, 7, 26, 2);
+      q.fillStyle = '#c19152';
+      q.fillRect(3, 1, 22, 1);
+      q.fillRect(2, 7, 24, 1);
+      place(p.id, 'camp:bench', c, x - 14, foot - 15, foot);
     } else {
       const crop = p.kind === 'crate' ? [288, 0, 32, 32] : [144, 0, 32, 32];
       place(p.id, `farm:${p.kind}`, cut('farm', crop), x - 16, foot - 30, foot);

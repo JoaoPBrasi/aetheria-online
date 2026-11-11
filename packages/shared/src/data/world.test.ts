@@ -77,18 +77,16 @@ describe('world movement', () => {
   });
   it('keeps quarry nodes apart on reachable terrain and clear of the main routes', () => {
     expect(new Set(QUARRY_RESOURCES.map((node) => node.kind))).toEqual(
-      new Set(['ore', 'rock', 'fiber', 'flower']),
+      new Set(['ore', 'rock']),
     );
     for (const [i, node] of QUARRY_RESOURCES.entries()) {
       const x = Math.floor(node.x / 32);
       const y = Math.floor(node.y / 32);
-      expect(x).toBeGreaterThanOrEqual(QUARRY.x + 3);
+      expect(x).toBeGreaterThanOrEqual(QUARRY.x);
       expect(x).toBeLessThan(QUARRY.x + QUARRY.w);
       expect(y).toBeGreaterThanOrEqual(QUARRY.y);
       expect(y).toBeLessThan(QUARRY.y + QUARRY.h);
       expect(terrainAt(x, y)).toBe(0);
-      expect(x).not.toBe(52);
-      expect(y).not.toBe(43);
       for (const other of QUARRY_RESOURCES.slice(i + 1))
         expect(
           Math.hypot(node.x - other.x, node.y - other.y),

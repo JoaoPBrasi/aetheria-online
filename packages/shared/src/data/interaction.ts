@@ -9,6 +9,7 @@ import {
   type CraftingStationType,
   type MonsterSnapshot,
   type ResourceStates,
+  type ForageNode,
 } from './gameplay.js';
 import { cropStatus, type FarmSnapshot, type CropId } from './farming.js';
 import { NPCS, type NPCDefinition } from './npcs.js';
@@ -32,9 +33,10 @@ export function interaction(
   crop: CropId,
   target?: string,
   monsters: MonsterSnapshot[] = [],
+  forage: ForageNode[] = [],
 ) {
   const candidates = [
-    ...RESOURCES.map((r) => ({
+    ...[...RESOURCES, ...forage].map((r) => ({
       id: r.id,
       x: r.x,
       y: r.y,

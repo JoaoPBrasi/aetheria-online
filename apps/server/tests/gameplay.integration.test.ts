@@ -19,7 +19,6 @@ const identities = new IdentityRepository(db),
 const accounts: string[] = [];
 const position = () => ({ x: 1040, y: 1040, direction: 'down' });
 const tree = GROVE_RESOURCES[0]!;
-const fiber = QUARRY_RESOURCES.find((node) => node.kind === 'fiber')!;
 const stone = QUARRY_RESOURCES.find((node) => node.kind === 'rock')!;
 const at =
   ({ x, y }: { x: number; y: number }) =>
@@ -131,6 +130,7 @@ it('rejects invalid or out-of-range requests and rolls back without taking items
 });
 
 it('rolls back a full bag and permits the same uncommitted request after fixing space', async () => {
+  const fiber = service.forage.nodes().find((node) => node.kind === 'fiber')!;
   const id = await fixture();
   const s = await service.sync(id);
   await db.inventorySlot.deleteMany({ where: { characterId: id } });
@@ -152,6 +152,7 @@ it('rolls back a full bag and permits the same uncommitted request after fixing 
     node: fiber.id,
   };
   await expect(service.act(id, action, at(fiber))).rejects.toThrow('cheio');
+  expect(service.forage.get(fiber.id)).toBeDefined();
   expect(await repo.receipt(id, action.id)).toBeNull();
   expect(
     (await service.sync(id)).skills.find((v) => v.profession === 'farmer')?.xp,
@@ -160,6 +161,16 @@ it('rolls back a full bag and permits the same uncommitted request after fixing 
   const result = await service.act(id, action, at(fiber));
   expect(result.inventory.find((v) => v.itemId === 'fiber')?.quantity).toBe(3);
   expect(result.skills.find((v) => v.profession === 'farmer')?.xp).toBe(10);
+  expect(service.forage.get(fiber.id)).toBeUndefined();
+  const otherIds = new Set(service.forage.nodes().map((node) => node.id));
+  expect(service.forage.tick(Date.now() + 5_001)).toBe(true);
+  const replacement = service.forage
+    .nodes()
+    .find((node) => !otherIds.has(node.id));
+  expect(replacement?.kind).toBe('fiber');
+  expect(
+    Math.hypot(replacement!.x - fiber.x, replacement!.y - fiber.y),
+  ).toBeGreaterThanOrEqual(128);
 });
 
 it('lets only one character collect a shared node concurrently', async () => {

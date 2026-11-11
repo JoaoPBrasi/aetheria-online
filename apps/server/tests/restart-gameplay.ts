@@ -62,6 +62,7 @@ let resources: ResourceStates = {};
 room.onMessage('resources', (state: ResourceStates) => {
   resources = state;
 });
+room.onMessage('forage', () => undefined);
 room.onMessage('monsters', () => undefined);
 let plots: import('@aetheria/shared').FarmSnapshot[] = [];
 room.onMessage('plots', (p: import('@aetheria/shared').FarmSnapshot[]) => {

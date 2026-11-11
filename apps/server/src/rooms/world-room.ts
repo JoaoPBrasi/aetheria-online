@@ -45,6 +45,7 @@ export class WorldRoom extends Room<{
       try {
         client.send('gameplay', await this.gameplay.sync(p.characterId));
         client.send('resources', await this.gameplay.resources());
+        client.send('forage', this.gameplay.forage.nodes());
         client.send('plots', await this.gameplay.plots());
         client.send('monsters', this.gameplay.monsters());
         client.send('quests', await this.gameplay.quests(p.characterId));
@@ -67,8 +68,10 @@ export class WorldRoom extends Room<{
           typeof raw === 'object' &&
           'kind' in raw &&
           raw.kind === 'gather'
-        )
+        ) {
+          this.broadcast('forage', this.gameplay.forage.nodes());
           this.broadcast('resources', await this.gameplay.resources());
+        }
         client.send('quests', await this.gameplay.quests(p.characterId));
         if (
           raw &&
@@ -180,6 +183,8 @@ export class WorldRoom extends Room<{
     }
     let monsterBroadcastCounter = 0;
     this.setSimulationInterval(() => {
+      if (this.gameplay.forage.tick(Date.now()))
+        this.broadcast('forage', this.gameplay.forage.nodes());
       for (const [id, player] of this.state.players) {
         if (!player.connected) continue;
         const next = this.inputs.get(id)?.step(player.x, player.y);

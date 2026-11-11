@@ -1,8 +1,21 @@
 import { TILE_SIZE } from '../constants/index.js';
 import { CEMETERY } from './cemetery.js';
 export const MAP_SIZE = 96;
-export const WORLD_ART_REVISION = 'brumavale-quarry-grove-v4';
-export const QUARRY = { x: 44, y: 35, w: 15, h: 14 };
+export const WORLD_ART_REVISION = 'brumavale-lakeside-quarry-v5';
+export const QUARRY = { x: 60, y: 5, w: 13, h: 10 };
+export const WOODLAND_CAMP = { x: 50, y: 41, w: 5, h: 4 };
+export const CAMPFIRE = { x: 52.5 * TILE_SIZE, y: 43.5 * TILE_SIZE };
+const woodland = { x: 43, y: 35, w: 17, h: 20 };
+const woodlandTrees = [
+  [46, 41],
+  [47, 49],
+  [49, 38],
+  [51, 51],
+  [54, 38],
+  [57, 50],
+  [57, 42],
+  [59, 48],
+] as const;
 export const ANCIENT_GROVE = { x: 1, y: 1, w: 21, h: 24 };
 // As copas ultrapassam o tile do tronco em até 1 tile na lateral e 6 ao norte.
 const quarryTreeClearance = {
@@ -23,6 +36,13 @@ export const landmarks = [
   { name: 'Cabana do Caminho', model: 'lodge', x: 35, y: 57, w: 6, h: 4 },
 ] as const;
 export const WORLD_REGIONS = [
+  { id: 'quarry', name: 'Pedreira do Lago', ...QUARRY, danger: 'safe' },
+  {
+    id: 'woodland-camp',
+    name: 'Acampamento do Bosque',
+    ...WOODLAND_CAMP,
+    danger: 'safe',
+  },
   {
     id: 'village',
     name: 'Vila de Brumavale',
@@ -105,6 +125,11 @@ export const WORLD_PATHS = [
     [41, 16],
   ],
   [
+    [69, 32],
+    [69, 17],
+    [66.5, 14],
+  ],
+  [
     [58, 32],
     [69, 32],
     [76, 27],
@@ -127,6 +152,8 @@ export const BRIDGES = [
   { x: 40, y: 15, w: 5, h: 2 },
 ] as const;
 export const VILLAGE_PROPS = [
+  { id: 'camp-bench-west', kind: 'bench', x: 50, y: 43, w: 1, h: 1 },
+  { id: 'camp-bench-east', kind: 'bench', x: 54, y: 43, w: 1, h: 1 },
   { id: 'market-west', kind: 'stall', x: 25, y: 30, w: 2, h: 1 },
   { id: 'market-south', kind: 'stall', x: 25, y: 34, w: 2, h: 1 },
   { id: 'fishing-crate', kind: 'crate', x: 40, y: 12, w: 1, h: 1 },
@@ -136,11 +163,10 @@ export const VILLAGE_PROPS = [
   { id: 'orc-crate-two', kind: 'crate', x: 84, y: 46, w: 1, h: 1 },
 ] as const;
 export const ROCKS = [
-  [48, 39],
-  [51, 38],
-  [54, 40],
-  [56, 42],
-  [55, 37],
+  [61, 7],
+  [65, 9],
+  [70, 8],
+  [72, 12],
   [77, 47],
   [85, 49],
   [81, 54],
@@ -212,6 +238,8 @@ export function terrainAt(x: number, y: number) {
   if (WORLD_PATHS.some((path) => nearPath(x + 0.5, y + 0.5, path, 1.1)))
     return 1;
   if (ROCKS.some(([rx, ry]) => x === rx && y === ry)) return 4;
+  if (inRect(x, y, woodland))
+    return woodlandTrees.some(([tx, ty]) => x === tx && y === ty) ? 4 : 0;
   if (inRect(x, y, quarryTreeClearance) || inRect(x, y, ANCIENT_GROVE))
     return 0;
   const field = WORLD_REGIONS.some(

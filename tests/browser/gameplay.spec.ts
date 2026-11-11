@@ -164,15 +164,23 @@ test('crosses the plaza, mines the quarry, forges iron equipment and recuts a re
   await walk(page, 'x', 400);
   await gather('Cortar Carvalho', 'Madeira');
   await walk(page, 'y', 1040);
-  await walk(page, 'x', 1600);
-  await walk(page, 'y', 1328);
+  await walk(page, 'x', 1680);
+  await walk(page, 'y', 1360);
+  await expect(page.getByTestId('world-region')).toHaveText(
+    'Acampamento do Bosque',
+  );
+  await page.screenshot({ path: 'work/acampamento-bosque.png' });
+  await walk(page, 'y', 1040);
+  await walk(page, 'x', 2224);
+  await walk(page, 'y', 432);
+  await expect(page.getByTestId('world-region')).toHaveText('Pedreira do Lago');
   await gather('Coletar Minério de ferro', 'Minério de ferro');
-  await walk(page, 'y', 1456);
-  await walk(page, 'x', 1552);
+  await walk(page, 'x', 2288);
+  await walk(page, 'y', 464);
   await gather('Coletar Minério de ferro', 'Minério de ferro');
   await page.screenshot({ path: 'work/pedreira.png' });
 
-  await walk(page, 'x', 1600);
+  await walk(page, 'x', 2224);
   await walk(page, 'y', 1040);
   await walk(page, 'x', 1184);
   await walk(page, 'y', 1168);

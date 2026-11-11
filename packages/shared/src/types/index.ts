@@ -14,6 +14,7 @@ export interface GameSnapshot {
   actionPending?: boolean;
   questPending?: boolean;
   resources?: import('../data/resources.js').ResourceStates;
+  forage?: import('../data/resources.js').ForageNode[];
   monsters?: import('../data/gameplay.js').MonsterSnapshot[];
   health?: number;
   maxHealth?: number;
