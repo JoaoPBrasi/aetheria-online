@@ -1,4 +1,4 @@
-import type { ItemId } from '@aetheria/shared';
+import { type ItemId, EQUIPMENT_DEFINITIONS } from '@aetheria/shared';
 import farm from '../../../../../art/sprites/farm.png';
 import resources from '../../../../../art/sprites/resources.png';
 import vegetation from '../../../../../art/sprites/vegetation.png';
@@ -58,6 +58,24 @@ export function ItemIcon({ item }: { item: ItemId }) {
   }
   if (drawnIcons.has(item))
     return <span className={className} aria-hidden="true" />;
+  if (EQUIPMENT_DEFINITIONS[item]?.icon) {
+    return (
+      <span
+        className={`${className} item-equipment-icon`}
+        aria-hidden="true"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '20px',
+          lineHeight: 1,
+          userSelect: 'none',
+        }}
+      >
+        {EQUIPMENT_DEFINITIONS[item]!.icon}
+      </span>
+    );
+  }
   return (
     <img
       className={className}

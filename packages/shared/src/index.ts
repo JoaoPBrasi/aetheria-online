@@ -16,3 +16,4 @@ export * from './data/chat.js';
 export * from './data/targeting.js';
 export * from './data/market.js';
 export * from './data/skills.js';
+export * from './data/equipment.js';

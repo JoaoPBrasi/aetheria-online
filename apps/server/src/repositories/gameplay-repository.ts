@@ -2,7 +2,6 @@ import type { Database } from '../database/client.js';
 import { QuestRepository, advanceQuests } from './quest-repository.js';
 import {
   addItem,
-  ITEMS,
   transferItem,
   CROPS,
   FARM_RANGE,
@@ -18,6 +17,7 @@ import {
   DEFAULT_TREE_GROWTH_MS,
   MARKET_BUY_PRICES,
   MARKET_SELL_PRICES,
+  getEquipmentSlot,
   type CropId,
   type FarmSnapshot,
   type GameAction,
@@ -225,17 +225,43 @@ export class GameplayRepository {
       }
       if (action?.kind === 'equip') {
         const item = slots.find((s) => s.index === action.from);
-        if (!item || !ITEMS[item.itemId].tool)
-          throw new Error('Escolha uma ferramenta.');
-        const tool = item.itemId;
+        if (!item) throw new Error('Item não encontrado.');
+        const targetSlot = action.slot || getEquipmentSlot(item.itemId);
+        if (!targetSlot) throw new Error('Este item não pode ser equipado.');
+
+        // Remove a peça da mochila
         slots = slots.filter((s) => s.index !== action.from);
-        for (const old of equipment) slots = addItem(slots, old.itemId, 1);
-        equipment = [{ slot: 'tool', itemId: tool }];
+
+        // Se já houver um item naquele mesmo slot, devolve o antigo para a mochila
+        const existing = equipment.find((e) => e.slot === targetSlot);
+        if (existing) {
+          slots = addItem(slots, existing.itemId, 1);
+        }
+
+        equipment = [
+          ...equipment.filter((e) => e.slot !== targetSlot),
+          { slot: targetSlot, itemId: item.itemId },
+        ];
         changed = true;
       }
       if (action?.kind === 'unequip') {
-        for (const old of equipment) slots = addItem(slots, old.itemId, 1);
-        equipment = [];
+        const targetSlot = action.slot;
+        if (targetSlot) {
+          const existing = equipment.find((e) => e.slot === targetSlot);
+          if (existing) {
+            slots = addItem(slots, existing.itemId, 1);
+            equipment = equipment.filter((e) => e.slot !== targetSlot);
+            changed = true;
+          }
+        } else {
+          // Desequipa a ferramenta principal ou o primeiro item equipado
+          const existingTool = equipment.find((e) => e.slot === 'tool') ?? equipment[0];
+          if (existingTool) {
+            slots = addItem(slots, existingTool.itemId, 1);
+            equipment = equipment.filter((e) => e.slot !== existingTool.slot);
+            changed = true;
+          }
+        }
         changed = true;
       }
       if (action?.kind === 'consume') {

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CAMPFIRE, CAMPFIRE_REST_RANGE, PLAZA_CAMPFIRE } from './world.js';
+import { EQUIPMENT_SLOTS } from './equipment.js';
 export * from './resources.js';
 export const ITEMS = {
   wood: { name: 'Madeira', stack: 99, tool: false },
@@ -24,6 +25,16 @@ export const ITEMS = {
   sword: { name: 'Espada de treino', stack: 1, tool: true },
   iron_sword: { name: 'Espada de ferro', stack: 1, tool: true },
   slime_goo: { name: 'Gosma de slime', stack: 99, tool: false },
+  cloth_hood: { name: 'Capuz de pano', stack: 1, tool: false },
+  iron_helmet: { name: 'Elmo de ferro', stack: 1, tool: false },
+  leather_tunic: { name: 'Túnica de couro', stack: 1, tool: false },
+  iron_armor: { name: 'Armadura de ferro', stack: 1, tool: false },
+  linen_pants: { name: 'Calças de linho', stack: 1, tool: false },
+  iron_greaves: { name: 'Grevas de ferro', stack: 1, tool: false },
+  leather_boots: { name: 'Botas de couro', stack: 1, tool: false },
+  wooden_shield: { name: 'Escudo de madeira', stack: 1, tool: false },
+  iron_shield: { name: 'Escudo de ferro', stack: 1, tool: false },
+  forest_amulet: { name: 'Amuleto da floresta', stack: 1, tool: false },
 } as const;
 export type ItemId = keyof typeof ITEMS;
 export const ROASTED_TURNIP_HEAL = 20;
@@ -406,9 +417,22 @@ export const GameActionSchema = z.discriminatedUnion('kind', [
       quantity: z.number().int().min(1).max(99),
     })
     .strict(),
-  z.object({ ...base, kind: z.literal('equip'), from: slot }).strict(),
+  z
+    .object({
+      ...base,
+      kind: z.literal('equip'),
+      from: slot,
+      slot: z.enum(EQUIPMENT_SLOTS).optional(),
+    })
+    .strict(),
   z.object({ ...base, kind: z.literal('consume'), from: slot }).strict(),
-  z.object({ ...base, kind: z.literal('unequip') }).strict(),
+  z
+    .object({
+      ...base,
+      kind: z.literal('unequip'),
+      slot: z.enum(EQUIPMENT_SLOTS).optional(),
+    })
+    .strict(),
   z
     .object({ ...base, kind: z.literal('gather'), node: z.string().max(40) })
     .strict(),

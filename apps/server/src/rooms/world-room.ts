@@ -14,6 +14,8 @@ import {
   type ChatMessage,
   type CombatFeedback,
   type CharacterSummary,
+  calculateCharacterStats,
+  type CharacterAttributes,
 } from '@aetheria/shared';
 import type { IdentityRepository } from '../repositories/identity-repository.js';
 import type { PresenceRegistry } from '../services/presence-registry.js';
@@ -32,6 +34,7 @@ export class WorldRoom extends Room<{
     string,
     { x: number; y: number; direction: string }
   >();
+  private characterStats = new Map<string, CharacterAttributes>();
   constructor(
     private identities: IdentityRepository,
     private leases: PresenceRegistry,
@@ -157,6 +160,10 @@ export class WorldRoom extends Room<{
           },
         );
         client.send('gameplay', snapshot);
+        const stats = calculateCharacterStats(snapshot.equipment);
+        this.characterStats.set(p.characterId, stats);
+        p.maxHealth = stats.maxHealth;
+        if (p.health > p.maxHealth) p.health = p.maxHealth;
         if (
           raw &&
           typeof raw === 'object' &&
@@ -325,15 +332,18 @@ export class WorldRoom extends Room<{
       for (const hit of playerDamages) {
         const player = this.state.players.get(hit.sessionId);
         if (player && player.connected) {
+          const stats = this.characterStats.get(player.characterId);
+          const defense = stats?.defense ?? 0;
+          const finalDamage = Math.max(1, hit.damage - defense);
           this.lastCombat.set(hit.sessionId, Date.now());
           this.sendCombat({
             kind: 'hurt',
             playerId: player.characterId,
             x: player.x,
             y: player.y,
-            amount: Math.min(hit.damage, player.health),
+            amount: Math.min(finalDamage, player.health),
           });
-          player.health = Math.max(0, player.health - hit.damage);
+          player.health = Math.max(0, player.health - finalDamage);
           if (player.health <= 0) {
             player.health = player.maxHealth;
             player.x = WORLD_SPAWN.x;
@@ -434,11 +444,12 @@ export class WorldRoom extends Room<{
   }
   async onJoin(client: Client, _options: unknown, character: CharacterSummary) {
     const recovery = this.pendingSaves.get(character.id);
+    let snapshot: import('@aetheria/shared').GameplaySnapshot | undefined;
     try {
       if (recovery) {
-        await this.gameplay.save(character.id, recovery);
+        snapshot = await this.gameplay.save(character.id, recovery);
         this.pendingSaves.delete(character.id);
-      } else await this.gameplay.sync(character.id);
+      } else snapshot = await this.gameplay.sync(character.id);
     } catch {
       this.leases.release(character.id, client.sessionId);
       throw new ServerError(503, 'PERSISTENCE_UNAVAILABLE');
@@ -451,6 +462,10 @@ export class WorldRoom extends Room<{
     player.hairColor = character.hairColor;
     player.skinColor = character.skinColor;
     player.hairStyle = character.hairStyle;
+    const stats = calculateCharacterStats(snapshot?.equipment ?? []);
+    this.characterStats.set(character.id, stats);
+    player.maxHealth = stats.maxHealth;
+    player.health = Math.min(player.maxHealth, character.health || player.maxHealth);
     const candidate = recovery ?? character;
     const pos = canStand(candidate.x, candidate.y) ? candidate : WORLD_SPAWN;
     player.x = pos.x;
@@ -467,6 +482,7 @@ export class WorldRoom extends Room<{
     const player = this.state.players.get(client.sessionId);
     if (player) {
       player.connected = false;
+      this.characterStats.delete(player.characterId);
       this.pendingSaves.set(player.characterId, {
         x: player.x,
         y: player.y,

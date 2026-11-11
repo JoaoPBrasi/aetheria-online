@@ -14,6 +14,16 @@ export const MARKET_BUY_PRICES: Partial<Record<ItemId, number>> = {
   pickaxe: 25,
   sickle: 25,
   sword: 50,
+  cloth_hood: 25,
+  iron_helmet: 60,
+  leather_tunic: 35,
+  iron_armor: 90,
+  linen_pants: 20,
+  iron_greaves: 50,
+  leather_boots: 30,
+  wooden_shield: 30,
+  iron_shield: 75,
+  forest_amulet: 80,
 };
 
 /**
@@ -31,6 +41,16 @@ export const MARKET_SELL_PRICES: Partial<Record<ItemId, number>> = {
   iron_ore: 8,
   iron_ingot: 20,
   plank: 5,
+  cloth_hood: 12,
+  iron_helmet: 30,
+  leather_tunic: 17,
+  iron_armor: 45,
+  linen_pants: 10,
+  iron_greaves: 25,
+  leather_boots: 15,
+  wooden_shield: 15,
+  iron_shield: 37,
+  forest_amulet: 40,
 };
 
 export interface MarketItemEntry {
@@ -50,6 +70,16 @@ export const MERCHANT_STOCK: readonly ItemId[] = [
   'pickaxe',
   'sickle',
   'sword',
+  'cloth_hood',
+  'leather_tunic',
+  'linen_pants',
+  'leather_boots',
+  'wooden_shield',
+  'iron_helmet',
+  'iron_armor',
+  'iron_greaves',
+  'iron_shield',
+  'forest_amulet',
 ];
 
 /**

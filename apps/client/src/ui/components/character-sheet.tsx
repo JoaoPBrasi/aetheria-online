@@ -5,6 +5,9 @@ import {
   WEAPON_DAMAGE,
   hasTool,
   type Cosmetics,
+  EQUIPMENT_DEFINITIONS,
+  calculateCharacterStats,
+  type EquipmentSlot,
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
 import type { WorldConnection } from '../../game/networking/world-connection';
@@ -13,6 +16,19 @@ import { GameplayPanel } from './gameplay-panel';
 import { ItemIcon, MetalCorners } from './medieval-art';
 
 export type CharacterView = 'bag' | 'equipment';
+
+const ARMOR_SLOTS: { slot: EquipmentSlot; label: string; placeholderIcon: string }[] = [
+  { slot: 'head', label: 'Cabeça', placeholderIcon: '🪖' },
+  { slot: 'chest', label: 'Peitoral', placeholderIcon: '🥋' },
+  { slot: 'legs', label: 'Calças', placeholderIcon: '👖' },
+  { slot: 'feet', label: 'Botas', placeholderIcon: '🥾' },
+];
+
+const WEAPON_ACCESSORY_SLOTS: { slot: EquipmentSlot; label: string; placeholderIcon: string }[] = [
+  { slot: 'accessory', label: 'Amuleto', placeholderIcon: '📿' },
+  { slot: 'tool', label: 'Arma / Mão 1', placeholderIcon: '⚔️' },
+  { slot: 'offHand', label: 'Escudo / Mão 2', placeholderIcon: '🛡️' },
+];
 
 export function CharacterSheet({
   view,
@@ -32,18 +48,25 @@ export function CharacterSheet({
     gameBridge.getSnapshot,
   );
   const gameplay = state.gameplay;
-  const tool = gameplay?.equipment.find(
-    (entry) => entry.slot === 'tool',
-  )?.itemId;
+  const equipment = gameplay?.equipment ?? [];
+
   const weapon =
     gameplay && hasTool(gameplay, 'iron_sword')
       ? 'iron_sword'
       : gameplay && hasTool(gameplay, 'sword')
         ? 'sword'
         : undefined;
-  const damage = weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE;
+  const baseDamage = weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE;
+  const stats = calculateCharacterStats(equipment, baseDamage);
+
   const busy =
     state.status !== 'connected' || state.actionPending || state.questPending;
+
+  const handleUnequipSlot = (slot: EquipmentSlot) => {
+    if (busy || !connection) return;
+    connection.action({ kind: 'unequip', slot });
+  };
+
   return (
     <div className="character-sheet" data-view={view}>
       <nav
@@ -65,6 +88,8 @@ export function CharacterSheet({
           <kbd>C</kbd> Equipamentos
         </button>
       </nav>
+
+      {/* Seção da Mochila / Inventário */}
       <section
         className="character-sheet-bag medieval-frame"
         aria-labelledby="character-bag-title"
@@ -82,71 +107,128 @@ export function CharacterSheet({
         </div>
         <GameplayPanel connection={connection} section="bag" />
       </section>
+
+      {/* Seção de Equipamentos (Paper Doll Completa) */}
       <section
         className="character-sheet-equipment medieval-frame"
         aria-labelledby="character-equipment-title"
       >
         <MetalCorners />
         <h2 className="medieval-plaque" id="character-equipment-title">
-          <span aria-hidden="true">⚔</span> Equipamentos
+          <span aria-hidden="true">⚔</span> Equipamentos do Herói
         </h2>
-        <div className="paper-doll">
-          <div className="equipment-piece" data-testid="equipped-tool">
-            <span>Ferramenta</span>
-            <div className="medieval-slot gear-socket">
-              {tool ? (
-                <ItemIcon item={tool} />
-              ) : (
-                <span aria-hidden="true">⚒</span>
-              )}
-            </div>
-            <strong>{tool ? ITEMS[tool].name : 'Vazio'}</strong>
+
+        <div className="paper-doll-layout">
+          {/* Coluna Esquerda: Armaduras */}
+          <div className="paper-doll-column left">
+            {ARMOR_SLOTS.map(({ slot, label, placeholderIcon }) => {
+              const piece = equipment.find((e) => e.slot === slot);
+              const def = piece ? EQUIPMENT_DEFINITIONS[piece.itemId] : undefined;
+              return (
+                <div
+                  key={slot}
+                  className={`equipment-piece ${piece ? 'equipped' : 'empty'}`}
+                  data-testid={`equipped-${slot}`}
+                  onClick={() => piece && handleUnequipSlot(slot)}
+                  title={
+                    piece
+                      ? `${ITEMS[piece.itemId].name} (${label})\n${def ? `+${def.bonusHp} HP · +${def.armor} Defesa` : ''}\nClique para desequipar`
+                      : `Slot de ${label} (Vazio)`
+                  }
+                >
+                  <span className="piece-label">{label}</span>
+                  <div className="medieval-slot gear-socket">
+                    {piece ? (
+                      <ItemIcon item={piece.itemId} />
+                    ) : (
+                      <span className="slot-placeholder" aria-hidden="true">{placeholderIcon}</span>
+                    )}
+                  </div>
+                  <strong className="piece-name">
+                    {piece ? ITEMS[piece.itemId].name : 'Vazio'}
+                  </strong>
+                </div>
+              );
+            })}
           </div>
-          <div className="paper-doll-portrait">
-            <CharacterPortrait look={look} />
-            <strong>{name}</strong>
-          </div>
-          <div className="equipment-piece">
-            <span>Arma em uso</span>
-            <div className="medieval-slot gear-socket">
-              {weapon ? (
-                <ItemIcon item={weapon} />
-              ) : (
-                <span aria-hidden="true">⚔</span>
-              )}
+
+          {/* Coluna Central: Retrato do Personagem */}
+          <div className="paper-doll-portrait-center">
+            <div className="paper-doll-portrait">
+              <CharacterPortrait look={look} />
             </div>
-            <strong>{weapon ? ITEMS[weapon].name : 'Mãos livres'}</strong>
+            <strong className="character-hero-name">{name}</strong>
+            <span className="character-title-badge">Aventureiro de Brumavale</span>
+          </div>
+
+          {/* Coluna Direita: Amuleto, Mão Principal e Secundária */}
+          <div className="paper-doll-column right">
+            {WEAPON_ACCESSORY_SLOTS.map(({ slot, label, placeholderIcon }) => {
+              const piece = equipment.find((e) => e.slot === slot);
+              const def = piece ? EQUIPMENT_DEFINITIONS[piece.itemId] : undefined;
+              return (
+                <div
+                  key={slot}
+                  className={`equipment-piece ${piece ? 'equipped' : 'empty'}`}
+                  data-testid={`equipped-${slot}`}
+                  onClick={() => piece && handleUnequipSlot(slot)}
+                  title={
+                    piece
+                      ? `${ITEMS[piece.itemId].name} (${label})\n${def ? `+${def.bonusHp} HP · +${def.armor} Defesa · +${def.bonusAttack} Ataque` : ''}\nClique para desequipar`
+                      : `Slot de ${label} (Vazio)`
+                  }
+                >
+                  <span className="piece-label">{label}</span>
+                  <div className="medieval-slot gear-socket">
+                    {piece ? (
+                      <ItemIcon item={piece.itemId} />
+                    ) : (
+                      <span className="slot-placeholder" aria-hidden="true">{placeholderIcon}</span>
+                    )}
+                  </div>
+                  <strong className="piece-name">
+                    {piece ? ITEMS[piece.itemId].name : 'Vazio'}
+                  </strong>
+                </div>
+              );
+            })}
           </div>
         </div>
-        <div className="character-attributes">
-          <h3>Atributos</h3>
-          <dl>
-            <div>
-              <dt>
-                <span aria-hidden="true">♥</span> Vida
-              </dt>
+
+        {/* Painel de Atributos do Personagem */}
+        <div className="character-attributes medieval-attributes">
+          <h3 className="attributes-title">Atributos de Combate</h3>
+          <dl className="attributes-grid">
+            <div className="attribute-card">
+              <dt><span aria-hidden="true">♥</span> Vida Máxima</dt>
               <dd>
-                {state.health ?? 100} / {state.maxHealth ?? 100}
+                {state.health ?? 100} / {stats.maxHealth}
+                {stats.bonusHp > 0 && <small className="stat-bonus"> (+{stats.bonusHp})</small>}
               </dd>
             </div>
-            <div>
-              <dt>
-                <span aria-hidden="true">⚔</span> Ataque
-              </dt>
-              <dd>{damage} por golpe</dd>
+            <div className="attribute-card">
+              <dt><span aria-hidden="true">🛡️</span> Defesa Física</dt>
+              <dd>
+                {stats.defense}
+                <small className="stat-hint"> (−{stats.defense} absorvido)</small>
+              </dd>
+            </div>
+            <div className="attribute-card">
+              <dt><span aria-hidden="true">⚔️</span> Poder de Ataque</dt>
+              <dd>
+                {stats.attack}
+                {stats.bonusAttack > 0 && <small className="stat-bonus"> (+{stats.bonusAttack})</small>}
+                <small className="stat-hint"> por golpe</small>
+              </dd>
+            </div>
+            <div className="attribute-card">
+              <dt><span aria-hidden="true">⚡</span> Chance de Crítico</dt>
+              <dd>
+                {stats.critChance}% <small className="stat-hint">(1.5× dano)</small>
+              </dd>
             </div>
           </dl>
         </div>
-        {tool && (
-          <button
-            type="button"
-            className="equipment-store"
-            disabled={busy}
-            onClick={() => connection?.action({ kind: 'unequip' })}
-          >
-            Guardar ferramenta
-          </button>
-        )}
       </section>
     </div>
   );

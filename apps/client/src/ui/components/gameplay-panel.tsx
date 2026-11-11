@@ -8,6 +8,7 @@ import {
   PROFESSION_NAMES,
   levelForXp,
   XP_PER_LEVEL,
+  getEquipmentSlot,
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
 import type { WorldConnection } from '../../game/networking/world-connection';
@@ -152,9 +153,9 @@ export function GameplayPanel({
                 >
                   Mover / dividir
                 </button>
-                {ITEMS[source.itemId].tool && (
+                {(ITEMS[source.itemId].tool || getEquipmentSlot(source.itemId)) && (
                   <button
-                    disabled={disabled || !source || !ITEMS[source.itemId].tool}
+                    disabled={disabled || !source}
                     onClick={() =>
                       connection?.action({ kind: 'equip', from: selected })
                     }
