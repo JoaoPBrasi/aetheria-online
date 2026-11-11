@@ -1,0 +1,728 @@
+/* Madeira envernizada, metal rebitado e encaixes em pixel art. */
+.medieval-hud {
+  --medieval-ink: #100b08;
+  --medieval-paper: #f7e6c4;
+  --medieval-muted: #cbb08b;
+  --medieval-gold: #f2c374;
+  --medieval-edge: #80512e;
+  --medieval-dark: linear-gradient(145deg, #382619, #20150f 65%);
+  --medieval-wood:
+    repeating-linear-gradient(0deg, #461e071a 0 1px, transparent 1px 5px),
+    linear-gradient(170deg, #e29a45 0%, #bb6a26 38%, #9b4f1c 65%, #c47b32 100%);
+  --medieval-heading: Georgia, 'Palatino Linotype', serif;
+  color: var(--medieval-paper);
+}
+
+.medieval-hud
+  :is(
+    .hud-identity,
+    .hud-location,
+    .hud-dock,
+    .hud-modal,
+    .seed-picker,
+    .solo-guide,
+    .minimap-shell,
+    .quest-tracker-shell,
+    .hud-chat-box,
+    .hud-context > button,
+    .hud-context > p
+  ) {
+  background: var(--medieval-dark);
+  border: 1px solid var(--medieval-edge);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 2px #1b100a,
+    inset 0 0 0 3px #a36a3733,
+    0 5px 14px #1008038c;
+  color: var(--medieval-paper);
+  backdrop-filter: none;
+}
+.medieval-hud :is(.hud-modal, .quest-journal-window) > header {
+  background: linear-gradient(#68401f, #342115);
+  border-bottom-color: #b27b43;
+  color: var(--medieval-paper);
+}
+.medieval-hud
+  :is(
+    .hud-identity strong,
+    .station-banner h2,
+    .dialogue-modal h2,
+    .minimap-region-name
+  ) {
+  font-family: var(--medieval-heading);
+  color: #ffe9bb;
+  text-shadow: 0 2px #150c06;
+}
+.medieval-hud
+  :is(
+    .hud-identity span,
+    .hud-identity small,
+    .solo-guide small,
+    .hud-context > small,
+    .station-description
+  ) {
+  color: var(--medieval-muted);
+}
+.medieval-hud kbd {
+  color: #fff2d1;
+  border-color: #97754f;
+  border-radius: 3px;
+  background: linear-gradient(#493724, #25180f);
+  box-shadow: 0 1px #140b07;
+}
+.medieval-hud
+  :is(
+    .hud-dock > button,
+    .station-banner,
+    .station-description,
+    .recipe-card,
+    .farm-plot-list button,
+    .resource-controls button,
+    .seed-picker li button,
+    .dialogue-topic,
+    .cast-bar-inner
+  ) {
+  background: linear-gradient(155deg, #493421, #281b13);
+  border-color: #875c36;
+  color: var(--medieval-paper);
+}
+.medieval-hud button:hover:not(:disabled) {
+  background-color: #5a3b24;
+}
+.medieval-hud
+  :is(
+    .hud-dock > button,
+    .farm-plot-list button,
+    .seed-picker li button
+  ):hover:not(:disabled),
+.medieval-hud .hud-dock > button[aria-expanded='true'] {
+  background: linear-gradient(#644125, #392519);
+  border-color: var(--medieval-gold);
+}
+.medieval-hud :is(button, input, select):focus-visible {
+  outline: 2px solid var(--medieval-gold);
+  outline-offset: 2px;
+}
+.medieval-hud .hud-identity {
+  padding: 8px 14px 8px 8px;
+  gap: 10px;
+  min-width: 225px;
+  max-width: min(290px, 58vw);
+}
+.medieval-hud .hud-identity > div {
+  min-width: 0;
+  flex: 1;
+}
+.medieval-hud .hud-identity strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.medieval-hud .hud-avatar {
+  position: relative;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 2px solid #b98652;
+  background: radial-gradient(ellipse at 50% 65%, #674526, #271910 72%);
+  box-shadow:
+    inset 0 0 0 2px #20130d,
+    0 0 0 1px #120a06;
+}
+.medieval-hud .hud-avatar .character-portrait {
+  position: absolute;
+  width: 102px;
+  height: auto;
+  max-width: none;
+  left: 50%;
+  top: -11px;
+  transform: translateX(-50%);
+  image-rendering: pixelated;
+}
+.medieval-hud .hud-avatar [role='alert'] {
+  display: block;
+  font-size: 9px;
+  line-height: 1;
+}
+.medieval-hud .hud-health-bar {
+  height: 14px;
+  background: #1b0b08;
+  border: 1px solid #87513a;
+  border-radius: 3px;
+  box-shadow: inset 0 1px 2px #080403;
+}
+.medieval-hud .hud-health-fill {
+  background: linear-gradient(#d44e38, #a32521 49%, #791619 51%, #b93024);
+}
+.medieval-hud .hud-health-text {
+  display: flex;
+  font-size: 9px !important;
+}
+.medieval-hud .hud-dock {
+  gap: 5px;
+  padding: 7px 9px;
+}
+.medieval-hud .hud-dock > button {
+  width: clamp(39px, 8vw, 60px);
+  height: 53px;
+  color: #f4dbb4;
+  border-radius: 5px;
+}
+.medieval-hud .hud-dock button span {
+  color: var(--medieval-gold);
+  font-size: 20px;
+  line-height: 23px;
+}
+.medieval-hud .dock-divider {
+  background: #97673d;
+  margin-inline: 3px;
+}
+.medieval-hud .dock-muted-btn {
+  background: linear-gradient(#532c24, #321d17);
+}
+.medieval-hud .hud-chat-box input {
+  background: #21150e;
+  border-color: var(--medieval-edge);
+}
+.medieval-hud .hud-toast {
+  background: #3b2118;
+  border-color: #b26943;
+}
+.medieval-hud .hud-toast.success {
+  background: #30261a;
+  border-color: #bd8748;
+  color: #fff0cb;
+}
+
+.medieval-hud .medieval-frame {
+  position: relative;
+  background: var(--medieval-wood);
+  border: 3px solid #2d170b;
+  border-radius: 9px;
+  box-shadow:
+    inset 0 0 0 2px #da9c52,
+    inset 0 0 0 4px #713915,
+    inset 0 0 0 6px #c07936,
+    0 0 0 1px #b57b4b,
+    0 6px 0 #1a0e08,
+    0 10px 20px #0d0806a8;
+}
+.medieval-hud .metal-corners {
+  position: absolute;
+  inset: -4px;
+  z-index: 2;
+  pointer-events: none;
+}
+.metal-corners i {
+  position: absolute;
+  width: 29px;
+  height: 29px;
+  background: linear-gradient(
+    142deg,
+    #b6aaa0 0 14%,
+    #665d56 15% 45%,
+    #302b29 46% 73%,
+    #1e1918 74%
+  );
+  clip-path: polygon(
+    0 34%,
+    34% 0,
+    100% 0,
+    100% 27%,
+    74% 42%,
+    58% 45%,
+    44% 60%,
+    41% 76%,
+    24% 100%,
+    0 100%
+  );
+  filter: drop-shadow(0 1px 0 #120c08);
+}
+.metal-corners i::before,
+.metal-corners i::after {
+  position: absolute;
+  content: '';
+  width: 5px;
+  height: 5px;
+  background: #f7c56d;
+  box-shadow:
+    1px 1px 0 #3e270b,
+    inset -1px -1px #ac742f;
+}
+.metal-corners i::before {
+  top: 6px;
+  left: 14px;
+}
+.metal-corners i::after {
+  top: 13px;
+  left: 6px;
+}
+.metal-corners i:nth-child(1) {
+  top: 0;
+  left: 0;
+}
+.metal-corners i:nth-child(2) {
+  top: 0;
+  right: 0;
+  transform: scaleX(-1);
+}
+.metal-corners i:nth-child(3) {
+  bottom: 0;
+  left: 0;
+  transform: scaleY(-1);
+}
+.metal-corners i:nth-child(4) {
+  bottom: 0;
+  right: 0;
+  transform: scale(-1);
+}
+.medieval-hud .medieval-slot,
+.medieval-hud .inventory-paper .inventory-grid button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  background: radial-gradient(ellipse at 55% 42%, #2c2119, #14100d 72%);
+  border: 2px solid #71645a;
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 2px #241d18,
+    inset 0 3px 5px #0b0807;
+  clip-path: polygon(
+    6px 0,
+    calc(100% - 6px) 0,
+    100% 6px,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    6px 100%,
+    0 calc(100% - 6px),
+    0 6px
+  );
+}
+.medieval-hud
+  :is(
+    button.medieval-slot:hover:not(:disabled),
+    .inventory-grid button[aria-pressed='true'],
+    .hotbar-slot.equipped
+  ) {
+  background: radial-gradient(ellipse at 55% 42%, #664323, #23160e 72%);
+  border-color: #f1be70;
+}
+.medieval-hud button.medieval-slot:focus-visible {
+  outline-offset: -5px;
+}
+.medieval-hud .item-art {
+  display: block;
+  flex: none;
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  filter: drop-shadow(1px 2px 0 #100a06aa);
+}
+.medieval-hud img.item-art {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.medieval-hud
+  :is(.item-art--iron_axe, .item-art--iron_sword, .item-art--iron_ore) {
+  filter: saturate(0.35) hue-rotate(156deg) brightness(1.45);
+}
+.medieval-hud .item-art--charcoal {
+  filter: grayscale(1) brightness(0.56);
+}
+.medieval-hud .item-art--roasted_turnip {
+  filter: hue-rotate(55deg) saturate(0.75);
+}
+.item-art--watering_can,
+.item-art--slime_goo {
+  width: 19px;
+  height: 25px;
+  background: linear-gradient(125deg, #a9edf9, #51acd2 55%, #2b638e 56%);
+  clip-path: polygon(
+    42% 0,
+    58% 0,
+    58% 17%,
+    72% 17%,
+    72% 32%,
+    88% 32%,
+    88% 50%,
+    100% 50%,
+    100% 77%,
+    86% 77%,
+    86% 92%,
+    70% 92%,
+    70% 100%,
+    26% 100%,
+    26% 92%,
+    10% 92%,
+    10% 77%,
+    0 77%,
+    0 50%,
+    14% 50%,
+    14% 32%,
+    28% 32%,
+    28% 17%,
+    42% 17%
+  );
+}
+.item-art--slime_goo {
+  width: 23px;
+  height: 16px;
+  background: linear-gradient(125deg, #d0e16e, #73a342 50%, #385d31 51%);
+}
+
+.medieval-hud .hotbar {
+  gap: 5px;
+  padding: 7px 13px 11px;
+  backdrop-filter: none;
+}
+.medieval-hud .hotbar-slot {
+  width: clamp(28px, 8.7vw, 48px);
+  height: clamp(36px, 10vw, 49px);
+  clip-path: none;
+  border-radius: 6px;
+}
+.medieval-hud .hotbar-key {
+  top: auto;
+  left: 50%;
+  bottom: -8px;
+  min-width: 17px;
+  padding: 0 2px;
+  transform: translateX(-50%);
+  border: 1px solid #786955;
+  background: #32251e;
+  border-radius: 3px;
+  color: #fff3d9;
+  text-shadow: 1px 1px #140c06;
+}
+.medieval-hud .hotbar-qty {
+  bottom: 3px;
+  right: 2px;
+  padding-inline: 2px;
+}
+.medieval-hud .hotbar .metal-corners i {
+  width: 23px;
+  height: 23px;
+}
+
+.medieval-hud .character-window {
+  top: clamp(85px, 14vh, 145px);
+  bottom: 179px;
+  left: 50%;
+  right: auto;
+  width: min(930px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  padding: 0 8px 12px;
+  z-index: 62;
+  overflow: auto;
+  scrollbar-color: #9c673b #21150e;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+.medieval-hud .character-window > header {
+  z-index: 3;
+  min-height: 40px;
+  margin: 0 0 10px;
+  padding: 4px 9px 4px 15px;
+  background: linear-gradient(#513522, #271a13);
+  border: 1px solid #93643d;
+  border-radius: 5px;
+  font: bold 18px var(--medieval-heading);
+  letter-spacing: 0.02em;
+}
+.medieval-hud .character-window > header button {
+  min-width: 32px;
+  border: 1px solid #b8754b;
+  border-radius: 4px;
+  color: #fff0dd;
+  background: linear-gradient(#934933, #56281c);
+  font: bold 15px var(--medieval-heading);
+}
+.medieval-hud .character-window > header button:hover {
+  background: #ac5840;
+}
+.character-sheet {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 15px;
+  align-items: start;
+}
+.character-sheet > section {
+  min-width: 0;
+  padding: 13px;
+}
+.character-sheet-switch {
+  display: none;
+}
+.medieval-hud .character-sheet .medieval-plaque {
+  width: max-content;
+  max-width: 100%;
+  margin: -6px auto 10px;
+  padding: 4px 15px;
+  border: 2px solid #817062;
+  border-radius: 5px;
+  background: linear-gradient(#513928, #251a13);
+  box-shadow:
+    inset 0 0 0 1px #1f130e,
+    0 2px 0 #44220e;
+  color: #fff2db;
+  font: bold 21px var(--medieval-heading);
+  text-shadow: 0 2px #140c08;
+}
+.medieval-plaque span {
+  color: #f3bc65;
+  margin-right: 3px;
+}
+.medieval-hud .character-sheet .gameplay-panel {
+  padding: 0;
+}
+.medieval-hud .inventory-paper .inventory-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  padding: 7px;
+  margin: 0;
+  border: 1px solid #5b3017;
+  border-radius: 5px;
+  background: linear-gradient(#5b3822, #3b261b);
+  box-shadow: inset 0 1px 3px #2c1a10;
+}
+.medieval-hud .inventory-paper .inventory-grid button {
+  min-height: 0;
+  aspect-ratio: 1.12;
+  padding: 0;
+}
+.inventory-paper .inventory-grid small {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  color: #b39b7e;
+  font-size: 8px;
+}
+.inventory-paper .inventory-grid strong {
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  color: #fff0d5;
+  font-size: 11px;
+  text-shadow: 1px 1px #100905;
+}
+.inventory-capacity {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
+  padding: 5px 9px;
+  background: #412817;
+  border: 1px solid #734722;
+  border-radius: 4px;
+  color: #f7dcad;
+  font-size: 11px;
+}
+.inventory-selection,
+.character-attributes,
+.paper-doll {
+  background: var(--medieval-dark);
+  border: 1px solid #613e27;
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 2px #2a1a10;
+}
+.inventory-selection {
+  margin-top: 6px;
+  min-height: 36px;
+  padding: 7px 8px;
+}
+.medieval-hud .inventory-selection p {
+  margin: 0;
+  color: var(--medieval-muted);
+}
+.inventory-item-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 31px;
+}
+.inventory-item-title strong {
+  color: #ffe5b6;
+}
+.medieval-hud .inventory-selection .inventory-controls {
+  gap: 6px;
+  margin: 5px 0 0;
+  align-items: end;
+}
+.medieval-hud .inventory-selection input {
+  background: #20140e;
+  border-color: #865633;
+  color: #fff1d0;
+  min-width: 0;
+  width: 64px;
+}
+.medieval-hud
+  :is(
+    .inventory-selection button,
+    .equipment-store,
+    .character-sheet-switch button
+  ) {
+  padding: 5px 8px;
+  color: #ffebc8;
+  background: linear-gradient(#5f4028, #342218);
+  border: 1px solid #926338;
+  border-radius: 4px;
+}
+.medieval-hud
+  :is(
+    .inventory-selection button,
+    .equipment-store,
+    .character-sheet-switch button
+  ):hover:not(:disabled) {
+  background: #684629;
+}
+.paper-doll {
+  display: grid;
+  grid-template-columns: minmax(64px, 1fr) minmax(95px, 1.4fr) minmax(64px, 1fr);
+  align-items: center;
+  gap: 4px;
+  min-height: 190px;
+  padding: 8px 5px;
+}
+.paper-doll-portrait {
+  display: grid;
+  justify-items: center;
+  align-self: stretch;
+  align-content: center;
+  min-width: 0;
+  padding: 4px 0;
+  color: #ffe4b5;
+  background: radial-gradient(ellipse at 50% 55%, #7e5c34, #3a2a20 70%);
+  border: 1px solid #866340;
+  border-radius: 4px;
+  font: bold 13px var(--medieval-heading);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.paper-doll-portrait canvas {
+  width: min(100%, 108px);
+  height: auto;
+  image-rendering: pixelated;
+}
+.equipment-piece {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  color: var(--medieval-muted);
+  text-align: center;
+  font-size: 11px;
+}
+.equipment-piece strong {
+  color: var(--medieval-paper);
+  overflow-wrap: anywhere;
+}
+.equipment-piece .gear-socket {
+  width: 48px;
+  height: 49px;
+  color: #998372;
+  font-size: 21px;
+}
+.character-attributes {
+  padding: 7px 9px;
+  margin-top: 7px;
+}
+.character-attributes h3 {
+  margin: 0 0 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #775135;
+  color: #ffe6bd;
+  font: bold 16px var(--medieval-heading);
+}
+.character-attributes dl {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+.character-attributes dl > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 5px;
+}
+.character-attributes dt span {
+  display: inline-block;
+  width: 17px;
+  color: #e9a454;
+}
+.character-attributes dl > div:first-child dt span {
+  color: #ef6957;
+}
+.character-attributes dd {
+  margin: 0;
+  font-weight: 700;
+  color: #ffe6bd;
+}
+.medieval-hud .equipment-store {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+}
+
+@media (max-width: 760px) {
+  .medieval-hud .character-window {
+    width: min(460px, calc(100vw - 12px));
+    top: 76px;
+    bottom: 176px;
+  }
+  .character-sheet {
+    display: block;
+  }
+  .character-sheet-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .character-sheet-switch button[aria-pressed='true'] {
+    border-color: var(--medieval-gold);
+  }
+  .character-sheet[data-view='bag'] .character-sheet-equipment,
+  .character-sheet[data-view='equipment'] .character-sheet-bag {
+    display: none;
+  }
+  .medieval-hud .hud-identity {
+    min-width: 0;
+    max-width: 57vw;
+    gap: 5px;
+    padding: 6px;
+  }
+  .medieval-hud .hud-avatar {
+    width: 37px;
+    height: 37px;
+  }
+  .medieval-hud .hud-avatar .character-portrait {
+    width: 84px;
+    top: -10px;
+  }
+}
+@media (max-width: 480px) {
+  .medieval-hud .hotbar {
+    gap: 3px;
+    padding-inline: 10px;
+  }
+  .medieval-hud .hud-dock {
+    gap: 3px;
+    padding-inline: 6px;
+  }
+  .medieval-hud .hud-dock > button {
+    font-size: 9px;
+  }
+  .medieval-hud .inventory-paper .inventory-grid {
+    padding: 4px;
+    gap: 3px;
+  }
+  .medieval-hud .item-art {
+    transform: scale(0.85);
+  }
+}

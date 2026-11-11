@@ -5,30 +5,7 @@ import {
   type Slot,
 } from '@aetheria/shared';
 
-const ITEM_ICONS: Record<ItemId, string> = {
-  axe: '🪓',
-  pickaxe: '⛏️',
-  sickle: '🌾',
-  hoe: '🌱',
-  watering_can: '💧',
-  sword: '⚔️',
-  wood: '🪵',
-  stone: '🪨',
-  fiber: '🌿',
-  turnip_seed: '🌰',
-  pumpkin_seed: '🌰',
-  turnip: '🧅',
-  roasted_turnip: '🍲',
-  pumpkin: '🎃',
-  plank: '🪵',
-  slime_goo: '🟢',
-  flower: '🌼',
-  iron_ore: '🪨',
-  iron_ingot: '🔩',
-  charcoal: '⚫',
-  iron_axe: '🪓',
-  iron_sword: '⚔️',
-};
+import { ItemIcon, MetalCorners } from './medieval-art';
 
 interface HotbarProps {
   inventory: Slot[];
@@ -73,11 +50,12 @@ export function Hotbar({
 
   return (
     <div className="hotbar-container" aria-label="Barra de acesso rápido">
-      <div className="hotbar">
+      <div className="hotbar medieval-frame">
+        <MetalCorners />
         {slots.map(({ index, keyNumber, item, isEquipped }) => (
           <button
             key={index}
-            className={`hotbar-slot ${item ? 'has-item' : 'empty'} ${isEquipped ? 'equipped' : ''}`}
+            className={`hotbar-slot medieval-slot ${item ? 'has-item' : 'empty'} ${isEquipped ? 'equipped' : ''}`}
             onClick={() => handleClick(index, item)}
             title={
               item
@@ -89,9 +67,7 @@ export function Hotbar({
             <span className="hotbar-key">{keyNumber}</span>
             {item ? (
               <>
-                <span className="hotbar-icon">
-                  {ITEM_ICONS[item.itemId] ?? '📦'}
-                </span>
+                <ItemIcon item={item.itemId} />
                 {item.quantity > 1 && (
                   <span className="hotbar-qty">{item.quantity}</span>
                 )}

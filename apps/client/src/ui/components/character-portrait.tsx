@@ -14,10 +14,12 @@ export function CharacterPortrait({
   look,
   direction = 'down',
   walking = false,
+  animated = true,
 }: {
   look: Cosmetics;
   direction?: Facing;
   walking?: boolean;
+  animated?: boolean;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [error, setError] = useState(false);
@@ -31,7 +33,7 @@ export function CharacterPortrait({
         if (disposed) return;
         setError(false);
         const state = walking ? 'walk' : 'idle',
-          count = PLAYER_ANIMATIONS[state].frames;
+          count = animated ? PLAYER_ANIMATIONS[state].frames : 1;
         const keys = Array.from(
           { length: count },
           (_, i) =>
@@ -45,9 +47,9 @@ export function CharacterPortrait({
         const ctx = target.getContext('2d')!;
         ctx.imageSmoothingEnabled = false;
         const start = performance.now(),
-          reduced = window.matchMedia(
-            '(prefers-reduced-motion: reduce)',
-          ).matches;
+          reduced =
+            !animated ||
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         let previous = -1;
         const draw = (time: number) => {
           if (disposed) return;
@@ -90,7 +92,7 @@ export function CharacterPortrait({
       disposed = true;
       cancelAnimationFrame(request);
     };
-  }, [look, direction, walking]);
+  }, [look, direction, walking, animated]);
   return (
     <>
       <canvas
@@ -106,7 +108,9 @@ export function CharacterPortrait({
         data-motion={walking ? 'walk' : 'idle'}
       />
       {error && (
-        <p role="alert">Não foi possível carregar a prévia do personagem.</p>
+        <span role="alert">
+          Não foi possível carregar a prévia do personagem.
+        </span>
       )}
     </>
   );

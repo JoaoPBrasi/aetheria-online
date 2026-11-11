@@ -12,6 +12,7 @@ import {
 import { gameBridge } from '../../game/managers/game-bridge';
 import type { WorldConnection } from '../../game/networking/world-connection';
 import { FarmingPanel } from './farming-panel';
+import { ItemIcon } from './medieval-art';
 export function GameplayPanel({
   connection,
   section = 'all',
@@ -34,15 +35,23 @@ export function GameplayPanel({
         <button onClick={() => connection?.refresh()}>Carregar mochila</button>
       </section>
     ) : null;
-  const disabled = state.status !== 'connected' || state.actionPending;
+  const disabled =
+    state.status !== 'connected' || state.actionPending || state.questPending;
   const source = snapshot.inventory.find((s) => s.index === selected);
   return (
-    <section className="gameplay-panel" aria-label="Inventário e profissões">
+    <section
+      className={`gameplay-panel${section === 'bag' ? ' inventory-paper' : ''}`}
+      aria-label={
+        section === 'bag' ? 'Itens da mochila' : 'Inventário e profissões'
+      }
+    >
       {section !== 'farm' && (
         <>
-          <h2>
-            Mochila <small>24 espaços</small>
-          </h2>
+          {section !== 'bag' && (
+            <h2>
+              Mochila <small>24 espaços</small>
+            </h2>
+          )}
           <div className="inventory-grid">
             {Array.from({ length: 24 }, (_, index) => {
               const item = snapshot.inventory.find((s) => s.index === index);
@@ -50,107 +59,145 @@ export function GameplayPanel({
                 <button
                   key={index}
                   type="button"
+                  className={`medieval-slot${item ? ' inventory-slot-filled' : ''}`}
                   aria-pressed={selected === index}
                   aria-label={`Slot ${index + 1}${item ? `: ${ITEMS[item.itemId].name}, ${item.quantity}` : ': vazio'}`}
+                  title={
+                    item ? ITEMS[item.itemId].name : `Slot ${index + 1} vazio`
+                  }
                   onClick={() => {
                     setSelected(index);
                     setQuantity(1);
                   }}
                 >
-                  <small>{index + 1}</small>
+                  <small aria-hidden="true">{index + 1}</small>
                   {item ? (
                     <>
-                      {ITEMS[item.itemId].name}
-                      <strong>×{item.quantity}</strong>
+                      <ItemIcon item={item.itemId} />
+                      {item.quantity > 1 && (
+                        <strong aria-hidden="true">{item.quantity}</strong>
+                      )}
                     </>
-                  ) : (
-                    '—'
-                  )}
+                  ) : null}
                 </button>
               );
             })}
           </div>
-          {(source?.itemId === 'sword' || source?.itemId === 'iron_sword') && (
-            <p>
-              {WEAPON_DAMAGE[source.itemId]} de dano por golpe. O combate usa a
-              melhor espada que você carrega.
-            </p>
-          )}
-          {source?.itemId === 'roasted_turnip' && (
-            <p>Recupera até {ROASTED_TURNIP_HEAL} pontos de vida.</p>
-          )}
-          <div className="inventory-controls">
-            <label>
-              Quantidade
-              <input
-                aria-label="Quantidade a mover"
-                type="number"
-                min={1}
-                max={source?.quantity ?? 1}
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-              />
-            </label>
-            <label>
-              Slot de destino
-              <input
-                aria-label="Slot de destino"
-                type="number"
-                min={1}
-                max={24}
-                value={destination}
-                onChange={(e) => setDestination(Number(e.target.value))}
-              />
-            </label>
-            <button
-              disabled={disabled || !source}
-              onClick={() =>
-                connection?.action({
-                  kind: 'transfer',
-                  from: selected,
-                  to: destination - 1,
-                  quantity,
-                })
-              }
-            >
-              Mover / dividir
-            </button>
-            <button
-              disabled={disabled || !source || !ITEMS[source.itemId].tool}
-              onClick={() =>
-                connection?.action({ kind: 'equip', from: selected })
-              }
-            >
-              Equipar
-            </button>
+          <div className="inventory-capacity">
+            <span>Espaços ocupados</span>
+            <strong>{snapshot.inventory.length} / 24</strong>
+          </div>
+          <div className="inventory-selection">
+            {source ? (
+              <div className="inventory-item-title">
+                <ItemIcon item={source.itemId} />
+                <strong>{ITEMS[source.itemId].name}</strong>
+                {source.quantity > 1 && <span>×{source.quantity}</span>}
+              </div>
+            ) : (
+              <p>Selecione um item para usar, equipar ou mover.</p>
+            )}
+            {(source?.itemId === 'sword' ||
+              source?.itemId === 'iron_sword') && (
+              <p>
+                {WEAPON_DAMAGE[source.itemId]} de dano por golpe. O combate usa
+                a melhor espada que você carrega.
+              </p>
+            )}
             {source?.itemId === 'roasted_turnip' && (
-              <button
-                type="button"
-                disabled={
-                  disabled || (state.health ?? 100) >= (state.maxHealth ?? 100)
-                }
-                onClick={() =>
-                  connection?.action({ kind: 'consume', from: source.index })
-                }
-              >
-                {(state.health ?? 100) >= (state.maxHealth ?? 100)
-                  ? 'Vida cheia'
-                  : 'Comer nabo assado'}
-              </button>
+              <p>Recupera até {ROASTED_TURNIP_HEAL} pontos de vida.</p>
+            )}
+            {source && (
+              <div className="inventory-controls">
+                <label>
+                  Quantidade
+                  <input
+                    aria-label="Quantidade a mover"
+                    type="number"
+                    min={1}
+                    max={source?.quantity ?? 1}
+                    value={quantity}
+                    onChange={(e) => setQuantity(Number(e.target.value))}
+                  />
+                </label>
+                <label>
+                  Slot de destino
+                  <input
+                    aria-label="Slot de destino"
+                    type="number"
+                    min={1}
+                    max={24}
+                    value={destination}
+                    onChange={(e) => setDestination(Number(e.target.value))}
+                  />
+                </label>
+                <button
+                  disabled={
+                    disabled ||
+                    !Number.isInteger(quantity) ||
+                    quantity < 1 ||
+                    quantity > source.quantity ||
+                    !Number.isInteger(destination) ||
+                    destination < 1 ||
+                    destination > 24
+                  }
+                  onClick={() =>
+                    connection?.action({
+                      kind: 'transfer',
+                      from: selected,
+                      to: destination - 1,
+                      quantity,
+                    })
+                  }
+                >
+                  Mover / dividir
+                </button>
+                {ITEMS[source.itemId].tool && (
+                  <button
+                    disabled={disabled || !source || !ITEMS[source.itemId].tool}
+                    onClick={() =>
+                      connection?.action({ kind: 'equip', from: selected })
+                    }
+                  >
+                    Equipar
+                  </button>
+                )}
+                {source?.itemId === 'roasted_turnip' && (
+                  <button
+                    type="button"
+                    disabled={
+                      disabled ||
+                      (state.health ?? 100) >= (state.maxHealth ?? 100)
+                    }
+                    onClick={() =>
+                      connection?.action({
+                        kind: 'consume',
+                        from: source.index,
+                      })
+                    }
+                  >
+                    {(state.health ?? 100) >= (state.maxHealth ?? 100)
+                      ? 'Vida cheia'
+                      : 'Comer nabo assado'}
+                  </button>
+                )}
+              </div>
             )}
           </div>
-          <p data-testid="equipped-tool">
-            Ferramenta:{' '}
-            {snapshot.equipment[0]
-              ? ITEMS[snapshot.equipment[0].itemId].name
-              : 'Nenhuma'}{' '}
-            <button
-              disabled={disabled || !snapshot.equipment.length}
-              onClick={() => connection?.action({ kind: 'unequip' })}
-            >
-              Guardar ferramenta
-            </button>
-          </p>
+          {section !== 'bag' && (
+            <p data-testid="equipped-tool">
+              Ferramenta:{' '}
+              {snapshot.equipment[0]
+                ? ITEMS[snapshot.equipment[0].itemId].name
+                : 'Nenhuma'}{' '}
+              <button
+                disabled={disabled || !snapshot.equipment.length}
+                onClick={() => connection?.action({ kind: 'unequip' })}
+              >
+                Guardar ferramenta
+              </button>
+            </p>
+          )}
         </>
       )}
       {section === 'all' && (

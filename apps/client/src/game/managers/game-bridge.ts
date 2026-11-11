@@ -41,6 +41,7 @@ export class GameBridge {
     maxHealth: 100,
     monsters: [],
     chatMessages: [],
+    currentTargetId: null,
   };
   private listeners = new Set<() => void>();
   private activeCast: ActiveCast | null = null;
@@ -63,6 +64,12 @@ export class GameBridge {
     const next = [...list.slice(-49), message];
     this.update({ chatMessages: next });
     this.speechBubble?.(message);
+  }
+
+  selectTarget(targetId: string | null) {
+    if (this.snapshot.currentTargetId !== targetId) {
+      this.update({ currentTargetId: targetId });
+    }
   }
 
   getCast = () => this.activeCast;

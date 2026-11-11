@@ -46,6 +46,7 @@ export class WorldScene extends Phaser.Scene {
   private walking = false;
   private lastFootstepTime = 0;
   private dangerRing!: Phaser.GameObjects.Graphics;
+  private targetRing!: Phaser.GameObjects.Graphics;
   private plots = new Map<
     string,
     {
@@ -78,6 +79,7 @@ export class WorldScene extends Phaser.Scene {
     {
       container: Phaser.GameObjects.Container;
       body: Phaser.GameObjects.Ellipse | Phaser.GameObjects.Sprite;
+      hpBg: Phaser.GameObjects.Rectangle;
       hpFill: Phaser.GameObjects.Rectangle;
       barWidth: number;
       hurtUntil: number;
@@ -118,6 +120,19 @@ export class WorldScene extends Phaser.Scene {
   create() {
     this.focusRing = this.add.graphics().setDepth(5001);
     this.dangerRing = this.add.graphics().setDepth(2);
+    this.targetRing = this.add.graphics().setDepth(20);
+
+    this.input.on(
+      'pointerdown',
+      (
+        _pointer: Phaser.Input.Pointer,
+        currentlyOver: Phaser.GameObjects.GameObject[],
+      ) => {
+        if (currentlyOver.length === 0) {
+          gameBridge.selectTarget(null);
+        }
+      },
+    );
 
     const artwork = this.cache.json.get('world-art') as WorldArtwork;
     if (
@@ -292,7 +307,10 @@ export class WorldScene extends Phaser.Scene {
       npcContainer.setDepth(npc.y);
       npcContainer
         .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => gameBridge.interact?.(npc.id));
+        .on('pointerdown', () => {
+          gameBridge.selectTarget(npc.id);
+          gameBridge.interact?.(npc.id);
+        });
     }
     for (const b of landmarks)
       this.label(
@@ -916,9 +934,12 @@ export class WorldScene extends Phaser.Scene {
         container.setSize(hostile ? 48 : 32, hostile ? 64 : 32);
         container
           .setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => gameBridge.interact?.(m.id));
+          .on('pointerdown', () => {
+            gameBridge.selectTarget(m.id);
+            gameBridge.interact?.(m.id);
+          });
 
-        entry = { container, body, hpFill, barWidth, hurtUntil: 0 };
+        entry = { container, body, hpBg, hpFill, barWidth, hurtUntil: 0 };
         this.monsterSprites.set(m.id, entry);
       }
 
@@ -950,9 +971,27 @@ export class WorldScene extends Phaser.Scene {
             .lineStyle(2, 0xff8758, 0.95)
             .strokeCircle(m.x, m.y, m.attackRange);
         }
+
+        const isSelected = farmState.currentTargetId === m.id;
+        const showHp =
+          isSelected ||
+          m.health < m.maxHealth ||
+          m.state === 'chase' ||
+          m.state === 'windup' ||
+          m.state === 'attack';
+        entry.hpBg.setVisible(showHp);
+        entry.hpFill.setVisible(showHp);
+        if (isSelected) {
+          entry.hpBg.setStrokeStyle(1.5, 0xffd166, 0.95);
+        } else {
+          entry.hpBg.setStrokeStyle(1, 0x111111, 0.7);
+        }
+
         const pct = Math.max(0, Math.min(1, m.health / m.maxHealth));
         entry.hpFill.width = entry.barWidth * pct;
-        entry.hpFill.setFillStyle(pct > 0.3 ? 0x33cc33 : 0xcc3333);
+        entry.hpFill.setFillStyle(
+          pct > 0.5 ? 0x2ec4b6 : pct > 0.25 ? 0xffb703 : 0xe63946,
+        );
       }
     }
 
@@ -960,6 +999,81 @@ export class WorldScene extends Phaser.Scene {
       if (!liveMonsters.has(id)) {
         entry.container.destroy();
         this.monsterSprites.delete(id);
+      }
+    }
+
+    // Renderização do anel elíptico de mira (Target Ring) sob os pés do alvo selecionado
+    this.targetRing.clear();
+    const currentTargetId = farmState.currentTargetId;
+    if (currentTargetId) {
+      let targetX: number | undefined;
+      let targetY: number | undefined;
+      let isHostile = true;
+      let radius = 22;
+
+      const monsterEntry = this.monsterSprites.get(currentTargetId);
+      if (monsterEntry && monsterEntry.container.visible) {
+        targetX = monsterEntry.container.x;
+        targetY = monsterEntry.container.y;
+        radius =
+          currentTargetId.includes('orc') ||
+          currentTargetId.includes('skeleton')
+            ? 28
+            : 20;
+        isHostile = true;
+      } else {
+        const npc = NPCS.find((n) => n.id === currentTargetId);
+        if (npc) {
+          targetX = npc.x;
+          targetY = npc.y;
+          radius = 24;
+          isHostile = false;
+        }
+      }
+
+      if (targetX !== undefined && targetY !== undefined) {
+        const pulse = 0.75 + Math.sin(time / 140) * 0.2;
+        const color = isHostile ? 0xff4d4d : 0x4ddb82;
+        const strokeColor = isHostile ? 0xff8585 : 0x85ffb0;
+
+        const rx = radius * 1.15;
+        const ry = radius * 0.58;
+        const groundY = targetY + 2;
+
+        this.targetRing.lineStyle(2, strokeColor, pulse);
+        this.targetRing.strokeEllipse(targetX, groundY, rx * 2, ry * 2);
+
+        this.targetRing.fillStyle(color, pulse * 0.2);
+        this.targetRing.fillEllipse(targetX, groundY, rx * 2, ry * 2);
+
+        const tickLen = 6;
+        this.targetRing.lineStyle(2.5, strokeColor, Math.min(1, pulse + 0.25));
+        this.targetRing.lineBetween(
+          targetX - rx - 2,
+          groundY,
+          targetX - rx + tickLen,
+          groundY,
+        );
+        this.targetRing.lineBetween(
+          targetX + rx + 2,
+          groundY,
+          targetX + rx - tickLen,
+          groundY,
+        );
+        this.targetRing.lineBetween(
+          targetX,
+          groundY - ry - 2,
+          targetX,
+          groundY - ry + tickLen,
+        );
+        this.targetRing.lineBetween(
+          targetX,
+          groundY + ry + 2,
+          targetX,
+          groundY + ry - tickLen,
+        );
+      } else {
+        gameBridge.selectTarget(null);
       }
     }
   }

@@ -13,6 +13,8 @@ import {
   CRAFTING_STATIONS,
   craftingStationRange,
   type CraftingStationId,
+  type Cosmetics,
+  cycleNextTarget,
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
 import type { WorldConnection } from '../../game/networking/world-connection';
@@ -25,9 +27,12 @@ import { DialogueModal } from './dialogue-modal';
 import { CastBar } from './cast-bar';
 import { Hotbar } from './hotbar';
 import { Minimap } from './minimap';
+import { TargetFrame } from './target-frame';
 import { QuestTracker } from './quest-tracker';
 import { QuestJournal } from './quest-journal';
 import { SeedPicker } from './seed-picker';
+import { CharacterSheet } from './character-sheet';
+import { CharacterPortrait } from './character-portrait';
 import { soloGuide } from '../solo-guide';
 import {
   activeQuests,
@@ -37,12 +42,14 @@ import {
 export function GameHud({
   connection,
   name,
+  look,
   characterId,
   ready,
   onExit,
 }: {
   connection: WorldConnection | null;
   name: string;
+  look: Cosmetics;
   characterId: string;
   ready: boolean | null;
   onExit: () => void;
@@ -59,6 +66,7 @@ export function GameHud({
     );
   const [panel, setPanel] = useState<
     | 'bag'
+    | 'equipment'
     | 'skills'
     | 'farm'
     | 'seeds'
@@ -68,6 +76,7 @@ export function GameHud({
     | 'audio'
     | null
   >(null);
+  const characterPanel = panel === 'bag' || panel === 'equipment';
   const showModal =
     panel !== 'dialogue' && panel !== 'audio' && panel !== 'seeds';
   const [hiddenQuests, setHiddenQuests] = useState(() =>
@@ -161,6 +170,7 @@ export function GameHud({
         now.worldTime ?? 0,
         crop,
         target ??
+          now.currentTargetId ??
           nearbyFarmTarget(now.plots ?? [], now.farmTarget, now.position),
         now.monsters ?? [],
         now.forage,
@@ -370,24 +380,59 @@ export function GameHud({
         audioManager.toggleMute();
         return;
       }
-      if (k === 'b' || k === 'l' || k === 'h' || k === 'j' || k === 'o') {
+      if (
+        k === 'b' ||
+        k === 'c' ||
+        k === 'l' ||
+        k === 'h' ||
+        k === 'j' ||
+        k === 'o'
+      ) {
         e.preventDefault();
         audioManager.unlockAudio();
         const next =
           k === 'b'
             ? 'bag'
-            : k === 'l'
-              ? 'skills'
-              : k === 'h'
-                ? 'farm'
-                : k === 'j'
-                  ? 'quests'
-                  : 'audio';
+            : k === 'c'
+              ? 'equipment'
+              : k === 'l'
+                ? 'skills'
+                : k === 'h'
+                  ? 'farm'
+                  : k === 'j'
+                    ? 'quests'
+                    : 'audio';
         setPanel((p) => {
           const res = p === next ? null : next;
           audioManager.playSfx(res ? 'ui_open' : 'ui_close');
           return res;
         });
+      }
+      if (k === 'tab') {
+        e.preventDefault();
+        const snap = gameBridge.getSnapshot();
+        const nextId = cycleNextTarget(
+          snap.monsters ?? [],
+          snap.currentTargetId,
+          snap.position,
+          400,
+        );
+        if (nextId) {
+          audioManager.unlockAudio();
+          audioManager.playSfx('ui_click');
+          gameBridge.selectTarget(nextId);
+        }
+        return;
+      }
+      if (k === 'escape') {
+        if (panel) {
+          setPanel(null);
+          return;
+        }
+        if (gameBridge.getSnapshot().currentTargetId) {
+          gameBridge.selectTarget(null);
+          return;
+        }
       }
       if (k === 'e' || k === ' ') {
         e.preventDefault();
@@ -401,9 +446,20 @@ export function GameHud({
     };
   }, [connection, panel, seedPlotId]);
   return (
-    <div className="game-hud">
+    <div className="game-hud medieval-hud">
+      <TargetFrame />
       <div className="hud-identity">
-        <div className="hud-avatar">✦</div>
+        <button
+          type="button"
+          className="hud-avatar"
+          title="Equipamentos (C)"
+          aria-label="Abrir ficha do personagem"
+          onClick={() =>
+            setPanel((p) => (p === 'equipment' ? null : 'equipment'))
+          }
+        >
+          <CharacterPortrait look={look} animated={false} />
+        </button>
         <div>
           <strong>{name}</strong>
           <span>Explorador de Brumavale</span>
@@ -546,10 +602,22 @@ export function GameHud({
       <nav className="hud-dock" aria-label="Atalhos do jogo">
         <button
           aria-label="Abrir mochila"
+          aria-expanded={panel === 'bag'}
           onClick={() => setPanel((p) => (p === 'bag' ? null : 'bag'))}
         >
           <kbd>B</kbd>
           <span>▦</span>Mochila
+        </button>
+        <button
+          type="button"
+          aria-label="Abrir equipamentos"
+          aria-expanded={panel === 'equipment'}
+          onClick={() =>
+            setPanel((p) => (p === 'equipment' ? null : 'equipment'))
+          }
+        >
+          <kbd>C</kbd>
+          <span>⚔</span>Herói
         </button>
         <div className="dock-divider" />
         <button
@@ -601,11 +669,6 @@ export function GameHud({
           <span>{audioSettings.muted ? '🔇' : '🔊'}</span>
           {audioSettings.muted ? 'Mudo' : 'Som'}
         </button>
-        <span className="dock-note">
-          FERRAMENTAS AUTOMÁTICAS
-          <br />
-          <small>Mochila ou equipamento</small>
-        </span>
       </nav>
       <div className="hud-status">
         <span data-testid="database-status">
@@ -628,27 +691,32 @@ export function GameHud({
       {panel === 'audio' && <AudioModal onClose={() => setPanel(null)} />}
       {panel && showModal && (
         <div
-          className={`hud-modal ${panel === 'quests' ? 'quest-journal-window' : ''}`}
+          className={`hud-modal ${characterPanel ? 'character-window' : panel === 'quests' ? 'quest-journal-window' : ''}`}
           role="dialog"
           aria-modal="true"
           aria-label={
             panel === 'bag'
               ? 'Mochila'
-              : panel === 'skills'
-                ? 'Ofícios'
-                : panel === 'quests'
-                  ? 'Diário de missões'
-                  : panel === 'crafting'
-                    ? 'Criação e Forja'
-                    : 'Horta'
+              : panel === 'equipment'
+                ? 'Equipamentos'
+                : panel === 'skills'
+                  ? 'Ofícios'
+                  : panel === 'quests'
+                    ? 'Diário de missões'
+                    : panel === 'crafting'
+                      ? 'Criação e Forja'
+                      : 'Horta'
           }
           onKeyDown={(e) => {
             if (e.key === 'Tab') {
               const buttons = e.currentTarget.querySelectorAll<HTMLElement>(
                 'button:not(:disabled):not([tabindex="-1"]),input,select',
               );
-              const first = buttons[0],
-                last = buttons[buttons.length - 1];
+              const visible = Array.from(buttons).filter(
+                (button) => button.getClientRects().length > 0,
+              );
+              const first = visible[0],
+                last = visible[visible.length - 1];
               if (e.shiftKey && document.activeElement === first) {
                 e.preventDefault();
                 last?.focus();
@@ -660,11 +728,12 @@ export function GameHud({
           }}
         >
           <header>
-            <span>
-              EXPLORADOR /{' '}
-              {panel === 'bag'
-                ? 'PERTENCES'
-                : panel === 'skills'
+            {characterPanel ? (
+              <span>Personagem</span>
+            ) : (
+              <span>
+                EXPLORADOR /{' '}
+                {panel === 'skills'
                   ? 'OFÍCIOS'
                   : panel === 'farm'
                     ? 'AGRICULTURA'
@@ -673,7 +742,8 @@ export function GameHud({
                       : (CRAFTING_STATIONS.find(
                           (st) => st.id === craftStation,
                         )?.name.toUpperCase() ?? 'ESTAÇÃO DE TRABALHO')}
-            </span>
+              </span>
+            )}
             <button
               ref={close}
               aria-label="Fechar painel"
@@ -688,8 +758,14 @@ export function GameHud({
               hiddenIds={hiddenQuests}
               onToggle={toggleQuest}
             />
-          ) : panel === 'bag' ? (
-            <GameplayPanel connection={connection} section="bag" />
+          ) : characterPanel ? (
+            <CharacterSheet
+              view={panel}
+              onView={setPanel}
+              connection={connection}
+              name={name}
+              look={look}
+            />
           ) : panel === 'farm' ? (
             <GameplayPanel connection={connection} section="farm" />
           ) : panel === 'crafting' ? (

@@ -28,6 +28,7 @@ export interface GameSnapshot {
   farmTarget?: string;
   quests?: import('../data/quests.js').CharacterQuestState[];
   chatMessages?: import('../data/chat.js').ChatMessage[];
+  currentTargetId?: string | null;
   status: ConnectionStatus;
   players: number;
   error: string | null;

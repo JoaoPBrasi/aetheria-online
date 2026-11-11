@@ -13,3 +13,4 @@ export * from './data/npcs.js';
 export * from './data/quests.js';
 export * from './data/cemetery.js';
 export * from './data/chat.js';
+export * from './data/targeting.js';

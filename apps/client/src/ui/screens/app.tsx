@@ -131,6 +131,7 @@ export function App() {
                 characterId={session!.character!.id}
                 connection={connection}
                 name={session!.character!.name}
+                look={session!.character!}
                 ready={ready}
                 onExit={() => {
                   connection?.dispose();
