@@ -3,6 +3,7 @@ import {
   RESOURCES,
   treeStage,
   CRAFTING_STATIONS,
+  CRAFTING_INTERACTION_RANGE,
   MONSTERS,
   PLAYER_ATTACK_RANGE,
   type GameplaySnapshot,
@@ -108,7 +109,7 @@ export function interaction(
     }))
     .sort((a, b) => a.distance - b.distance)[0];
   if (!chosen) return undefined;
-  const maxRange = chosen.station ? 140 : 72;
+  const maxRange = chosen.station ? CRAFTING_INTERACTION_RANGE : 72;
   if (chosen.distance > maxRange) return undefined;
   let label = '',
     tool: ItemId | undefined,

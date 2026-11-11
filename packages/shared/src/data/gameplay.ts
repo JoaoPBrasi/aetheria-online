@@ -50,6 +50,9 @@ export const PROFESSION_NAMES: Record<string, string> = {
 export const XP_PER_LEVEL = 100;
 export const levelForXp = (xp: number) =>
   1 + Math.floor(Math.sqrt(xp / XP_PER_LEVEL));
+export const CRAFTING_INTERACTION_RANGE = 140;
+export const CRAFTING_SERVER_MAX_RANGE = 160;
+
 export const CRAFTING_STATIONS = [
   {
     id: 'workbench-plaza',

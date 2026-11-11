@@ -3,6 +3,7 @@ import {
   ITEMS,
   CRAFTING_RECIPES,
   CRAFTING_STATIONS,
+  CRAFTING_INTERACTION_RANGE,
   canCraft,
   type CraftingStationId,
   type RecipeId,
@@ -65,7 +66,7 @@ export function CraftingPanel({
         currentStation.x - state.position.x,
         currentStation.y - state.position.y,
       );
-      if (dist > 140) {
+      if (dist > CRAFTING_INTERACTION_RANGE) {
         onClose?.();
       }
     }
@@ -78,7 +79,7 @@ export function CraftingPanel({
     Math.hypot(
       currentStation.x - state.position.x,
       currentStation.y - state.position.y,
-    ) <= 140;
+    ) <= CRAFTING_INTERACTION_RANGE;
 
   const recipes = Object.values(CRAFTING_RECIPES).filter(
     (r) => r.station === currentStation.type,

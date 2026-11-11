@@ -8,6 +8,7 @@ import {
   hasTool,
   CRAFTING_RECIPES,
   CRAFTING_STATIONS,
+  CRAFTING_SERVER_MAX_RANGE,
   craftItem,
   DEFAULT_TREE_GROWTH_MS,
   type CropId,
@@ -262,7 +263,8 @@ export class GameplayRepository {
           (s) =>
             s.type === recipe.station &&
             position &&
-            Math.hypot(s.x - position.x, s.y - position.y) <= 140,
+            Math.hypot(s.x - position.x, s.y - position.y) <=
+              CRAFTING_SERVER_MAX_RANGE,
         );
         const station =
           CRAFTING_STATIONS.find((s) => s.id === action.stationId) ??
@@ -273,7 +275,8 @@ export class GameplayRepository {
         const activeStation = matchingStation ?? station;
         if (
           !position ||
-          Math.hypot(activeStation.x - position.x, activeStation.y - position.y) > 140
+          Math.hypot(activeStation.x - position.x, activeStation.y - position.y) >
+            CRAFTING_SERVER_MAX_RANGE
         )
           throw new Error('Estação de trabalho fora de alcance.');
         slots = craftItem(slots, recipe);

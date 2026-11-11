@@ -239,6 +239,10 @@ it('crafts planks at workbench and sword at forge atomically granting blacksmith
     ],
   });
   s = await service.sync(id);
+  const workbench = CRAFTING_STATIONS.find(
+    (station) => station.type === 'workbench',
+  )!;
+  const forge = CRAFTING_STATIONS.find((station) => station.type === 'forge')!;
   s = await service.act(
     id,
     {
@@ -248,7 +252,7 @@ it('crafts planks at workbench and sword at forge atomically granting blacksmith
       recipeId: 'plank',
       stationId: 'workbench-plaza',
     },
-    () => ({ x: 1120, y: 1040, direction: 'down' }),
+    () => ({ x: workbench.x, y: workbench.y, direction: 'down' }),
   );
   expect(s.inventory.find((i) => i.itemId === 'plank')?.quantity).toBe(1);
   expect(s.inventory.find((i) => i.itemId === 'wood')?.quantity).toBe(8);
@@ -263,7 +267,7 @@ it('crafts planks at workbench and sword at forge atomically granting blacksmith
       recipeId: 'sword',
       stationId: 'forge-blacksmith',
     },
-    () => ({ x: 1152, y: 1168, direction: 'down' }),
+    () => ({ x: forge.x, y: forge.y, direction: 'down' }),
   );
   expect(s.inventory.find((i) => i.itemId === 'sword')?.quantity).toBe(1);
   expect(s.inventory.find((i) => i.itemId === 'wood')?.quantity).toBe(5);

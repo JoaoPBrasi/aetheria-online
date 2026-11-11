@@ -10,6 +10,7 @@ import {
   CAMPFIRE,
   CAMPFIRE_REST_RANGE,
   CRAFTING_STATIONS,
+  CRAFTING_INTERACTION_RANGE,
   type CropId,
   type CraftingStationId,
 } from '@aetheria/shared';
@@ -150,7 +151,7 @@ export function GameHud({
             station.x - now.position.x,
             station.y - now.position.y,
           );
-          if (dist > 140) {
+          if (dist > CRAFTING_INTERACTION_RANGE) {
             audioManager.playSfx('ui_click');
             gameBridge.update({
               feedback: `Aproxime-se de ${station.name} para utilizá-la.`,
