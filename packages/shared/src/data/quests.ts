@@ -4,7 +4,10 @@ import type { NpcId } from './npcs.js';
 
 export const TUTORIAL_QUEST_ID = 'tutorial_first_steps';
 export const IRON_BLADE_QUEST_ID = 'first_iron_blade';
+export const FARM_HARVEST_QUEST_ID = 'farm_first_harvest';
+export const CEMETERY_WATCHERS_QUEST_ID = 'cemetery_watchers';
 export const IRON_BLADE_SCOUTS = ['orc-1', 'orc-3'] as const;
+export const CEMETERY_SKELETONS = ['skeleton-1', 'skeleton-2'] as const;
 
 export const QUEST_STATUSES = [
   'not_started',
@@ -114,18 +117,18 @@ export const IRON_BLADE_QUEST: QuestDefinition = {
   id: IRON_BLADE_QUEST_ID,
   title: 'A Primeira Lâmina de Ferro',
   description:
-    'Minere na Pedreira do Lago, funda o ferro e use a lâmina que você forjou contra um Orc Batedor.',
+    'Minere minério de ferro na Pedreira do Lago, funda lingotes na Fornalha, forje sua espada e use-a para derrotar um Orc Batedor.',
   giverNpcId: 'elder-eldrin',
   requires: TUTORIAL_QUEST_ID,
   dialogues: {
     offer:
-      'Cruze a ponte a leste e siga para o norte até a Pedreira do Lago. Obtenha ferro para dois lingotes, forje uma espada e derrote um Orc Batedor com ela.',
+      'As ameaças do outro lado do rio aumentam a cada dia, e sua espada de madeira não deterá os orcs. Cruze a ponte a leste e suba até a Pedreira do Lago para minerar ferro. Leve carvão à Fornalha para fundir 2 lingotes, forje uma Espada de Ferro na Forja e derrote um Orc Batedor para provar seu valor!',
     inProgress:
-      'Leve quatro minérios e dois carvões à Fornalha para fazer dois lingotes. Use os lingotes e uma madeira na Forja. Com a espada na mochila ou equipada, siga para o Acampamento dos Orcs.',
+      'Você precisará de 4 minérios de ferro e 2 carvões vegetais para fazer os 2 lingotes na Fornalha. Na Forja, combine-os com 1 madeira. Com a espada em mãos, procure os Orcs Batedores no acampamento a leste.',
     readyToTurnIn:
-      'Você forjou a lâmina e derrotou um batedor. Entregue a missão para receber 60 XP de Guerreiro.',
+      'Excelente bravura! Sinto a têmpera do ferro e o cheiro da batalha vencida. Conclua a missão para receber seu reconhecimento de guerreiro.',
     completed:
-      'Agora você sabe transformar o minério da pedreira em uma arma que aguenta o combate contra os orcs.',
+      'Agora você sabe transformar o minério bruto em armas resistentes. Os invasores pensarão duas vezes antes de desafiar Brumavale.',
   },
   objectives: [
     {
@@ -160,19 +163,110 @@ export const IRON_BLADE_QUEST: QuestDefinition = {
       after: 'forge_blade',
     },
   ],
-  rewards: { xp: { profession: 'warrior', amount: 60 }, items: [] },
+  rewards: {
+    xp: { profession: 'warrior', amount: 60 },
+    items: [
+      { itemId: 'charcoal', quantity: 5 },
+      { itemId: 'plank', quantity: 5 },
+    ],
+  },
+};
+
+export const FARM_HARVEST_QUEST: QuestDefinition = {
+  id: FARM_HARVEST_QUEST_ID,
+  title: 'A Primeira Colheita de Brumavale',
+  description:
+    'Use suas ferramentas de cultivo para arar a terra, plantar sementes de nabo, regá-las e colher vegetais frescos na horta comunitária da vila.',
+  giverNpcId: 'elder-eldrin',
+  requires: TUTORIAL_QUEST_ID,
+  dialogues: {
+    offer:
+      'Nossa vila precisa de mais do que lâminas afiadas: nossos celeiros exigem sustento. Pegue sua enxada e regador, vá até a horta comunitária a sudoeste da praça, plante as sementes que recebeu e traga 3 nabos frescos colhidos da terra.',
+    inProgress:
+      'Lembre-se do ciclo agrícola: use a enxada para preparar um canteiro vazio, plante a semente de nabo e umedeça o solo com o regador. Em poucos instantes, as folhagens brotarão prontas para a colheita com a tecla de interação.',
+    readyToTurnIn:
+      'Que aroma revigorante de vegetais recém-colhidos! O solo de Brumavale é fértil quando cuidado com dedicação. Entregue a missão para receber sementes e experiência de Agricultor.',
+    completed:
+      'Com este suprimento fresco, garantimos a provisão dos aldeões. Continue cultivando na horta sempre que precisar de mantimentos e novos plantios.',
+  },
+  objectives: [
+    {
+      id: 'harvest_turnip',
+      type: 'gather',
+      targetId: 'turnip',
+      description: 'Colher 3 nabos frescos na horta comunitária',
+      required: 3,
+    },
+  ],
+  rewards: {
+    xp: { profession: 'farmer', amount: 80 },
+    items: [
+      { itemId: 'turnip_seed', quantity: 10 },
+      { itemId: 'pumpkin_seed', quantity: 5 },
+    ],
+  },
+};
+
+export const CEMETERY_WATCHERS_QUEST: QuestDefinition = {
+  id: CEMETERY_WATCHERS_QUEST_ID,
+  title: 'Os Vigias do Cemitério Antigo',
+  description:
+    'Esqueletos ancestrais despertaram no Cemitério Antigo ao norte da vila. Elimine 2 Vigias Esquecidos e colha fibras silvestres para reforçar as proteções de Brumavale.',
+  giverNpcId: 'elder-eldrin',
+  requires: IRON_BLADE_QUEST_ID,
+  dialogues: {
+    offer:
+      'Uma névoa sobrenatural cobriu o Cemitério Antigo, além do lago ao norte. Antigos guardiões esqueletos — os Vigias Esquecidos — levantaram-se de seus túmulos. Com sua espada de ferro, derrote 2 desses vigias e recolha 3 fibras silvestres para renovarmos os laços de proteção.',
+    inProgress:
+      'Siga para o norte contornando as águas do Lago dos Juncos até avistar as lápides sombrias. Vigias atacam com precisão sombria, mantenha distância quando armarem seus golpes e use a foice nas moitas para recolher fibras silvestres.',
+    readyToTurnIn:
+      'O silêncio pacífico finalmente voltou às sepulturas antigas. Você provou ser um guardião implacável tanto contra os vivos quanto contra os mortos-vivos!',
+    completed:
+      'As almas dos antigos fundadores descansam em paz. O reino de Brumavale está mais seguro sob a vigília de sua lâmina de ferro.',
+  },
+  objectives: [
+    {
+      id: 'gather_fiber',
+      type: 'gather',
+      targetId: 'fiber',
+      description: 'Coletar 3 fibras silvestres pelo caminho com a foice',
+      required: 3,
+    },
+    {
+      id: 'defeat_skeletons',
+      type: 'defeat',
+      targetId: 'skeleton',
+      description: 'Derrotar 2 Vigias Esquecidos no Cemitério Antigo',
+      required: 2,
+      monsterIds: CEMETERY_SKELETONS,
+    },
+  ],
+  rewards: {
+    xp: { profession: 'warrior', amount: 120 },
+    items: [
+      { itemId: 'iron_ingot', quantity: 2 },
+      { itemId: 'plank', quantity: 6 },
+    ],
+  },
 };
 
 export const QUESTS: Record<string, QuestDefinition> = {
   [TUTORIAL_QUEST.id]: TUTORIAL_QUEST,
   [IRON_BLADE_QUEST.id]: IRON_BLADE_QUEST,
+  [FARM_HARVEST_QUEST.id]: FARM_HARVEST_QUEST,
+  [CEMETERY_WATCHERS_QUEST.id]: CEMETERY_WATCHERS_QUEST,
 };
 
 export type QuestId = keyof typeof QUESTS;
 
 export const QuestCommandSchema = z
   .object({
-    questId: z.enum([TUTORIAL_QUEST_ID, IRON_BLADE_QUEST_ID]),
+    questId: z.enum([
+      TUTORIAL_QUEST_ID,
+      IRON_BLADE_QUEST_ID,
+      FARM_HARVEST_QUEST_ID,
+      CEMETERY_WATCHERS_QUEST_ID,
+    ]),
   })
   .strict();
 

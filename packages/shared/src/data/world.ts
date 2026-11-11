@@ -37,7 +37,21 @@ export const landmarks = [
   { name: 'Cabana do Caminho', model: 'lodge', x: 35, y: 57, w: 6, h: 4 },
 ] as const;
 export const WORLD_REGIONS = [
-  { id: 'quarry', name: 'Pedreira do Lago', ...QUARRY, danger: 'safe' },
+  {
+    id: 'quarry',
+    name: 'Pedreira do Lago',
+    ...QUARRY,
+    danger: 'safe',
+  },
+  {
+    id: 'professions',
+    name: 'Zona de Profissões',
+    x: 43,
+    y: 23,
+    w: 11,
+    h: 7,
+    danger: 'safe',
+  },
   {
     id: 'woodland-camp',
     name: 'Acampamento do Bosque',
@@ -236,6 +250,8 @@ export function terrainAt(x: number, y: number) {
   if (x >= 8 && x <= 19 && y >= 36 && y <= 47) return 2;
   if ((x >= 30 && x <= 33) || (y >= 30 && y <= 33)) return 1;
   if (x >= 25 && x <= 38 && y >= 28 && y <= 35) return 1;
+  // Praça e Zona de Profissões ao lado do Armazém
+  if (x >= 43 && x <= 52 && y >= 24 && y <= 29) return 1;
   if (WORLD_PATHS.some((path) => nearPath(x + 0.5, y + 0.5, path, 1.1)))
     return 1;
   if (ROCKS.some(([rx, ry]) => x === rx && y === ry)) return 4;

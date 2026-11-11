@@ -29,7 +29,11 @@ import { makeNameplate } from '../ui/nameplate';
 import type { Cosmetics } from '@aetheria/shared';
 import { facingFromInput } from '../characters/animation';
 import { playCombatSound } from '../combat-audio';
-import { showCombatEffect } from '../combat-effects';
+import {
+  showCombatEffect,
+  showToolEffect,
+  type ToolEffectKind,
+} from '../combat-effects';
 import { audioManager } from '../audio/audio-manager';
 
 export class WorldScene extends Phaser.Scene {
@@ -157,11 +161,15 @@ export class WorldScene extends Phaser.Scene {
       });
     }
 
-    for (const { x, y } of [{ x: 990, y: 1032 }, CAMPFIRE]) {
-      this.add.ellipse(x, y + 10, 28, 12, 0x132b24, 0.4).setDepth(y - 1);
+    for (const { x, y } of [
+      { x: 990, y: 1032 },
+      CAMPFIRE,
+      { x: 1552, y: 784 },
+    ]) {
+      this.add.ellipse(x, y + 14, 44, 18, 0x132b24, 0.45).setDepth(y - 1);
       this.add
         .sprite(x, y, 'bonfire')
-        .setScale(1.2)
+        .setScale(1.75)
         .setDepth(y)
         .play('bonfire-burn');
     }
@@ -212,15 +220,16 @@ export class WorldScene extends Phaser.Scene {
       this.add
         .ellipse(
           station.x,
-          station.y + 12,
-          isFurnace ? 30 : 42,
-          14,
+          station.y + 16,
+          isFurnace ? 46 : 60,
+          20,
           0x132b24,
-          0.35,
+          0.38,
         )
         .setDepth(station.y - 1);
       this.add
-        .image(station.x, station.y - (isFurnace ? 6 : 0), textureKey)
+        .image(station.x, station.y - (isFurnace ? 8 : 0), textureKey)
+        .setScale(1.55)
         .setDepth(station.y)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => gameBridge.interact?.(station.id));
@@ -230,7 +239,7 @@ export class WorldScene extends Phaser.Scene {
         station.name,
         'object',
         station.x,
-        station.y - (isFurnace ? 55 : 29),
+        station.y - (isFurnace ? 70 : 44),
       ).setDepth(station.y + 1);
     }
     for (const npc of NPCS) {
@@ -276,6 +285,7 @@ export class WorldScene extends Phaser.Scene {
       (QUARRY.y + 0.5) * TILE_SIZE,
     );
     this.label('ACAMPAMENTO DO BOSQUE', CAMPFIRE.x, CAMPFIRE.y - 104);
+    this.label('ZONA DE PROFISSÕES', 1552, 720);
     for (const r of WORLD_REGIONS.filter((r) => r.danger !== 'safe'))
       this.label(
         r.name.toUpperCase(),
@@ -289,17 +299,70 @@ export class WorldScene extends Phaser.Scene {
       this.combat(event, local, attackerSession);
     };
     gameBridge.animateCharacter = (action) => {
-      const kind = action.kind;
+      const kind = action.kind as string;
       const resource = RESOURCES.find((r) => r.id === action.node);
-      this.avatar.playGesture(
-        kind === 'water'
-          ? 'water'
-          : kind === 'gather' && resource?.item === 'wood'
-            ? 'chop'
-            : kind === 'gather' && resource?.tool === 'pickaxe'
-              ? 'mine'
-              : 'collect',
-        this.time.now,
+      const isWood =
+        resource?.item === 'wood' ||
+        (typeof action.node === 'string' && action.node.includes('tree'));
+      const isOre =
+        resource?.tool === 'pickaxe' ||
+        (typeof action.node === 'string' && action.node.includes('quarry'));
+      const isSickle =
+        resource?.tool === 'sickle' ||
+        (typeof action.node === 'string' && action.node.includes('fiber'));
+
+      let gesture:
+        | 'idle'
+        | 'walk'
+        | 'collect'
+        | 'chop'
+        | 'mine'
+        | 'water'
+        | 'hit'
+        | 'attack' = 'collect';
+      let toolEffect: ToolEffectKind = 'collect';
+
+      if (kind === 'farm') {
+        const op = action.operation;
+        if (op === 'prepare') {
+          gesture = 'mine';
+          toolEffect = 'hoe';
+        } else if (op === 'water') {
+          gesture = 'water';
+          toolEffect = 'water';
+        } else {
+          gesture = 'collect';
+          toolEffect = 'collect';
+        }
+      } else if (kind === 'gather') {
+        if (isWood) {
+          gesture = 'chop';
+          toolEffect = 'axe';
+        } else if (isOre) {
+          gesture = 'mine';
+          toolEffect = 'pickaxe';
+        } else if (isSickle) {
+          gesture = 'chop';
+          toolEffect = 'sickle';
+        } else {
+          gesture = 'collect';
+          toolEffect = 'collect';
+        }
+      } else if (kind === 'craft') {
+        gesture = 'mine';
+        toolEffect = 'craft';
+      } else if (kind === 'attack') {
+        gesture = 'attack';
+        toolEffect = 'sword';
+      }
+
+      this.avatar.playGesture(gesture, this.time.now);
+      showToolEffect(
+        this,
+        this.avatar.x,
+        this.avatar.y,
+        toolEffect,
+        this.avatar.facing,
       );
     };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {

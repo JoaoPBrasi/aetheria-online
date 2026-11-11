@@ -36,10 +36,27 @@ export const NPCS: readonly NPCDefinition[] = [
       },
       {
         id: 'quest_first_iron_blade',
-        prompt: 'Aceitar missão: A Primeira Lâmina de Ferro',
-        response: 'Posso lhe mostrar como forjar sua primeira espada de ferro.',
+        prompt: '⚔️ Desejo aceitar: A Primeira Lâmina de Ferro',
+        response:
+          'O ferro é a espinha dorsal de qualquer guerreiro de respeito. Cruze a ponte a leste, minere na Pedreira do Lago e forje uma espada digna perante os orcs!',
         action: 'accept_quest',
         questId: 'first_iron_blade',
+      },
+      {
+        id: 'quest_farm_first_harvest',
+        prompt: '🌾 Como posso ajudar na horta e no sustento de Brumavale?',
+        response:
+          'Nossa despensa precisa de vegetais frescos. Pegue sua enxada e regador, prepare a terra na horta comunitária a sudoeste e colha 3 nabos frescos para a vila.',
+        action: 'accept_quest',
+        questId: 'farm_first_harvest',
+      },
+      {
+        id: 'quest_cemetery_watchers',
+        prompt: '💀 Há alguma ameaça mais sombria rondando as redondezas?',
+        response:
+          'Os Vigias Esquecidos despertaram no Cemitério Antigo ao norte. Use sua espada de ferro para restaurar o descanso eterno das almas e colha fibras para selar os túmulos.',
+        action: 'accept_quest',
+        questId: 'cemetery_watchers',
       },
       {
         id: 'gather',

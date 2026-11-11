@@ -87,10 +87,11 @@ export class QuestRepository {
           },
           select: { status: true },
         });
-        if (prerequisite?.status !== 'completed')
-          throw new Error(
-            'Conclua Primeiros Passos em Brumavale para aceitar esta missão.',
-          );
+        if (prerequisite?.status !== 'completed') {
+          const reqTitle =
+            QUESTS[definition.requires]?.title ?? 'Primeiros Passos em Brumavale';
+          throw new Error(`Conclua ${reqTitle} para aceitar esta missão.`);
+        }
       }
       if (questId === IRON_BLADE_QUEST_ID) {
         const character = await tx.character.findUniqueOrThrow({

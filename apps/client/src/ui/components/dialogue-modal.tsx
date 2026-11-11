@@ -75,7 +75,7 @@ export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
 
   return (
     <div
-      className="hud-modal"
+      className="hud-modal dialogue-modal"
       role="dialog"
       aria-modal="true"
       aria-label={`Conversa com ${npc.name}`}
@@ -86,95 +86,111 @@ export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
         }
       }}
     >
-      <div className="hud-panel dialogue-panel">
-        <div className="panel-header">
-          <div className="dialogue-header-identity">
-            <div className="dialogue-avatar">🧙‍♂️</div>
-            <div>
-              <h3>{npc.name}</h3>
-              <span className="dialogue-title">{npc.title}</span>
-            </div>
+      <header className="dialogue-header">
+        <div className="dialogue-header-identity">
+          <div className="dialogue-avatar" aria-hidden="true">🧙‍♂️</div>
+          <div className="dialogue-header-titles">
+            <span className="dialogue-eyebrow">DIÁLOGO & MISSÕES</span>
+            <h2 className="dialogue-npc-name">{npc.name}</h2>
+            <span className="dialogue-npc-title">{npc.title}</span>
           </div>
-          <button
-            ref={closeButtonRef}
-            className="panel-close"
-            onClick={onClose}
-            aria-label="Encerrar conversa"
-          >
-            ✕
-          </button>
+        </div>
+        <button
+          ref={closeButtonRef}
+          className="dialogue-close-btn"
+          onClick={onClose}
+          aria-label="Encerrar conversa"
+        >
+          ✕ Fechar
+        </button>
+      </header>
+
+      <div className="dialogue-body">
+        <div className="dialogue-speech-bubble" aria-live="polite">
+          <div className="speech-quote-icon" aria-hidden="true">❝</div>
+          <p>{speech}</p>
         </div>
 
-        <div className="dialogue-body">
-          <div className="dialogue-speech-bubble" aria-live="polite">
-            <p>{speech}</p>
-          </div>
+        <div className="dialogue-options">
+          <span className="dialogue-options-label">Opções de Conversa:</span>
+          <div className="dialogue-topics-list">
+            {readyQuests.map((quest) => (
+              <button
+                key={quest.id}
+                className="dialogue-topic-btn quest-turn-in-btn"
+                disabled={busy}
+                onClick={() => handleTurnInQuest(quest.id)}
+              >
+                <span className="topic-bullet">🎁</span>
+                <span className="topic-text">Concluir Missão: {quest.title}</span>
+                <span className="topic-badge turn-in-badge">Pronta para Entrega</span>
+              </button>
+            ))}
 
-          <div className="dialogue-options">
-            <span className="dialogue-options-label">Opções de Conversa:</span>
-            <div className="dialogue-topics-list">
-              {readyQuests.map((quest) => (
-                <button
-                  key={quest.id}
-                  className="dialogue-topic-btn quest-turn-in-btn"
-                  disabled={busy}
-                  onClick={() => handleTurnInQuest(quest.id)}
-                >
-                  <span className="topic-bullet">🎁</span>
-                  <span>Concluir Missão: {quest.title}</span>
-                </button>
-              ))}
-
-              {topics.map((topic) => {
-                let promptText = topic.prompt;
-                const quest = topic.questId ? QUESTS[topic.questId] : undefined;
-                if (quest) {
-                  const current = questState(quest.id)?.status;
-                  if (current === 'in_progress')
-                    promptText = `[Em Andamento] ${quest.title}`;
-                  else if (current === 'ready_to_turn_in')
-                    promptText = `[Objetivos Concluídos] ${quest.title}`;
-                  else if (current === 'completed')
-                    promptText = `[Missão Concluída] ${quest.title}`;
+            {topics.map((topic) => {
+              let promptText = topic.prompt;
+              let badge: string | null = null;
+              let isQuest = false;
+              const quest = topic.questId ? QUESTS[topic.questId] : undefined;
+              if (quest) {
+                isQuest = true;
+                const current = questState(quest.id)?.status;
+                if (current === 'in_progress') {
+                  promptText = `[Em Andamento] ${quest.title}`;
+                  badge = 'Em Andamento';
+                } else if (current === 'ready_to_turn_in') {
+                  promptText = `[Objetivos Concluídos] ${quest.title}`;
+                  badge = 'Concluída';
+                } else if (current === 'completed') {
+                  promptText = `[Missão Concluída] ${quest.title}`;
+                  badge = 'Finalizada';
+                } else {
+                  badge = 'Nova Missão';
                 }
+              }
 
-                return (
-                  <button
-                    key={topic.id}
-                    disabled={busy}
-                    className={`dialogue-topic-btn ${activeTopicId === topic.id ? 'active' : ''}`}
-                    onClick={() => handleTopicClick(topic)}
-                  >
-                    <span className="topic-bullet">💬</span>
-                    <span>{promptText}</span>
-                  </button>
-                );
-              })}
-              {activeTopicId && (
+              return (
                 <button
-                  className="dialogue-topic-btn reset-topic"
-                  onClick={() => {
-                    setActiveTopicId(null);
-                  }}
+                  key={topic.id}
+                  disabled={busy}
+                  className={`dialogue-topic-btn ${isQuest ? 'quest-topic' : ''} ${activeTopicId === topic.id ? 'active' : ''}`}
+                  onClick={() => handleTopicClick(topic)}
                 >
-                  <span className="topic-bullet">↩</span>
-                  <span>Ouvir a saudação inicial novamente</span>
+                  <span className="topic-bullet">{isQuest ? '📜' : '💬'}</span>
+                  <span className="topic-text">{promptText}</span>
+                  {badge && <span className={`topic-badge ${badge === 'Nova Missão' ? 'new-quest-badge' : ''}`}>{badge}</span>}
                 </button>
-              )}
-            </div>
-          </div>
-        </div>
+              );
+            })}
 
-        <div className="dialogue-footer">
-          {snapshot.questPending && <p role="status">Confirmando missão…</p>}
-          {snapshot.gameplayError && (
-            <p role="alert">{snapshot.gameplayError}</p>
-          )}
-          <button className="primary" onClick={onClose}>
-            Até logo, Ancião (ESC)
-          </button>
+            {activeTopicId && (
+              <button
+                className="dialogue-topic-btn reset-topic"
+                onClick={() => {
+                  setActiveTopicId(null);
+                }}
+              >
+                <span className="topic-bullet">↩</span>
+                <span className="topic-text">Ouvir a saudação inicial novamente</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      <footer className="dialogue-footer">
+        <div className="dialogue-feedback">
+          {snapshot.questPending && (
+            <p className="dialogue-status-text" role="status">Confirmando missão…</p>
+          )}
+          {snapshot.gameplayError && (
+            <p className="dialogue-error-text" role="alert">{snapshot.gameplayError}</p>
+          )}
+        </div>
+        <button className="dialogue-footer-btn" onClick={onClose}>
+          Até logo, Ancião (ESC)
+        </button>
+      </footer>
     </div>
   );
 }

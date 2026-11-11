@@ -148,12 +148,15 @@ export function GameHud({
           } else {
             audioManager.playSfx('gather');
           }
+          gameBridge.animateCharacter?.(item.payload);
           connection?.action(item.payload);
         } else if (item.payload.kind === 'farm') {
           audioManager.playSfx('gather');
+          gameBridge.animateCharacter?.(item.payload);
           connection?.action(item.payload);
         } else if (item.payload.kind === 'craft') {
           audioManager.playSfx('craft');
+          gameBridge.animateCharacter?.(item.payload);
           connection?.action(item.payload);
         } else if (item.payload.kind === 'open_crafting') {
           audioManager.playSfx('ui_open');

@@ -173,6 +173,7 @@ export class GameplayRepository {
             if (!crop) throw new Error('Cultura inválida.');
             slots = addItem(slots, crop.item, 3);
             slots = addItem(slots, crop.seed, 2);
+            await advanceQuests(tx, characterId, 'gather', crop.item, 3);
             await tx.characterSkill.update({
               where: {
                 characterId_profession: { characterId, profession: 'farmer' },

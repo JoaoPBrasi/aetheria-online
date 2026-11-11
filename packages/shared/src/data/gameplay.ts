@@ -55,22 +55,22 @@ export const CRAFTING_STATIONS = [
     id: 'workbench-plaza',
     name: 'Bancada de trabalho',
     type: 'workbench',
-    x: 1120,
-    y: 1040,
-  },
-  {
-    id: 'furnace-blacksmith',
-    name: 'Fornalha',
-    type: 'furnace',
-    x: 1184,
-    y: 1168,
+    x: 1456,
+    y: 832,
   },
   {
     id: 'forge-blacksmith',
     name: 'Forja do Ferreiro',
     type: 'forge',
-    x: 1152,
-    y: 1168,
+    x: 1552,
+    y: 832,
+  },
+  {
+    id: 'furnace-blacksmith',
+    name: 'Fornalha',
+    type: 'furnace',
+    x: 1648,
+    y: 832,
   },
 ] as const;
 export type CraftingStationId = (typeof CRAFTING_STATIONS)[number]['id'];

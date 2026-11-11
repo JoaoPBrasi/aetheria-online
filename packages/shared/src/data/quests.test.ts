@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   TUTORIAL_QUEST,
   IRON_BLADE_QUEST,
+  FARM_HARVEST_QUEST,
+  CEMETERY_WATCHERS_QUEST,
   ironBladeStartingProgress,
   createInitialQuestState,
   isQuestObjectivesMet,
@@ -166,5 +168,110 @@ describe('Sistema de Quests - Tutorial', () => {
     );
     expect(result.changed).toBe(false);
     expect(result.updatedState.progress.gather_wood).toBe(0);
+  });
+});
+
+describe('Missão Ajustada - A Primeira Lâmina de Ferro', () => {
+  it('contém recompensas em itens configuradas corretamente', () => {
+    expect(IRON_BLADE_QUEST.rewards.xp.amount).toBe(60);
+    expect(IRON_BLADE_QUEST.rewards.items).toEqual([
+      { itemId: 'charcoal', quantity: 5 },
+      { itemId: 'plank', quantity: 5 },
+    ]);
+  });
+});
+
+describe('Novas Quests - Horta e Cemitério', () => {
+  it('valida comandos das novas missões pelo Zod schema', () => {
+    expect(
+      QuestCommandSchema.safeParse({ questId: FARM_HARVEST_QUEST.id }).success,
+    ).toBe(true);
+    expect(
+      QuestCommandSchema.safeParse({ questId: CEMETERY_WATCHERS_QUEST.id })
+        .success,
+    ).toBe(true);
+  });
+
+  it('completa a missão da Primeira Colheita colhendo 3 nabos', () => {
+    let state = createInitialQuestState(FARM_HARVEST_QUEST.id);
+    expect(state.status).toBe('in_progress');
+    expect(state.progress.harvest_turnip).toBe(0);
+
+    const step1 = advanceQuestObjective(
+      state,
+      FARM_HARVEST_QUEST,
+      'gather',
+      'turnip',
+      2,
+    );
+    expect(step1.changed).toBe(true);
+    expect(step1.updatedState.progress.harvest_turnip).toBe(2);
+    expect(step1.updatedState.status).toBe('in_progress');
+
+    const step2 = advanceQuestObjective(
+      step1.updatedState,
+      FARM_HARVEST_QUEST,
+      'gather',
+      'turnip',
+      1,
+    );
+    expect(step2.changed).toBe(true);
+    expect(step2.updatedState.progress.harvest_turnip).toBe(3);
+    expect(step2.updatedState.status).toBe('ready_to_turn_in');
+    expect(
+      isQuestObjectivesMet(FARM_HARVEST_QUEST, step2.updatedState.progress),
+    ).toBe(true);
+  });
+
+  it('avança fibras e vigias esqueletos na missão do Cemitério Antigo', () => {
+    let state = createInitialQuestState(CEMETERY_WATCHERS_QUEST.id);
+    expect(state.status).toBe('in_progress');
+
+    // 1. Coleta 3 fibras
+    state = advanceQuestObjective(
+      state,
+      CEMETERY_WATCHERS_QUEST,
+      'gather',
+      'fiber',
+      3,
+    ).updatedState;
+    expect(state.progress.gather_fiber).toBe(3);
+    expect(state.status).toBe('in_progress');
+
+    // 2. Derrota o primeiro esqueleto
+    state = advanceQuestObjective(
+      state,
+      CEMETERY_WATCHERS_QUEST,
+      'defeat',
+      'skeleton',
+      1,
+      { monsterId: 'skeleton-1' },
+    ).updatedState;
+    expect(state.progress.defeat_skeletons).toBe(1);
+    expect(state.status).toBe('in_progress');
+
+    // 3. Monstro desconhecido não avança o objetivo
+    const invalidMob = advanceQuestObjective(
+      state,
+      CEMETERY_WATCHERS_QUEST,
+      'defeat',
+      'skeleton',
+      1,
+      { monsterId: 'orc-1' },
+    );
+    expect(invalidMob.changed).toBe(false);
+
+    // 4. Derrota o segundo esqueleto -> ready_to_turn_in
+    const finalStep = advanceQuestObjective(
+      state,
+      CEMETERY_WATCHERS_QUEST,
+      'defeat',
+      'skeleton',
+      1,
+      { monsterId: 'skeleton-2' },
+    );
+    expect(finalStep.changed).toBe(true);
+    expect(finalStep.updatedState.progress.defeat_skeletons).toBe(2);
+    expect(finalStep.updatedState.status).toBe('ready_to_turn_in');
   });
 });
