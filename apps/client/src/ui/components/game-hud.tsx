@@ -14,6 +14,8 @@ import {
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
 import type { WorldConnection } from '../../game/networking/world-connection';
+import { audioManager } from '../../game/audio/audio-manager';
+import { AudioModal } from './audio-modal';
 import { GameplayPanel } from './gameplay-panel';
 import { CraftingPanel } from './crafting-panel';
 import { DialogueModal } from './dialogue-modal';
@@ -51,7 +53,14 @@ export function GameHud({
         s.position!.y / TILE_SIZE < r.y + r.h,
     );
   const [panel, setPanel] = useState<
-    'bag' | 'skills' | 'farm' | 'crafting' | 'dialogue' | 'quests' | null
+    | 'bag'
+    | 'skills'
+    | 'farm'
+    | 'crafting'
+    | 'dialogue'
+    | 'quests'
+    | 'audio'
+    | null
   >(null);
   const [hiddenQuests, setHiddenQuests] = useState(() =>
     readHiddenQuests(characterId),
@@ -71,7 +80,7 @@ export function GameHud({
   const close = useRef<HTMLButtonElement>(null);
   const guide =
     s.status === 'connected' && s.position && s.quests
-      ? soloGuide(s.quests, s.position, hiddenQuests)
+      ? soloGuide(s.quests, s.position, hiddenQuests, s.gameplay)
       : undefined;
   const position = s.position;
   const threatened =
@@ -125,10 +134,29 @@ export function GameHud({
         now.forage,
       );
       if (item?.enabled) {
-        if (item.payload.kind === 'open_crafting') {
+        audioManager.unlockAudio();
+        if (item.payload.kind === 'gather') {
+          const nodeName = typeof item.payload.node === 'string' ? item.payload.node : '';
+          if (nodeName.startsWith('wood')) {
+            audioManager.playSfx('chop');
+          } else if (nodeName.startsWith('stone')) {
+            audioManager.playSfx('mine');
+          } else {
+            audioManager.playSfx('gather');
+          }
+          connection?.action(item.payload);
+        } else if (item.payload.kind === 'farm') {
+          audioManager.playSfx('gather');
+          connection?.action(item.payload);
+        } else if (item.payload.kind === 'craft') {
+          audioManager.playSfx('craft');
+          connection?.action(item.payload);
+        } else if (item.payload.kind === 'open_crafting') {
+          audioManager.playSfx('ui_open');
           setCraftStation(item.payload.stationId as CraftingStationId);
           setPanel('crafting');
         } else if (item.payload.kind === 'open_dialogue') {
+          audioManager.playSfx('ui_open');
           setDialogueNpc(item.payload.npcId as string);
           setPanel('dialogue');
         } else {
@@ -175,8 +203,16 @@ export function GameHud({
         }
         return;
       }
-      if (k === 'b' || k === 'l' || k === 'h' || k === 'c' || k === 'j') {
+      if (
+        k === 'b' ||
+        k === 'l' ||
+        k === 'h' ||
+        k === 'c' ||
+        k === 'j' ||
+        k === 'o'
+      ) {
         e.preventDefault();
+        audioManager.unlockAudio();
         const next =
           k === 'b'
             ? 'bag'
@@ -186,8 +222,14 @@ export function GameHud({
                 ? 'farm'
                 : k === 'j'
                   ? 'quests'
-                  : 'crafting';
-        setPanel((p) => (p === next ? null : next));
+                  : k === 'o'
+                    ? 'audio'
+                    : 'crafting';
+        setPanel((p) => {
+          const res = p === next ? null : next;
+          audioManager.playSfx(res ? 'ui_open' : 'ui_close');
+          return res;
+        });
       }
       if (k === 'e' || k === ' ') {
         e.preventDefault();
@@ -368,10 +410,26 @@ export function GameHud({
         <button
           aria-label="Abrir diário de missões"
           aria-expanded={panel === 'quests'}
-          onClick={() => setPanel((p) => (p === 'quests' ? null : 'quests'))}
+          onClick={() => {
+            audioManager.unlockAudio();
+            audioManager.playSfx('ui_click');
+            setPanel((p) => (p === 'quests' ? null : 'quests'));
+          }}
         >
           <kbd>J</kbd>
           <span>◇</span>Missões
+        </button>
+        <button
+          aria-label="Opções de áudio"
+          aria-expanded={panel === 'audio'}
+          onClick={() => {
+            audioManager.unlockAudio();
+            audioManager.playSfx('ui_click');
+            setPanel((p) => (p === 'audio' ? null : 'audio'));
+          }}
+        >
+          <kbd>O</kbd>
+          <span>🔊</span>Som
         </button>
         <span className="dock-note">
           FERRAMENTAS AUTOMÁTICAS
@@ -396,7 +454,8 @@ export function GameHud({
           </span>
         ))}
       </div>
-      {panel && panel !== 'dialogue' && (
+      {panel === 'audio' && <AudioModal onClose={() => setPanel(null)} />}
+      {panel && panel !== 'dialogue' && panel !== 'audio' && (
         <div
           className={`hud-modal ${panel === 'quests' ? 'quest-journal-window' : ''}`}
           role="dialog"

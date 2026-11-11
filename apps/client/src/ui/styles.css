@@ -1642,6 +1642,102 @@ footer {
 }
 
 /* ==========================================================================
+   MODAL DE OPÇÕES DE ÁUDIO E TRILHA
+   ========================================================================== */
+.audio-modal {
+  max-width: 420px;
+  max-height: 480px;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 15%;
+  bottom: auto;
+}
+
+.audio-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.audio-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.audio-row.toggle-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #48695366;
+}
+
+.audio-toggle-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: #243d2f;
+  border: 1px solid #8d8d60;
+  color: #eedca4;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.audio-toggle-btn.active {
+  background: #4a2d2d;
+  border-color: #d16b6b;
+  color: #f7b2b2;
+}
+
+.audio-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #dbe4d5;
+}
+
+.audio-label b {
+  color: #eed69b;
+}
+
+.audio-row input[type='range'] {
+  accent-color: #c2ad79;
+  cursor: pointer;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.audio-test-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid #48695366;
+}
+
+.audio-sample-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #223c2d;
+  border: 1px solid #7a886b;
+  color: #eedca4;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.audio-sample-btn:hover {
+  background: #385743;
+  border-color: #eed69b;
+  color: #fff;
+}
+
+/* ==========================================================================
    MINIMAP / RADAR DE NAVEGAÇÃO DE BRUMAVALE
    ========================================================================== */
 .minimap-shell {

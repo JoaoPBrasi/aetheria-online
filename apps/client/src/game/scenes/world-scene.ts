@@ -30,6 +30,7 @@ import type { Cosmetics } from '@aetheria/shared';
 import { facingFromInput } from '../characters/animation';
 import { playCombatSound } from '../combat-audio';
 import { showCombatEffect } from '../combat-effects';
+import { audioManager } from '../audio/audio-manager';
 
 export class WorldScene extends Phaser.Scene {
   private avatar!: PlayerAvatar;
@@ -37,6 +38,7 @@ export class WorldScene extends Phaser.Scene {
   private active = false;
   private focusRing!: Phaser.GameObjects.Graphics;
   private walking = false;
+  private lastFootstepTime = 0;
   private dangerRing!: Phaser.GameObjects.Graphics;
   private plots = new Map<string, Phaser.GameObjects.Rectangle>();
   private accumulator = 0;
@@ -647,6 +649,10 @@ export class WorldScene extends Phaser.Scene {
       movement.cosmetics,
     );
     this.walking = this.avatar.state === 'walk';
+    if (this.walking && time - this.lastFootstepTime > 340) {
+      this.lastFootstepTime = time;
+      audioManager.playSfx('footstep');
+    }
     this.game.canvas.dataset.playerPose = `${this.avatar.state}:${this.avatar.facing}:${pose.frame}`;
     for (const [id, remote] of movement.remotes) {
       let sprite = this.remoteSprites.get(id);

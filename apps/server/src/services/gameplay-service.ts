@@ -100,11 +100,12 @@ export class GameplayService {
             throw new Error('Aguarde o golpe anterior.');
 
           const equipment = await this.repository.execute(id);
-          const damage = hasTool(equipment, 'iron_sword')
-            ? WEAPON_DAMAGE.iron_sword
+          const weapon: ItemId | undefined = hasTool(equipment, 'iron_sword')
+            ? 'iron_sword'
             : hasTool(equipment, 'sword')
-              ? WEAPON_DAMAGE.sword
-              : UNARMED_DAMAGE;
+              ? 'sword'
+              : undefined;
+          const damage = weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE;
           const lethal = damage >= monster.health;
           const reward = lethal
             ? {
@@ -113,6 +114,7 @@ export class GameplayService {
                 profession: 'warrior',
                 xp: monster.xp,
                 monster: monster.kind,
+                weapon,
               }
             : undefined;
           const amount = Math.min(damage, monster.health);
