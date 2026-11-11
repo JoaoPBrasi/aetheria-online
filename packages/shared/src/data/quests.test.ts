@@ -1,12 +1,55 @@
 import { describe, expect, it } from 'vitest';
 import {
   TUTORIAL_QUEST,
+  IRON_BLADE_QUEST,
+  ironBladeStartingProgress,
   createInitialQuestState,
   isQuestObjectivesMet,
   advanceQuestObjective,
   CharacterQuestStateSchema,
   QuestCommandSchema,
 } from './quests.js';
+
+it('conta apenas batedores derrotados com ferro após obter a espada', () => {
+  const quest = IRON_BLADE_QUEST;
+  const initial = createInitialQuestState(quest.id);
+  const check = (
+    state: typeof initial,
+    monsterId: string,
+    weapon: 'sword' | 'iron_sword',
+  ) =>
+    advanceQuestObjective(state, quest, 'defeat', 'orc', 1, {
+      monsterId,
+      weapon,
+    });
+  expect(check(initial, 'orc-1', 'iron_sword').changed).toBe(false);
+  const armed = {
+    ...initial,
+    progress: {
+      gather_iron: 4,
+      smelt_iron: 2,
+      forge_blade: 1,
+      defeat_scout: 0,
+    },
+  };
+  expect(check(armed, 'orc-1', 'sword').changed).toBe(false);
+  expect(check(armed, 'orc-2', 'iron_sword').changed).toBe(false);
+  expect(check(armed, 'orc-3', 'iron_sword').updatedState.status).toBe(
+    'ready_to_turn_in',
+  );
+});
+
+it('aproveita minério e lingotes existentes sem antecipar o combate', () => {
+  expect(
+    ironBladeStartingProgress({
+      inventory: [
+        { index: 0, itemId: 'iron_ingot', quantity: 1 },
+        { index: 1, itemId: 'iron_ore', quantity: 2 },
+      ],
+      equipment: [],
+    }),
+  ).toEqual({ gather_iron: 4, smelt_iron: 1, forge_blade: 0, defeat_scout: 0 });
+});
 
 describe('Sistema de Quests - Tutorial', () => {
   it('rejeita missões desconhecidas e campos de identidade enviados pelo cliente', () => {

@@ -1,15 +1,24 @@
+export type BgmMode = 'calm' | 'combat';
+
 /**
- * Gerador de trilha sonora ambiente procedural (Tema de Brumavale).
- * Reproduz arpeggios de harpa e melodia suave de flauta em loop contínuo.
+ * Gerador de trilha sonora ambiente procedural com suporte a BGM Dinâmica.
+ * - Modo 'calm': Tema relaxante de Brumavale (72 BPM) com harpa e flauta.
+ * - Modo 'combat': Trilha tensa de ação (130 BPM) com baixo staccato pulsante.
  */
 export class BgmGenerator {
   private isPlaying = false;
   private intervalId: number | null = null;
   private currentStep = 0;
   private nextNoteTime = 0;
+  private mode: BgmMode = 'calm';
 
-  // Escala Dórica / Pentatônica em Lá (A3 a E5 em Hertz)
+  // Frequências das notas (A1 a E5 em Hertz)
   private readonly notes: Record<string, number> = {
+    A1: 55.0,
+    D2: 73.42,
+    E2: 82.41,
+    F2: 87.31,
+    G2: 98.0,
     A2: 110.0,
     C3: 130.81,
     D3: 146.83,
@@ -30,24 +39,42 @@ export class BgmGenerator {
     E5: 659.25,
   };
 
-  // Progressão de acordes dedilhados (Harpa / Violão Medieval)
-  private readonly arpeggioPattern = [
-    // Am (Compasso 1-2)
+  // --- MODO CALMO (Tema de Brumavale) ---
+  private readonly calmArpeggio = [
+    // Am
     'A3', 'C4', 'E4', 'A4', 'E4', 'C4', 'A3', 'C4',
-    // F (Compasso 3-4)
+    // F
     'F3', 'A3', 'C4', 'F4', 'C4', 'A3', 'F3', 'A3',
-    // C (Compasso 5-6)
+    // C
     'C3', 'E3', 'G3', 'C4', 'G3', 'E3', 'C3', 'E3',
-    // G (Compasso 7-8)
+    // G
     'G3', 'B3', 'D4', 'G4', 'D4', 'B3', 'G3', 'B3',
   ];
 
-  // Frases da flauta melódica sobre a harmonia
-  private readonly fluteMelody: (string | null)[] = [
+  private readonly calmFlute: (string | null)[] = [
     'E5', null, 'D5', null, 'C5', null, 'B4', null,
     'A4', null, 'C5', null, 'B4', null, null, null,
     'G4', null, 'A4', null, 'B4', null, 'C5', null,
     'D5', null, 'B4', null, 'A4', null, null, null,
+  ];
+
+  // --- MODO COMBATE (Tema de Ação / Batalha) ---
+  private readonly combatBass = [
+    // Dm (Tensão rápida em semicolcheias)
+    'D2', 'D2', 'F2', 'D2', 'A2', 'D2', 'F2', 'A2',
+    // Am
+    'A1', 'A1', 'C3', 'A1', 'E2', 'A1', 'C3', 'E2',
+    // Dm
+    'D2', 'D2', 'F2', 'D2', 'A2', 'D2', 'F2', 'A2',
+    // E7 (Tensão que resolve de volta para Dm)
+    'E2', 'E2', 'G2', 'E2', 'B2', 'E2', 'D3', 'B2',
+  ];
+
+  private readonly combatLead: (string | null)[] = [
+    'D4', null, 'F4', null, 'E4', 'D4', 'C4', null,
+    'A3', null, 'C4', null, 'D4', null, null, null,
+    'D4', null, 'F4', null, 'G4', 'F4', 'E4', null,
+    'E4', null, 'F4', null, 'D4', null, null, null,
   ];
 
   constructor(
@@ -61,7 +88,6 @@ export class BgmGenerator {
     this.currentStep = 0;
     this.nextNoteTime = this.ctx.currentTime + 0.05;
 
-    // Agenda as notas com lookahead de 25ms para precisão de tempo impecável
     this.intervalId = window.setInterval(() => {
       this.scheduler();
     }, 25);
@@ -75,27 +101,45 @@ export class BgmGenerator {
     }
   }
 
+  setMode(newMode: BgmMode): void {
+    if (this.mode === newMode) return;
+    this.mode = newMode;
+    // Reinicia o ciclo na próxima nota para sincronizar o andamento
+    this.currentStep = 0;
+  }
+
+  getMode(): BgmMode {
+    return this.mode;
+  }
+
   private scheduler(): void {
-    // Agenda as notas que devem tocar nos próximos 100ms
+    const isCombat = this.mode === 'combat';
+    // 72 BPM para calmo (~0.208s por nota) | 130 BPM para combate (~0.115s por nota)
+    const stepDuration = isCombat ? 0.115 : 0.208;
+    const patternLength = isCombat
+      ? this.combatBass.length
+      : this.calmArpeggio.length;
+
     while (this.nextNoteTime < this.ctx.currentTime + 0.1) {
-      this.playStep(this.nextNoteTime, this.currentStep);
-      // Cada semicolcheia a 72 BPM dura aproximadamente 0.208s
-      this.nextNoteTime += 0.208;
-      this.currentStep = (this.currentStep + 1) % this.arpeggioPattern.length;
+      if (isCombat) {
+        this.playCombatStep(this.nextNoteTime, this.currentStep);
+      } else {
+        this.playCalmStep(this.nextNoteTime, this.currentStep);
+      }
+      this.nextNoteTime += stepDuration;
+      this.currentStep = (this.currentStep + 1) % patternLength;
     }
   }
 
-  private playStep(time: number, step: number): void {
-    // 1. Nota da Harpa (Arpeggio)
-    const harpNoteName = this.arpeggioPattern[step];
-    if (harpNoteName && this.notes[harpNoteName]) {
+  private playCalmStep(time: number, step: number): void {
+    // Harpa dedilhada
+    const harpNote = this.calmArpeggio[step];
+    if (harpNote && this.notes[harpNote]) {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(this.notes[harpNoteName], time);
+      osc.frequency.setValueAtTime(this.notes[harpNote], time);
 
-      // Envelope percussivo suave de corda dedilhada
       gain.gain.setValueAtTime(0.028, time);
       gain.gain.exponentialRampToValueAtTime(0.0005, time + 0.38);
 
@@ -104,16 +148,14 @@ export class BgmGenerator {
       osc.stop(time + 0.4);
     }
 
-    // 2. Nota da Flauta Suave
-    const fluteNoteName = this.fluteMelody[step];
-    if (fluteNoteName && this.notes[fluteNoteName]) {
+    // Flauta lírica
+    const fluteNote = this.calmFlute[step];
+    if (fluteNote && this.notes[fluteNote]) {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(this.notes[fluteNoteName], time);
+      osc.frequency.setValueAtTime(this.notes[fluteNote], time);
 
-      // Envelope com ataque suave de sopro e sustentação
       gain.gain.setValueAtTime(0.001, time);
       gain.gain.linearRampToValueAtTime(0.024, time + 0.06);
       gain.gain.exponentialRampToValueAtTime(0.0005, time + 0.42);
@@ -121,6 +163,41 @@ export class BgmGenerator {
       osc.connect(gain).connect(this.destination);
       osc.start(time);
       osc.stop(time + 0.45);
+    }
+  }
+
+  private playCombatStep(time: number, step: number): void {
+    // 1. Baixo pulsante de ação em staccato
+    const bassNote = this.combatBass[step];
+    if (bassNote && this.notes[bassNote]) {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(this.notes[bassNote], time);
+
+      // Decaimento curto e agressivo de combate
+      gain.gain.setValueAtTime(0.038, time);
+      gain.gain.exponentialRampToValueAtTime(0.0008, time + 0.1);
+
+      osc.connect(gain).connect(this.destination);
+      osc.start(time);
+      osc.stop(time + 0.11);
+    }
+
+    // 2. Melodia tensa de combate
+    const leadNote = this.combatLead[step];
+    if (leadNote && this.notes[leadNote]) {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(this.notes[leadNote], time);
+
+      gain.gain.setValueAtTime(0.026, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
+
+      osc.connect(gain).connect(this.destination);
+      osc.start(time);
+      osc.stop(time + 0.19);
     }
   }
 }

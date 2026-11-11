@@ -3,6 +3,9 @@ import { randomUUID } from 'node:crypto';
 import {
   CRAFTING_STATIONS,
   GROVE_RESOURCES,
+  IRON_BLADE_QUEST_ID,
+  PLAYER_ATTACK_COOLDOWN_MS,
+  QUARRY_RESOURCES,
   type GameAction,
   type GameplaySnapshot,
 } from '@aetheria/shared';
@@ -186,6 +189,111 @@ it('grants orc loot and XP without advancing the slime objective', async () => {
   expect(xp(after) - xp(before)).toBe(40);
   expect(quantity(after, 'fiber') - quantity(before, 'fiber')).toBe(2);
   expect((await service().quests(id))[0]?.progress.defeat_slimes).toBe(0);
+});
+
+it('unlocks the iron blade after the tutorial and completes mining, forging and the two-hit scout fight', async () => {
+  const { id, s } = await fixture();
+  const ironQuest = { questId: IRON_BLADE_QUEST_ID };
+  await expect(s.acceptQuest(id, ironQuest, near)).rejects.toThrow(
+    'Conclua Primeiros Passos',
+  );
+  await ready(id, s);
+  await expect(s.acceptQuest(id, ironQuest, near)).rejects.toThrow(
+    'Conclua Primeiros Passos',
+  );
+  await s.turnInQuest(id, command, near);
+  let state = await s.acceptQuest(id, ironQuest, near);
+  const quest = async () =>
+    (await service().quests(id)).find(
+      (row) => row.questId === ironQuest.questId,
+    );
+  const act = async (payload: object, point: { x: number; y: number }) => {
+    state = await s.act(
+      id,
+      { ...payload, id: randomUUID(), revision: state.revision },
+      () => ({ x: point.x, y: point.y, direction: 'down' }),
+    );
+  };
+  const cooldown = () =>
+    new Promise((resolve) =>
+      setTimeout(resolve, PLAYER_ATTACK_COOLDOWN_MS + 20),
+    );
+
+  const earlyScout = s.monstersManager.get('orc-3')!;
+  earlyScout.health = 30;
+  await act({ kind: 'attack', targetId: earlyScout.id }, earlyScout);
+  expect((await quest())?.progress.defeat_scout).toBe(0);
+
+  for (const node of QUARRY_RESOURCES.filter(
+    (node) => node.kind === 'ore',
+  ).slice(0, 2))
+    await act({ kind: 'gather', node: node.id }, node);
+  expect((await quest())?.progress.gather_iron).toBe(4);
+  const tree = GROVE_RESOURCES[11]!;
+  await act({ kind: 'gather', node: tree.id }, tree);
+  const furnace = CRAFTING_STATIONS.find(
+    (station) => station.type === 'furnace',
+  )!;
+  const forge = CRAFTING_STATIONS.find((station) => station.type === 'forge')!;
+  await act(
+    { kind: 'craft', recipeId: 'charcoal', stationId: furnace.id },
+    furnace,
+  );
+  for (let i = 0; i < 2; i++)
+    await act(
+      { kind: 'craft', recipeId: 'iron_ingot', stationId: furnace.id },
+      furnace,
+    );
+  expect((await quest())?.progress.smelt_iron).toBe(2);
+  await act(
+    { kind: 'craft', recipeId: 'iron_sword', stationId: forge.id },
+    forge,
+  );
+  expect(quantity(state, 'iron_sword')).toBe(1);
+  expect((await quest())?.progress.forge_blade).toBe(1);
+  await expect(s.turnInQuest(id, ironQuest, near)).rejects.toThrow('objetivos');
+  await cooldown();
+
+  const scout = s.monstersManager.get('orc-1')!;
+  expect(scout.health).toBe(90);
+  await act({ kind: 'attack', targetId: scout.id }, scout);
+  expect(scout.health).toBe(45);
+  expect((await quest())?.status).toBe('in_progress');
+  await cooldown();
+  await act({ kind: 'attack', targetId: scout.id }, scout);
+  expect(scout.health).toBe(0);
+  expect(await quest()).toMatchObject({
+    status: 'ready_to_turn_in',
+    progress: { defeat_scout: 1 },
+  });
+  const before = xp(state);
+  await Promise.all([
+    s.turnInQuest(id, ironQuest, near),
+    service().turnInQuest(id, ironQuest, near),
+  ]);
+  expect(xp(await s.sync(id)) - before).toBe(60);
+  expect(await quest()).toMatchObject({ status: 'completed' });
+});
+
+it('credits an existing equipped iron blade on acceptance without completing the scout objective', async () => {
+  const { id, s } = await fixture();
+  await ready(id, s);
+  await s.turnInQuest(id, command, near);
+  await db.characterEquipment.create({
+    data: { characterId: id, slot: 'tool', itemId: 'iron_sword' },
+  });
+  await s.acceptQuest(id, { questId: IRON_BLADE_QUEST_ID }, near);
+  expect(
+    (await s.quests(id)).find((quest) => quest.questId === IRON_BLADE_QUEST_ID),
+  ).toMatchObject({
+    status: 'in_progress',
+    progress: {
+      gather_iron: 4,
+      smelt_iron: 2,
+      forge_blade: 1,
+      defeat_scout: 0,
+    },
+  });
 });
 
 it('keeps a quest claimable when the second reward does not fit; retry grants both rewards', async () => {

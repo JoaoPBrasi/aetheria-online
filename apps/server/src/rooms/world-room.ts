@@ -190,6 +190,7 @@ export class WorldRoom extends Room<{
             'Entre na vila para agir.',
             'Você ainda não aceitou esta missão.',
             'Você ainda não cumpriu todos os objetivos da missão.',
+            'Conclua Primeiros Passos em Brumavale para aceitar esta missão.',
             'Inventário cheio.',
           ];
           client.send(

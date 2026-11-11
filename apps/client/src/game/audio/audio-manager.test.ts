@@ -59,4 +59,44 @@ describe('AudioManager', () => {
     manager.setMasterVolume(0.3);
     expect(listener).not.toHaveBeenCalled();
   });
+
+  it('manages combat mode transition and exits after 5 seconds of inactivity', () => {
+    vi.useFakeTimers();
+
+    expect(manager.isInCombat()).toBe(false);
+
+    manager.notifyCombatAction();
+    expect(manager.isInCombat()).toBe(true);
+
+    // Avança 4 segundos (ainda em combate)
+    vi.advanceTimersByTime(4000);
+    expect(manager.isInCombat()).toBe(true);
+
+    // Renova o combate com nova ação aos 4s
+    manager.notifyCombatAction();
+    expect(manager.isInCombat()).toBe(true);
+
+    // Avança mais 4 segundos (8s total, mas apenas 4s desde a última ação)
+    vi.advanceTimersByTime(4000);
+    expect(manager.isInCombat()).toBe(true);
+
+    // Avança mais 1001ms (passando os 5s da última ação)
+    vi.advanceTimersByTime(1001);
+    expect(manager.isInCombat()).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  it('immediately exits combat upon exitCombat() call', () => {
+    vi.useFakeTimers();
+
+    manager.notifyCombatAction();
+    expect(manager.isInCombat()).toBe(true);
+
+    manager.exitCombat();
+    expect(manager.isInCombat()).toBe(false);
+
+    vi.useRealTimers();
+  });
 });
+

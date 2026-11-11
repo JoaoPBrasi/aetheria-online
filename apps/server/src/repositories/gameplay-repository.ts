@@ -38,6 +38,7 @@ export class GameplayRepository {
       quantity?: number;
       xp?: number;
       monster?: MonsterKind;
+      weapon?: ItemId;
     },
     position?: Position,
     gatherNode?: ResourceDefinition,
@@ -295,6 +296,7 @@ export class GameplayRepository {
             'defeat',
             reward.monster ?? 'slime',
             1,
+            { monsterId: action.targetId, weapon: reward.weapon },
           );
           await tx.characterSkill.update({
             where: {

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useSyncExternalStore } from 'react';
-import { NPCS, TUTORIAL_QUEST, type NpcId } from '@aetheria/shared';
+import { NPCS, QUESTS, type NpcId } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
 
 interface DialogueModalProps {
@@ -16,30 +16,62 @@ export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
     gameBridge.subscribe,
     gameBridge.getSnapshot,
   );
-  const tutorialQuest = snapshot.quests?.find(
-    (q) => q.questId === 'tutorial_first_steps',
+  const questState = (id: string) =>
+    snapshot.quests?.find((quest) => quest.questId === id);
+  const topics = npc.topics.filter((topic) => {
+    const prerequisite = topic.questId
+      ? QUESTS[topic.questId]?.requires
+      : undefined;
+    return !prerequisite || questState(prerequisite)?.status === 'completed';
+  });
+  const readyQuests = Object.values(QUESTS).filter(
+    (quest) =>
+      quest.giverNpcId === npc.id &&
+      questState(quest.id)?.status === 'ready_to_turn_in',
   );
+  const busy =
+    snapshot.actionPending ||
+    snapshot.questPending ||
+    snapshot.status !== 'connected';
 
   useEffect(() => {
     closeButtonRef.current?.focus();
   }, []);
 
-  const activeTopic = npc.topics.find((t) => t.id === activeTopicId);
+  const activeTopic = topics.find((t) => t.id === activeTopicId);
+  const activeQuest = activeTopic?.questId
+    ? QUESTS[activeTopic.questId]
+    : undefined;
+  const status = activeQuest && questState(activeQuest.id)?.status;
+  const speech = activeQuest
+    ? activeQuest.dialogues[
+        status === 'completed'
+          ? 'completed'
+          : status === 'ready_to_turn_in'
+            ? 'readyToTurnIn'
+            : status === 'in_progress'
+              ? 'inProgress'
+              : 'offer'
+      ]
+    : (activeTopic?.response ?? npc.greeting);
 
   const handleTopicClick = (topic: (typeof npc.topics)[number]) => {
     setActiveTopicId(topic.id);
-    if (topic.action === 'accept_quest' && topic.questId && !tutorialQuest) {
+    if (
+      topic.action === 'accept_quest' &&
+      topic.questId &&
+      !questState(topic.questId)
+    ) {
       gameBridge.acceptQuest?.(topic.questId);
     }
   };
 
   const handleTurnInQuest = (questId: string) => {
+    setActiveTopicId(
+      topics.find((topic) => topic.questId === questId)?.id ?? null,
+    );
     gameBridge.turnInQuest?.(questId);
   };
-
-  const isReadyToTurnIn = tutorialQuest?.status === 'ready_to_turn_in';
-  const isQuestInProgress = tutorialQuest?.status === 'in_progress';
-  const isQuestCompleted = tutorialQuest?.status === 'completed';
 
   return (
     <div
@@ -75,65 +107,41 @@ export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
 
         <div className="dialogue-body">
           <div className="dialogue-speech-bubble" aria-live="polite">
-            <p>
-              {activeTopic?.id === 'quest_tutorial' || isQuestCompleted
-                ? isQuestCompleted
-                  ? TUTORIAL_QUEST.dialogues.completed
-                  : isReadyToTurnIn
-                    ? TUTORIAL_QUEST.dialogues.readyToTurnIn
-                    : isQuestInProgress
-                      ? TUTORIAL_QUEST.dialogues.inProgress
-                      : TUTORIAL_QUEST.dialogues.offer
-                : activeTopic
-                  ? activeTopic.response
-                  : npc.greeting}
-            </p>
+            <p>{speech}</p>
           </div>
 
           <div className="dialogue-options">
             <span className="dialogue-options-label">Opções de Conversa:</span>
             <div className="dialogue-topics-list">
-              {/* Botão dourado de entrega de missão quando pronta */}
-              {isReadyToTurnIn && (
+              {readyQuests.map((quest) => (
                 <button
+                  key={quest.id}
                   className="dialogue-topic-btn quest-turn-in-btn"
-                  disabled={
-                    snapshot.actionPending ||
-                    snapshot.questPending ||
-                    snapshot.status !== 'connected'
-                  }
-                  onClick={() => handleTurnInQuest('tutorial_first_steps')}
+                  disabled={busy}
+                  onClick={() => handleTurnInQuest(quest.id)}
                 >
                   <span className="topic-bullet">🎁</span>
-                  <span>
-                    Concluir Missão: "Primeiros Passos em Brumavale" (Receber
-                    Recompensas!)
-                  </span>
+                  <span>Concluir Missão: {quest.title}</span>
                 </button>
-              )}
+              ))}
 
-              {npc.topics.map((topic) => {
+              {topics.map((topic) => {
                 let promptText = topic.prompt;
-                if (topic.id === 'quest_tutorial') {
-                  if (isQuestInProgress) {
-                    promptText = '📜 [Em Andamento] Como vão meus objetivos?';
-                  } else if (isReadyToTurnIn) {
-                    promptText =
-                      '✨ [Objetivos Concluídos] Consegui tudo o que pediu!';
-                  } else if (isQuestCompleted) {
-                    promptText =
-                      '🌟 [Missão Concluída] Obrigado pelos ensinamentos!';
-                  }
+                const quest = topic.questId ? QUESTS[topic.questId] : undefined;
+                if (quest) {
+                  const current = questState(quest.id)?.status;
+                  if (current === 'in_progress')
+                    promptText = `[Em Andamento] ${quest.title}`;
+                  else if (current === 'ready_to_turn_in')
+                    promptText = `[Objetivos Concluídos] ${quest.title}`;
+                  else if (current === 'completed')
+                    promptText = `[Missão Concluída] ${quest.title}`;
                 }
 
                 return (
                   <button
                     key={topic.id}
-                    disabled={
-                      snapshot.actionPending ||
-                      snapshot.questPending ||
-                      snapshot.status !== 'connected'
-                    }
+                    disabled={busy}
                     className={`dialogue-topic-btn ${activeTopicId === topic.id ? 'active' : ''}`}
                     onClick={() => handleTopicClick(topic)}
                   >

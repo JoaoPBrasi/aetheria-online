@@ -78,6 +78,10 @@ export function GameHud({
   const [dialogueNpc, setDialogueNpc] = useState<string | null>(null);
   const [crop, setCrop] = useState<CropId>('turnip');
   const close = useRef<HTMLButtonElement>(null);
+  const audioSettings = useSyncExternalStore(
+    audioManager.subscribe,
+    audioManager.getSnapshot,
+  );
   const guide =
     s.status === 'connected' && s.position && s.quests
       ? soloGuide(s.quests, s.position, hiddenQuests, s.gameplay)
@@ -201,6 +205,12 @@ export function GameHud({
             }
           }
         }
+        return;
+      }
+      if (k === 'm') {
+        e.preventDefault();
+        audioManager.unlockAudio();
+        audioManager.toggleMute();
         return;
       }
       if (
@@ -420,16 +430,26 @@ export function GameHud({
           <span>◇</span>Missões
         </button>
         <button
-          aria-label="Opções de áudio"
+          aria-label={
+            audioSettings.muted
+              ? 'Áudio silenciado (clique para opções, botão direito ou tecla M para desmutar)'
+              : 'Opções de áudio (clique para opções, botão direito ou tecla M para silenciar)'
+          }
           aria-expanded={panel === 'audio'}
+          className={audioSettings.muted ? 'dock-muted-btn' : ''}
           onClick={() => {
             audioManager.unlockAudio();
             audioManager.playSfx('ui_click');
             setPanel((p) => (p === 'audio' ? null : 'audio'));
           }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            audioManager.toggleMute();
+          }}
         >
-          <kbd>O</kbd>
-          <span>🔊</span>Som
+          <kbd>{audioSettings.muted ? 'M' : 'O'}</kbd>
+          <span>{audioSettings.muted ? '🔇' : '🔊'}</span>
+          {audioSettings.muted ? 'Mudo' : 'Som'}
         </button>
         <span className="dock-note">
           FERRAMENTAS AUTOMÁTICAS

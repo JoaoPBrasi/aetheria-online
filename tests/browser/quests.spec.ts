@@ -22,6 +22,9 @@ test('accepts Eldrin tutorial with server confirmation and restores it after ret
     name: 'Conversa com Ancião Eldrin',
   });
   await expect(dialogue).toBeVisible();
+  await expect(
+    dialogue.getByRole('button', { name: /A Primeira Lâmina de Ferro/ }),
+  ).toHaveCount(0);
   await dialogue.getByRole('button', { name: /Tenho coragem/ }).click();
   await expect(
     dialogue.getByRole('button', { name: /Em Andamento/ }),
@@ -158,6 +161,9 @@ test('archives confirmed completed quest snapshots and keeps the journal usable 
 
   await snapshot({ ...ready, status: 'completed', completedAt: 1794330000000 });
   await expect(tracker).toHaveCount(0);
+  await expect(page.getByTestId('solo-guide')).toContainText(
+    'Nova missão: A Primeira Lâmina de Ferro',
+  );
   await expect(
     journal.getByRole('tab', { name: 'Em andamento 0' }),
   ).toBeVisible();

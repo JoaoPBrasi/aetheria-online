@@ -35,6 +35,13 @@ export const NPCS: readonly NPCDefinition[] = [
         questId: 'tutorial_first_steps',
       },
       {
+        id: 'quest_first_iron_blade',
+        prompt: 'Aceitar missão: A Primeira Lâmina de Ferro',
+        response: 'Posso lhe mostrar como forjar sua primeira espada de ferro.',
+        action: 'accept_quest',
+        questId: 'first_iron_blade',
+      },
+      {
         id: 'gather',
         prompt: 'Como consigo recursos básicos como madeira e pedra?',
         response:

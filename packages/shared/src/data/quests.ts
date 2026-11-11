@@ -1,6 +1,10 @@
 import { z } from 'zod';
-import type { ItemId } from './gameplay.js';
+import type { GameplaySnapshot, ItemId } from './gameplay.js';
 import type { NpcId } from './npcs.js';
+
+export const TUTORIAL_QUEST_ID = 'tutorial_first_steps';
+export const IRON_BLADE_QUEST_ID = 'first_iron_blade';
+export const IRON_BLADE_SCOUTS = ['orc-1', 'orc-3'] as const;
 
 export const QUEST_STATUSES = [
   'not_started',
@@ -21,6 +25,9 @@ export interface QuestObjective {
   targetId: string;
   description: string;
   required: number;
+  monsterIds?: readonly string[];
+  weapon?: ItemId;
+  after?: string;
 }
 
 export interface QuestReward {
@@ -47,11 +54,12 @@ export interface QuestDefinition {
   };
   objectives: QuestObjective[];
   startingItem?: ItemId;
+  requires?: string;
   rewards: QuestReward;
 }
 
 export const TUTORIAL_QUEST: QuestDefinition = {
-  id: 'tutorial_first_steps',
+  id: TUTORIAL_QUEST_ID,
   title: 'Primeiros Passos em Brumavale',
   description:
     'O Ancião Eldrin pediu que você aprenda os fundamentos de sobrevivência: colha madeira, fabrique tábuas e derrote slimes que ameaçam a vila.',
@@ -65,7 +73,7 @@ export const TUTORIAL_QUEST: QuestDefinition = {
     readyToTurnIn:
       'Extraordinário! Você cumpriu os objetivos. Conclua a missão para receber 50 XP de Guerreiro, 5 sementes de nabo e 2 de abóbora.',
     completed:
-      'Quando quiser uma arma mais forte, minere na Pedreira do Lago, funda o minério em lingotes na Fornalha e fabrique a espada de ferro na Forja. Volte ao prado para experimentar o novo golpe.',
+      'Você já domina o básico. Tenho um novo desafio: forjar sua primeira lâmina de ferro e testá-la contra um Orc Batedor.',
   },
   objectives: [
     {
@@ -102,15 +110,69 @@ export const TUTORIAL_QUEST: QuestDefinition = {
   },
 };
 
+export const IRON_BLADE_QUEST: QuestDefinition = {
+  id: IRON_BLADE_QUEST_ID,
+  title: 'A Primeira Lâmina de Ferro',
+  description:
+    'Minere na Pedreira do Lago, funda o ferro e use a lâmina que você forjou contra um Orc Batedor.',
+  giverNpcId: 'elder-eldrin',
+  requires: TUTORIAL_QUEST_ID,
+  dialogues: {
+    offer:
+      'Cruze a ponte a leste e siga para o norte até a Pedreira do Lago. Obtenha ferro para dois lingotes, forje uma espada e derrote um Orc Batedor com ela.',
+    inProgress:
+      'Leve quatro minérios e dois carvões à Fornalha para fazer dois lingotes. Use os lingotes e uma madeira na Forja. Com a espada na mochila ou equipada, siga para o Acampamento dos Orcs.',
+    readyToTurnIn:
+      'Você forjou a lâmina e derrotou um batedor. Entregue a missão para receber 60 XP de Guerreiro.',
+    completed:
+      'Agora você sabe transformar o minério da pedreira em uma arma que aguenta o combate contra os orcs.',
+  },
+  objectives: [
+    {
+      id: 'gather_iron',
+      type: 'gather',
+      targetId: 'iron_ore',
+      description: 'Obter minério de ferro na Pedreira do Lago',
+      required: 4,
+    },
+    {
+      id: 'smelt_iron',
+      type: 'craft',
+      targetId: 'iron_ingot',
+      description: 'Obter lingotes de ferro na Fornalha',
+      required: 2,
+    },
+    {
+      id: 'forge_blade',
+      type: 'craft',
+      targetId: 'iron_sword',
+      description: 'Obter uma espada de ferro na Forja',
+      required: 1,
+    },
+    {
+      id: 'defeat_scout',
+      type: 'defeat',
+      targetId: 'orc',
+      description: 'Derrotar um Orc Batedor com a espada de ferro',
+      required: 1,
+      monsterIds: IRON_BLADE_SCOUTS,
+      weapon: 'iron_sword',
+      after: 'forge_blade',
+    },
+  ],
+  rewards: { xp: { profession: 'warrior', amount: 60 }, items: [] },
+};
+
 export const QUESTS: Record<string, QuestDefinition> = {
   [TUTORIAL_QUEST.id]: TUTORIAL_QUEST,
+  [IRON_BLADE_QUEST.id]: IRON_BLADE_QUEST,
 };
 
 export type QuestId = keyof typeof QUESTS;
 
 export const QuestCommandSchema = z
   .object({
-    questId: z.literal('tutorial_first_steps'),
+    questId: z.enum([TUTORIAL_QUEST_ID, IRON_BLADE_QUEST_ID]),
   })
   .strict();
 
@@ -152,12 +214,40 @@ export function isQuestObjectivesMet(
   );
 }
 
+export function ironBladeStartingProgress(
+  s: Pick<GameplaySnapshot, 'inventory' | 'equipment'>,
+) {
+  const quantity = (id: ItemId) =>
+    s.inventory.reduce(
+      (total, slot) => total + (slot.itemId === id ? slot.quantity : 0),
+      0,
+    );
+  if (
+    quantity('iron_sword') > 0 ||
+    s.equipment.some((slot) => slot.itemId === 'iron_sword')
+  )
+    return { gather_iron: 4, smelt_iron: 2, forge_blade: 1, defeat_scout: 0 };
+  const ingots = Math.min(2, quantity('iron_ingot'));
+  return {
+    gather_iron: Math.min(4, quantity('iron_ore') + 2 * ingots),
+    smelt_iron: ingots,
+    forge_blade: 0,
+    defeat_scout: 0,
+  };
+}
+
+export interface QuestObjectiveContext {
+  monsterId?: string;
+  weapon?: ItemId;
+}
+
 export function advanceQuestObjective(
   state: CharacterQuestState,
   quest: QuestDefinition,
   objectiveType: QuestObjectiveType,
   targetId: string,
   amount = 1,
+  context: QuestObjectiveContext = {},
 ): { updatedState: CharacterQuestState; changed: boolean } {
   if (state.status !== 'in_progress') {
     return { updatedState: state, changed: false };
@@ -167,7 +257,19 @@ export function advanceQuestObjective(
   const nextProgress = { ...state.progress };
 
   for (const obj of quest.objectives) {
-    if (obj.type === objectiveType && obj.targetId === targetId) {
+    if (
+      obj.type === objectiveType &&
+      obj.targetId === targetId &&
+      (!obj.weapon || obj.weapon === context.weapon) &&
+      (!obj.monsterIds ||
+        (context.monsterId && obj.monsterIds.includes(context.monsterId))) &&
+      (!obj.after ||
+        quest.objectives.some(
+          (previous) =>
+            previous.id === obj.after &&
+            (state.progress[previous.id] ?? 0) >= previous.required,
+        ))
+    ) {
       const current = nextProgress[obj.id] ?? 0;
       if (current < obj.required) {
         const nextValue = Math.min(obj.required, current + amount);

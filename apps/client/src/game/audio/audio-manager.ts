@@ -17,6 +17,8 @@ export class AudioManager {
   private settings: AudioSettings = { ...DEFAULT_AUDIO_SETTINGS };
   private listeners = new Set<() => void>();
   private isUnlocked = false;
+  private inCombat = false;
+  private combatTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.loadSettings();
@@ -120,6 +122,45 @@ export class AudioManager {
   }
 
   /**
+   * Notifica evento de combate: ativa a trilha de ação e inicia timer de 5s para retorno.
+   */
+  notifyCombatAction(): void {
+    if (!this.inCombat) {
+      this.inCombat = true;
+      if (this.bgm) {
+        this.bgm.setMode('combat');
+      }
+    }
+
+    if (this.combatTimeoutId !== null) {
+      clearTimeout(this.combatTimeoutId);
+    }
+
+    // Após 5 segundos sem ações de combate, retorna para a música normal
+    this.combatTimeoutId = setTimeout(() => {
+      this.exitCombat();
+    }, 5000);
+  }
+
+  /**
+   * Encerra o modo de combate e restaura a música calma de Brumavale.
+   */
+  exitCombat(): void {
+    this.inCombat = false;
+    if (this.combatTimeoutId !== null) {
+      clearTimeout(this.combatTimeoutId);
+      this.combatTimeoutId = null;
+    }
+    if (this.bgm) {
+      this.bgm.setMode('calm');
+    }
+  }
+
+  isInCombat(): boolean {
+    return this.inCombat;
+  }
+
+  /**
    * Interrompe a música de fundo.
    */
   stopBgm(): void {
@@ -161,6 +202,9 @@ export class AudioManager {
   }
 
   toggleMute(): void {
+    if (!this.isUnlocked) {
+      this.unlockAudio();
+    }
     this.settings = {
       ...this.settings,
       muted: !this.settings.muted,
@@ -179,17 +223,23 @@ export class AudioManager {
       const now = this.ctx.currentTime;
 
       const master = this.settings.muted ? 0 : this.settings.masterVolume;
-      const sfx = this.settings.sfxVolume;
-      const bgm = this.settings.bgmVolume;
+      const sfx = this.settings.muted ? 0 : this.settings.sfxVolume;
+      const bgm = this.settings.muted ? 0 : this.settings.bgmVolume;
 
       if (this.masterGain) {
+        this.masterGain.gain.cancelScheduledValues(now);
         this.masterGain.gain.setValueAtTime(master, now);
+        this.masterGain.gain.value = master;
       }
       if (this.sfxGain) {
+        this.sfxGain.gain.cancelScheduledValues(now);
         this.sfxGain.gain.setValueAtTime(sfx, now);
+        this.sfxGain.gain.value = sfx;
       }
       if (this.bgmGain) {
+        this.bgmGain.gain.cancelScheduledValues(now);
         this.bgmGain.gain.setValueAtTime(bgm, now);
+        this.bgmGain.gain.value = bgm;
       }
     }
 

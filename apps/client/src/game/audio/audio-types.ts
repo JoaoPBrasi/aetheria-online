@@ -28,3 +28,4 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
 };
 
 export const AUDIO_STORAGE_KEY = 'aetheria_audio_settings';
+

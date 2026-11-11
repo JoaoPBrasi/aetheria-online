@@ -5,9 +5,12 @@ import {
   createInitialQuestState,
   isQuestObjectivesMet,
   addItem,
+  IRON_BLADE_QUEST_ID,
+  ironBladeStartingProgress,
   type CharacterQuestState,
   type ItemId,
   type QuestObjectiveType,
+  type QuestObjectiveContext,
 } from '@aetheria/shared';
 import type { Database } from '../database/client.js';
 import type { Prisma } from '../generated/prisma/client.js';
@@ -34,6 +37,7 @@ export async function advanceQuests(
   type: QuestObjectiveType,
   targetId: string,
   amount: number,
+  context?: QuestObjectiveContext,
 ) {
   const rows = await tx.characterQuest.findMany({
     where: { characterId, status: 'in_progress' },
@@ -47,6 +51,7 @@ export async function advanceQuests(
       type,
       targetId,
       amount,
+      context,
     );
     if (changed)
       await tx.characterQuest.update({
@@ -75,6 +80,34 @@ export class QuestRepository {
       await tx.$queryRaw`SELECT "id" FROM "Character" WHERE "id"=${characterId}::uuid FOR UPDATE`;
       const where = { characterId_questId: { characterId, questId } };
       if (await tx.characterQuest.findUnique({ where })) return;
+      if (definition.requires) {
+        const prerequisite = await tx.characterQuest.findUnique({
+          where: {
+            characterId_questId: { characterId, questId: definition.requires },
+          },
+          select: { status: true },
+        });
+        if (prerequisite?.status !== 'completed')
+          throw new Error(
+            'Conclua Primeiros Passos em Brumavale para aceitar esta missão.',
+          );
+      }
+      if (questId === IRON_BLADE_QUEST_ID) {
+        const character = await tx.character.findUniqueOrThrow({
+          where: { id: characterId },
+          include: { inventory: true, equipment: true },
+        });
+        initial.progress = ironBladeStartingProgress({
+          inventory: character.inventory.map((slot) => ({
+            ...slot,
+            itemId: slot.itemId as ItemId,
+          })),
+          equipment: character.equipment.map((slot) => ({
+            ...slot,
+            itemId: slot.itemId as ItemId,
+          })),
+        });
+      }
       await tx.characterQuest.create({
         data: {
           characterId,
@@ -127,21 +160,22 @@ export class QuestRepository {
       )
         throw new Error('Você ainda não cumpriu todos os objetivos da missão.');
 
-      const inventory = await tx.inventorySlot.findMany({
-        where: { characterId },
-      });
-      let slots = inventory.map((s) => ({
-        index: s.index,
-        itemId: s.itemId as ItemId,
-        quantity: s.quantity,
-      }));
-      for (const item of definition.rewards.items)
-        slots = addItem(slots, item.itemId, item.quantity);
-      await tx.inventorySlot.deleteMany({ where: { characterId } });
-      if (slots.length)
+      if (definition.rewards.items.length) {
+        const inventory = await tx.inventorySlot.findMany({
+          where: { characterId },
+        });
+        let slots = inventory.map((s) => ({
+          index: s.index,
+          itemId: s.itemId as ItemId,
+          quantity: s.quantity,
+        }));
+        for (const item of definition.rewards.items)
+          slots = addItem(slots, item.itemId, item.quantity);
+        await tx.inventorySlot.deleteMany({ where: { characterId } });
         await tx.inventorySlot.createMany({
           data: slots.map((s) => ({ ...s, characterId })),
         });
+      }
       const xp = definition.rewards.xp;
       await tx.characterSkill.upsert({
         where: {

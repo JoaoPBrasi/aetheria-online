@@ -978,6 +978,14 @@ footer {
   gap: 7px;
   align-items: center;
 }
+.hud-dock > button.dock-muted-btn {
+  border-color: #a85858;
+  background: linear-gradient(135deg, #381f1f, #241414);
+  color: #ffc4c4;
+}
+.hud-dock > button.dock-muted-btn span {
+  color: #ff9999;
+}
 .hud-dock > button {
   position: relative;
   width: 70px;
@@ -1645,8 +1653,8 @@ footer {
    MODAL DE OPÇÕES DE ÁUDIO E TRILHA
    ========================================================================== */
 .audio-modal {
-  max-width: 420px;
-  max-height: 480px;
+  max-width: 440px;
+  max-height: 520px;
   right: auto;
   left: 50%;
   transform: translateX(-50%);
@@ -1671,43 +1679,174 @@ footer {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 12px;
+  padding-bottom: 14px;
   border-bottom: 1px solid #48695366;
 }
 
+.toggle-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.toggle-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f1ebd8;
+}
+
+.toggle-sub {
+  font-size: 10px;
+  color: #9ab39e;
+}
+
 .audio-toggle-btn {
-  padding: 6px 14px;
+  padding: 8px 16px;
   border-radius: 6px;
   background: #243d2f;
   border: 1px solid #8d8d60;
   color: #eedca4;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.audio-toggle-btn:hover {
+  background: #355743;
+  border-color: #eed69b;
+  transform: scale(1.02);
 }
 
 .audio-toggle-btn.active {
-  background: #4a2d2d;
+  background: #4a2424;
   border-color: #d16b6b;
-  color: #f7b2b2;
+  color: #fca5a5;
+  box-shadow: 0 0 8px rgba(209, 107, 107, 0.3);
 }
 
 .audio-label {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 13px;
   color: #dbe4d5;
 }
 
 .audio-label b {
   color: #eed69b;
+  font-size: 12px;
+  font-weight: 600;
+  background: #192a20;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #3c5443;
+}
+
+.audio-label b.audio-val-max {
+  color: #fff2a8;
+  border-color: #d4b56a;
+  background: #332d16;
+  box-shadow: 0 0 6px rgba(238, 214, 155, 0.4);
+}
+
+.audio-slider-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .audio-row input[type='range'] {
-  accent-color: #c2ad79;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  border: 1px solid #486953;
   cursor: pointer;
-  height: 6px;
-  border-radius: 3px;
+  outline: none;
+  margin: 6px 0 2px;
+  transition: border-color 0.15s ease;
+}
+
+.audio-row input[type='range']:hover:not(:disabled) {
+  border-color: #eed69b;
+}
+
+.audio-row input[type='range']:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Chrome / Safari / Edge Track */
+.audio-row input[type='range']::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: transparent;
+}
+
+/* Firefox Track */
+.audio-row input[type='range']::-moz-range-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: transparent;
+}
+
+/* Chrome / Safari / Edge Thumb */
+.audio-row input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff1c4, #d4af37 60%, #876d1e 100%);
+  border: 2px solid #231c0c;
+  box-shadow: 0 0 5px rgba(212, 175, 55, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  margin-top: -5px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.audio-row input[type='range']::-webkit-slider-thumb:hover {
+  transform: scale(1.18);
+  box-shadow: 0 0 10px rgba(240, 215, 131, 0.9);
+}
+
+/* Firefox Thumb */
+.audio-row input[type='range']::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff1c4, #d4af37 60%, #876d1e 100%);
+  border: 2px solid #231c0c;
+  box-shadow: 0 0 5px rgba(212, 175, 55, 0.5);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.audio-row input[type='range']::-moz-range-thumb:hover {
+  transform: scale(1.18);
+  box-shadow: 0 0 10px rgba(240, 215, 131, 0.9);
+}
+
+.audio-slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #7b9480;
+  padding: 0 1px;
+}
+
+.audio-slider-ticks .tick-mid {
+  color: #8fa693;
+}
+
+.audio-slider-ticks .tick-max {
+  color: #eed69b;
+  font-weight: 600;
 }
 
 .audio-test-actions {

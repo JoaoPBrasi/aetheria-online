@@ -547,7 +547,10 @@ export class WorldScene extends Phaser.Scene {
     attackerSession?: string,
   ) {
     if (!this.active) return;
-    if (local) playCombatSound(event.kind);
+    if (local) {
+      playCombatSound(event.kind);
+      audioManager.notifyCombatAction();
+    }
     if (event.kind === 'strike') {
       const actor = local
         ? this.avatar
@@ -675,6 +678,24 @@ export class WorldScene extends Phaser.Scene {
     this.syncForage(farmState.forage);
     this.updateResources(farmState.resources ?? {}, Date.now());
     this.updateCover();
+
+    if (farmState.health !== undefined && farmState.health <= 0) {
+      audioManager.exitCombat();
+    } else {
+      const localCharId = farmState.gameplay?.characterId;
+      const isUnderThreat =
+        !!localCharId &&
+        (farmState.monsters ?? []).some(
+          (m) =>
+            m.health > 0 &&
+            m.state !== 'dead' &&
+            m.targetId === localCharId &&
+            (m.state === 'chase' || m.state === 'windup' || m.state === 'attack'),
+        );
+      if (isUnderThreat) {
+        audioManager.notifyCombatAction();
+      }
+    }
 
     const liveMonsters = new Set<string>();
     this.dangerRing.clear();
