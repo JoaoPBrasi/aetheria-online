@@ -122,3 +122,4 @@ flowchart TD
    - Predominância de verdes florestais (`#243d2f`, `#385743`), dourados de fogueira e trigo (`#eed69b`, `#d4b56a`) e madeiras aquecidas.
 3. **Leveza e Desempenho:**
    - 100% dos assets e áudios são carregados instantaneamente no navegador sem downloads pesados, rodando a 60 FPS estáveis mesmo em dispositivos modestos.
+
