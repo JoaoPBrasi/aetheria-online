@@ -62,3 +62,4 @@ describe('Minimap Math & Projection', () => {
     expect(TERRAIN_COLORS[4]).toBeDefined(); // Edifícios
   });
 });
+
