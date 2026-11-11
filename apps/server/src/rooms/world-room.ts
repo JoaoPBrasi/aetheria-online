@@ -9,7 +9,6 @@ import {
   WORLD_SPAWN,
   isNearRestCampfire,
   ChatSendSchema,
-  isWithinChatRange,
   CHAT_COOLDOWN_MS,
   type ChatMessage,
   type CombatFeedback,
@@ -88,25 +87,13 @@ export class WorldRoom extends Room<{
         channel: parsed.data.channel,
         text: parsed.data.text,
         createdAt: now,
+        mapId: this.state.mapId || 'brumavale',
         x: p.x,
         y: p.y,
       };
 
-      if (parsed.data.channel === 'global') {
-        this.broadcast('chat', message);
-      } else {
-        // Canal local: envia para todos os jogadores a até CHAT_LOCAL_RADIUS (320px)
-        for (const other of this.clients) {
-          const otherPlayer = this.state.players.get(other.sessionId);
-          if (!otherPlayer?.connected) continue;
-          if (
-            other.sessionId === client.sessionId ||
-            isWithinChatRange(p.x, p.y, otherPlayer.x, otherPlayer.y)
-          ) {
-            other.send('chat', message);
-          }
-        }
-      }
+      // Chat Geral transmite para todo o servidor; Chat Local transmite para quem está no mesmo mapa
+      this.broadcast('chat', message);
     });
     this.onMessage('action', async (client, raw: unknown) => {
       const p = this.state.players.get(client.sessionId);
@@ -354,7 +341,31 @@ export class WorldRoom extends Room<{
     if (!parsed.success) throw new ServerError(400, 'INVALID_JOIN');
     try {
       const character = await this.identities.loadCharacter(parsed.data.token);
-      this.leases.acquire(character.id, client.sessionId);
+      const previousSession = this.leases.acquire(character.id, client.sessionId, true);
+      if (previousSession) {
+        // Encerra a conexão da sessão anterior para evitar "Personagem já conectado"
+        const oldClient = this.clients.find((c) => c.sessionId === previousSession);
+        if (oldClient) {
+          try {
+            oldClient.leave(4001);
+          } catch {
+            // sessão já encerrada
+          }
+        }
+        const oldPlayer = this.state.players.get(previousSession);
+        if (oldPlayer) {
+          this.pendingSaves.set(character.id, {
+            x: oldPlayer.x,
+            y: oldPlayer.y,
+            direction: oldPlayer.direction,
+          });
+          this.state.players.delete(previousSession);
+        }
+        this.inputs.delete(previousSession);
+        this.lastSync.delete(previousSession);
+        this.lastCombat.delete(previousSession);
+        this.lastChat.delete(previousSession);
+      }
       try {
         return await this.identities.loadCharacter(parsed.data.token);
       } catch (error) {

@@ -63,12 +63,33 @@ export function ChatBox({
   }, [inputText, channel, connection]);
 
   const handleSend = () => {
-    const text = inputText.trim();
+    let text = inputText.trim();
     if (!text || !connection) {
       inputRef.current?.blur();
       return;
     }
-    connection.sendChat(text, channel);
+
+    let targetChannel = channel;
+    if (text.startsWith('/g ') || text.startsWith('/geral ')) {
+      targetChannel = 'global';
+      text = text.replace(/^\/(g|geral)\s+/, '').trim();
+    } else if (text.startsWith('/l ') || text.startsWith('/local ')) {
+      targetChannel = 'local';
+      text = text.replace(/^\/(l|local)\s+/, '').trim();
+    }
+
+    if (!text) {
+      setInputText('');
+      inputRef.current?.blur();
+      return;
+    }
+
+    setChannel(targetChannel);
+    if (filter !== 'all') {
+      setFilter(targetChannel);
+    }
+
+    connection.sendChat(text, targetChannel);
     setInputText('');
     inputRef.current?.blur();
   };
@@ -100,16 +121,22 @@ export function ChatBox({
           <button
             type="button"
             className={filter === 'local' ? 'active' : ''}
-            onClick={() => setFilter('local')}
-            title="Exibir apenas mensagens locais"
+            onClick={() => {
+              setFilter('local');
+              setChannel('local');
+            }}
+            title="Exibir e falar no canal local (mapa atual)"
           >
             Local
           </button>
           <button
             type="button"
             className={filter === 'global' ? 'active' : ''}
-            onClick={() => setFilter('global')}
-            title="Exibir apenas mensagens globais"
+            onClick={() => {
+              setFilter('global');
+              setChannel('global');
+            }}
+            title="Exibir e falar no canal geral (todo o servidor)"
           >
             Geral
           </button>
@@ -163,7 +190,13 @@ export function ChatBox({
         <button
           type="button"
           className={`chat-channel-selector ${channel}`}
-          onClick={() => setChannel(channel === 'local' ? 'global' : 'local')}
+          onClick={() => {
+            const next = channel === 'local' ? 'global' : 'local';
+            setChannel(next);
+            if (filter !== 'all') {
+              setFilter(next);
+            }
+          }}
           title="Clique para alternar o canal de envio (Local / Geral)"
         >
           {channel === 'local' ? 'Local' : 'Geral'}
@@ -174,7 +207,11 @@ export function ChatBox({
           className="chat-input"
           value={inputText}
           maxLength={CHAT_MAX_LENGTH}
-          placeholder="Pressione Enter para falar..."
+          placeholder={
+            channel === 'global'
+              ? 'Falar no chat Geral... (ou /l para local)'
+              : 'Falar no chat Local... (ou /g para geral)'
+          }
           onChange={(e) => setInputText(e.target.value)}
           onFocus={() => {
             setIsFocused(true);

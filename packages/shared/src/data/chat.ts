@@ -18,6 +18,7 @@ export interface ChatMessage {
   channel: ChatChannel;
   text: string;
   createdAt: number;
+  mapId?: string;
   x?: number;
   y?: number;
 }
@@ -49,3 +50,4 @@ export function formatChatTimestamp(timestamp: number): string {
   const minutes = date.getMinutes().toString().padStart(2, '0');
   return `${hours}:${minutes}`;
 }
+

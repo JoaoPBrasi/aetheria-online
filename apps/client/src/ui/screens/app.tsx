@@ -52,7 +52,16 @@ export function App() {
       active = false;
     };
   }, []);
-  useEffect(() => () => connection?.dispose(), [connection]);
+  useEffect(() => {
+    const onBeforeUnload = () => {
+      connection?.dispose();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      connection?.dispose();
+    };
+  }, [connection]);
   const load = async (fresh = false) => {
     setBusy(true);
     setError(null);
