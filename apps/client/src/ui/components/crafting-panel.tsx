@@ -9,6 +9,7 @@ import {
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
 import type { WorldConnection } from '../../game/networking/world-connection';
+import { audioManager } from '../../game/audio/audio-manager';
 
 export function CraftingPanel({
   connection,
@@ -21,6 +22,12 @@ export function CraftingPanel({
     gameBridge.subscribe,
     gameBridge.getSnapshot,
   );
+  const activeCast = useSyncExternalStore(
+    gameBridge.subscribeCast,
+    gameBridge.getCast,
+  );
+  const isCasting = activeCast?.status === 'channeling';
+
   const [stationId, setStationId] = useState<CraftingStationId>(
     initialStation ?? 'workbench-plaza',
   );
@@ -44,11 +51,36 @@ export function CraftingPanel({
   const busy = state.status !== 'connected' || state.actionPending;
 
   const handleCraft = (recipeId: RecipeId) => {
-    if (!currentStation || !isNear || busy) return;
-    connection?.action({
-      kind: 'craft',
-      recipeId,
-      stationId: currentStation.id,
+    const recipe = CRAFTING_RECIPES[recipeId];
+    if (!currentStation || !isNear || busy || isCasting || !recipe) return;
+
+    let durationMs = 2000;
+    if (recipe.station === 'furnace') {
+      durationMs = 2500;
+    } else if (recipe.station === 'forge') {
+      durationMs = 3500;
+    }
+
+    const outputItem = ITEMS[recipe.output.itemId];
+    const label = `Forjando ${outputItem?.name ?? 'item'}…`;
+    const icon = recipe.station === 'furnace' ? '🔥' : '🔨';
+
+    audioManager.unlockAudio();
+    audioManager.playSfx('craft');
+    gameBridge.animateCharacter?.({ kind: 'craft' });
+
+    gameBridge.startCast({
+      label,
+      icon,
+      durationMs,
+      payload: { kind: 'craft', recipeId, stationId: currentStation.id },
+      onComplete: () => {
+        connection?.action({
+          kind: 'craft',
+          recipeId,
+          stationId: currentStation.id,
+        });
+      },
     });
   };
 
@@ -118,16 +150,18 @@ export function CraftingPanel({
               <div className="recipe-actions">
                 <button
                   type="button"
-                  disabled={busy || !possible || !isNear}
+                  disabled={busy || isCasting || !possible || !isNear}
                   onClick={() => handleCraft(r.id)}
                 >
-                  {busy
-                    ? 'Fabricando…'
-                    : !isNear
-                      ? 'Estação distante'
-                      : !possible
-                        ? 'Faltam materiais'
-                        : 'Fabricar'}
+                  {isCasting
+                    ? 'Forjando…'
+                    : busy
+                      ? 'Fabricando…'
+                      : !isNear
+                        ? 'Estação distante'
+                        : !possible
+                          ? 'Faltam materiais'
+                          : 'Fabricar'}
                 </button>
               </div>
             </div>

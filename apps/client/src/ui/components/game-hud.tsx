@@ -19,6 +19,7 @@ import { AudioModal } from './audio-modal';
 import { GameplayPanel } from './gameplay-panel';
 import { CraftingPanel } from './crafting-panel';
 import { DialogueModal } from './dialogue-modal';
+import { CastBar } from './cast-bar';
 import { Hotbar } from './hotbar';
 import { Minimap } from './minimap';
 import { QuestTracker } from './quest-tracker';
@@ -126,6 +127,10 @@ export function GameHud({
         !now.position
       )
         return;
+
+      const currentCast = gameBridge.getCast();
+      if (currentCast && currentCast.status === 'channeling') return;
+
       const item = interaction(
         now.gameplay,
         now.position,
@@ -140,24 +145,100 @@ export function GameHud({
       if (item?.enabled) {
         audioManager.unlockAudio();
         if (item.payload.kind === 'gather') {
-          const nodeName = typeof item.payload.node === 'string' ? item.payload.node : '';
-          if (nodeName.startsWith('wood')) {
-            audioManager.playSfx('chop');
-          } else if (nodeName.startsWith('stone')) {
-            audioManager.playSfx('mine');
-          } else {
-            audioManager.playSfx('gather');
+          const nodeName =
+            typeof item.payload.node === 'string' ? item.payload.node : '';
+          const isWood =
+            nodeName.startsWith('wood') || nodeName.includes('tree');
+          const isIron = nodeName.includes('iron');
+          const isStone =
+            nodeName.startsWith('stone') || nodeName.includes('quarry');
+          const isSickle = nodeName.includes('fiber');
+
+          let label = 'Coletando Recursos…';
+          let icon = '🌿';
+          let durationMs = 1500;
+          let sfx: 'chop' | 'mine' | 'gather' = 'gather';
+
+          if (isWood) {
+            label = 'Derrubando Árvore…';
+            icon = '🪓';
+            durationMs = 2500;
+            sfx = 'chop';
+          } else if (isIron) {
+            label = 'Extraindo Minério de Ferro…';
+            icon = '⛏️';
+            durationMs = 3000;
+            sfx = 'mine';
+          } else if (isStone) {
+            label = 'Minerando Pedra…';
+            icon = '⛏️';
+            durationMs = 2500;
+            sfx = 'mine';
+          } else if (isSickle) {
+            label = 'Ceifando Fibras…';
+            icon = '🌾';
+            durationMs = 1500;
+            sfx = 'gather';
           }
+
+          audioManager.playSfx(sfx);
           gameBridge.animateCharacter?.(item.payload);
-          connection?.action(item.payload);
+          gameBridge.startCast({
+            label,
+            icon,
+            durationMs,
+            payload: item.payload,
+            onComplete: () => {
+              connection?.action(item.payload);
+            },
+          });
         } else if (item.payload.kind === 'farm') {
+          const op = item.payload.operation;
+          let label = 'Trabalho Agrícola…';
+          let icon = '🌱';
+          let durationMs = 1500;
+
+          if (op === 'prepare') {
+            label = 'Lavrando o Solo…';
+            icon = '🌱';
+            durationMs = 1500;
+          } else if (op === 'water') {
+            label = 'Regando a Plantação…';
+            icon = '💧';
+            durationMs = 1500;
+          } else if (op === 'plant') {
+            label = 'Plantando Sementes…';
+            icon = '🌾';
+            durationMs = 1200;
+          } else if (op === 'harvest') {
+            label = 'Colhendo Vegetais…';
+            icon = '🥕';
+            durationMs = 1500;
+          }
+
           audioManager.playSfx('gather');
           gameBridge.animateCharacter?.(item.payload);
-          connection?.action(item.payload);
+          gameBridge.startCast({
+            label,
+            icon,
+            durationMs,
+            payload: item.payload,
+            onComplete: () => {
+              connection?.action(item.payload);
+            },
+          });
         } else if (item.payload.kind === 'craft') {
           audioManager.playSfx('craft');
           gameBridge.animateCharacter?.(item.payload);
-          connection?.action(item.payload);
+          gameBridge.startCast({
+            label: 'Fabricando Item…',
+            icon: '🔨',
+            durationMs: 2500,
+            payload: item.payload,
+            onComplete: () => {
+              connection?.action(item.payload);
+            },
+          });
         } else if (item.payload.kind === 'open_crafting') {
           audioManager.playSfx('ui_open');
           setCraftStation(item.payload.stationId as CraftingStationId);
@@ -333,11 +414,20 @@ export function GameHud({
             <small>{nearby.name}</small>
             <button
               data-testid="context-action"
-              disabled={!nearby.enabled || s.actionPending || !!panel}
+              disabled={
+                !nearby.enabled ||
+                s.actionPending ||
+                !!panel ||
+                gameBridge.getCast()?.status === 'channeling'
+              }
               onClick={() => gameBridge.interact?.()}
             >
               <kbd>E</kbd>
-              {s.actionPending ? 'Trabalhando…' : nearby.label}
+              {gameBridge.getCast()?.status === 'channeling'
+                ? 'Canalizando…'
+                : s.actionPending
+                  ? 'Trabalhando…'
+                  : nearby.label}
             </button>
             {nearby.payload.operation === 'plant' && (
               <div className="crop-quick">
@@ -377,6 +467,7 @@ export function GameHud({
           {s.gameplayError}
         </div>
       )}
+      <CastBar />
       {s.gameplay && (
         <Hotbar
           inventory={s.gameplay.inventory}

@@ -46,6 +46,8 @@ export class WorldScene extends Phaser.Scene {
   private dangerRing!: Phaser.GameObjects.Graphics;
   private plots = new Map<string, Phaser.GameObjects.Rectangle>();
   private accumulator = 0;
+  private lastToolAction?: Record<string, unknown>;
+  private lastToolAnimTime = 0;
   private remoteSprites = new Map<string, PlayerAvatar>();
   private coverCells = new Map<string, Set<Phaser.GameObjects.Image>>();
   private fadingCover = new Set<Phaser.GameObjects.Image>();
@@ -299,75 +301,14 @@ export class WorldScene extends Phaser.Scene {
       this.combat(event, local, attackerSession);
     };
     gameBridge.animateCharacter = (action) => {
-      const kind = action.kind as string;
-      const resource = RESOURCES.find((r) => r.id === action.node);
-      const isWood =
-        resource?.item === 'wood' ||
-        (typeof action.node === 'string' && action.node.includes('tree'));
-      const isOre =
-        resource?.tool === 'pickaxe' ||
-        (typeof action.node === 'string' && action.node.includes('quarry'));
-      const isSickle =
-        resource?.tool === 'sickle' ||
-        (typeof action.node === 'string' && action.node.includes('fiber'));
-
-      let gesture:
-        | 'idle'
-        | 'walk'
-        | 'collect'
-        | 'chop'
-        | 'mine'
-        | 'water'
-        | 'hit'
-        | 'attack' = 'collect';
-      let toolEffect: ToolEffectKind = 'collect';
-
-      if (kind === 'farm') {
-        const op = action.operation;
-        if (op === 'prepare') {
-          gesture = 'mine';
-          toolEffect = 'hoe';
-        } else if (op === 'water') {
-          gesture = 'water';
-          toolEffect = 'water';
-        } else {
-          gesture = 'collect';
-          toolEffect = 'collect';
-        }
-      } else if (kind === 'gather') {
-        if (isWood) {
-          gesture = 'chop';
-          toolEffect = 'axe';
-        } else if (isOre) {
-          gesture = 'mine';
-          toolEffect = 'pickaxe';
-        } else if (isSickle) {
-          gesture = 'chop';
-          toolEffect = 'sickle';
-        } else {
-          gesture = 'collect';
-          toolEffect = 'collect';
-        }
-      } else if (kind === 'craft') {
-        gesture = 'mine';
-        toolEffect = 'craft';
-      } else if (kind === 'attack') {
-        gesture = 'attack';
-        toolEffect = 'sword';
-      }
-
-      this.avatar.playGesture(gesture, this.time.now);
-      showToolEffect(
-        this,
-        this.avatar.x,
-        this.avatar.y,
-        toolEffect,
-        this.avatar.facing,
-      );
+      this.lastToolAction = action;
+      this.lastToolAnimTime = this.time.now;
+      this.animateToolAction(action);
     };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       gameBridge.animateCharacter = undefined;
       gameBridge.combatFeedback = undefined;
+      this.lastToolAction = undefined;
     });
     this.avatar.setVisible(false);
     this.cameras.main.setBounds(
@@ -633,12 +574,100 @@ export class WorldScene extends Phaser.Scene {
       }
       const target = this.monsterSprites.get(event.monsterId);
       if (target) target.hurtUntil = this.time.now + 160;
-    } else if (local && event.kind === 'hurt')
+    } else if (local && event.kind === 'hurt') {
       this.avatar.playGesture('hit', this.time.now);
+      if (gameBridge.getCast()?.status === 'channeling') {
+        gameBridge.cancelCast('Sofreu dano!');
+        this.lastToolAction = undefined;
+      }
+    }
     const camera = this.cameras.main.worldView;
     if (local || camera.contains(event.x, event.y))
       showCombatEffect(this, event, local);
   }
+
+  private animateToolAction(
+    action: Record<string, unknown>,
+    playSound = false,
+  ) {
+    const kind = action.kind as string;
+    const resource = RESOURCES.find((r) => r.id === action.node);
+    const isWood =
+      resource?.item === 'wood' ||
+      (typeof action.node === 'string' && action.node.includes('tree'));
+    const isOre =
+      resource?.tool === 'pickaxe' ||
+      (typeof action.node === 'string' &&
+        (action.node.includes('quarry') ||
+          action.node.includes('iron') ||
+          action.node.includes('stone')));
+    const isSickle =
+      resource?.tool === 'sickle' ||
+      (typeof action.node === 'string' && action.node.includes('fiber'));
+
+    let gesture:
+      | 'idle'
+      | 'walk'
+      | 'collect'
+      | 'chop'
+      | 'mine'
+      | 'water'
+      | 'hit'
+      | 'attack' = 'collect';
+    let toolEffect: ToolEffectKind = 'collect';
+
+    if (kind === 'farm') {
+      const op = action.operation;
+      if (op === 'prepare') {
+        gesture = 'mine';
+        toolEffect = 'hoe';
+        if (playSound) audioManager.playSfx('gather');
+      } else if (op === 'water') {
+        gesture = 'water';
+        toolEffect = 'water';
+        if (playSound) audioManager.playSfx('gather');
+      } else {
+        gesture = 'collect';
+        toolEffect = 'collect';
+        if (playSound) audioManager.playSfx('gather');
+      }
+    } else if (kind === 'gather') {
+      if (isWood) {
+        gesture = 'chop';
+        toolEffect = 'axe';
+        if (playSound) audioManager.playSfx('chop');
+      } else if (isOre) {
+        gesture = 'mine';
+        toolEffect = 'pickaxe';
+        if (playSound) audioManager.playSfx('mine');
+      } else if (isSickle) {
+        gesture = 'chop';
+        toolEffect = 'sickle';
+        if (playSound) audioManager.playSfx('gather');
+      } else {
+        gesture = 'collect';
+        toolEffect = 'collect';
+        if (playSound) audioManager.playSfx('gather');
+      }
+    } else if (kind === 'craft') {
+      gesture = 'mine';
+      toolEffect = 'craft';
+      if (playSound) audioManager.playSfx('craft');
+    } else if (kind === 'attack') {
+      gesture = 'attack';
+      toolEffect = 'sword';
+    }
+
+    this.avatar.playGesture(gesture, this.time.now);
+    showToolEffect(
+      this,
+      this.avatar.x,
+      this.avatar.y,
+      toolEffect,
+      this.avatar.facing,
+    );
+  }
+
   update(time: number, delta: number) {
     const farmState = gameBridge.getSnapshot();
     this.focusRing?.clear();
@@ -702,6 +731,23 @@ export class WorldScene extends Phaser.Scene {
       this.active && !typing
         ? down('S') + down('DOWN') - down('W') - down('UP')
         : 0;
+
+    const isMoving = dx !== 0 || dy !== 0;
+    if (isMoving && gameBridge.getCast()?.status === 'channeling') {
+      gameBridge.cancelCast('Movimento cancelou a ação!');
+      this.lastToolAction = undefined;
+    }
+
+    const activeCast = gameBridge.getCast();
+    if (activeCast && activeCast.status === 'channeling') {
+      if (this.lastToolAction && time - this.lastToolAnimTime >= 650) {
+        this.lastToolAnimTime = time;
+        this.animateToolAction(this.lastToolAction, true);
+      }
+    } else if (this.lastToolAction) {
+      this.lastToolAction = undefined;
+    }
+
     if (this.active) {
       this.accumulator += Math.min(delta, 100);
       while (this.accumulator >= 50) {
