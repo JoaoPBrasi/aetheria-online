@@ -18,7 +18,18 @@ export function paintFarmPlot(
 
   if (state === 'thirsty') {
     art.fillStyle(0xc99962).fillRect(-5, -3, 10, 4).fillRect(-3, -6, 6, 3);
-    art.fillStyle(0x89cfff).fillRect(7, -10, 2, 3).fillRect(5, -7, 6, 4);
+    art
+      .fillStyle(0x183044)
+      .fillRect(8, -17, 2, 3)
+      .fillRect(6, -14, 6, 3)
+      .fillRect(4, -11, 10, 5)
+      .fillRect(6, -6, 6, 2);
+    art
+      .fillStyle(0x58aee1)
+      .fillRect(8, -15, 2, 3)
+      .fillRect(6, -12, 6, 5)
+      .fillRect(8, -7, 2, 2);
+    art.fillStyle(0xc5ecff).fillRect(7, -11, 2, 3);
     return;
   }
   art.fillStyle(0x302319, 0.7).fillEllipse(0, 4, 23, 9);
@@ -37,5 +48,15 @@ export function paintFarmPlot(
     art.fillStyle(0xc98ca4).fillRect(-7, -7, 14, 3);
     art.fillStyle(0xf1d9bb).fillRect(-2, 5, 3, 4);
   }
-  art.fillStyle(0xffde8b).fillRect(10, -16, 2, 6).fillRect(8, -14, 6, 2);
+  art
+    .fillStyle(0xffd87d, 0.18)
+    .fillRect(6, -17, 10, 10)
+    .fillRect(-14, -13, 6, 6);
+  art
+    .fillStyle(0xffdf9b, 0.9)
+    .fillRect(10, -17, 2, 10)
+    .fillRect(6, -13, 10, 2)
+    .fillRect(-12, -12, 2, 4)
+    .fillRect(-13, -11, 4, 2);
+  art.fillStyle(0xfff5da).fillRect(10, -13, 2, 2);
 }

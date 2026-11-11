@@ -3,12 +3,21 @@ import {
   CROPS,
   FARM_RANGE,
   MAX_OWNED_PLOTS,
+  cropStatus,
   cropStatusLabel,
   farmInteraction,
   plotPosition,
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
 import type { WorldConnection } from '../../game/networking/world-connection';
+
+const attentionOrder = {
+  ready: 0,
+  thirsty: 1,
+  growing: 2,
+  prepared: 2,
+  empty: 2,
+};
 
 export function FarmingPanel({
   connection,
@@ -29,7 +38,12 @@ export function FarmingPanel({
 
   const plots = state.plots ?? [];
   const now = state.worldTime ?? 0;
-  const owned = plots.filter((p) => p.ownerId === gameplay.characterId);
+  const owned = plots
+    .filter((p) => p.ownerId === gameplay.characterId)
+    .sort(
+      (a, b) =>
+        attentionOrder[cropStatus(a, now)] - attentionOrder[cropStatus(b, now)],
+    );
   const distance = (plot: (typeof plots)[number]) => {
     const point = plotPosition(plot);
     return state.position

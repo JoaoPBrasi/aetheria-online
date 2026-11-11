@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { makeNameplate } from '../ui/nameplate';
+import { makeSpeechBubble } from '../ui/speech-bubble';
 import type { Cosmetics } from '@aetheria/shared';
 import {
   appearanceLayers,
@@ -17,6 +18,7 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
   private frameKey = '';
   private startedAt = 0;
   private movingUntil = 0;
+  private currentSpeechBubble?: Phaser.GameObjects.Container;
   private action?: {
     state: PlayerAnimation;
     until: number;
@@ -56,6 +58,19 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
     this.startedAt = time;
     this.state = state;
     this.frameKey = '';
+  }
+  showSpeechBubble(message: string, durationMs = 5000) {
+    if (this.currentSpeechBubble) {
+      this.currentSpeechBubble.destroy();
+      this.currentSpeechBubble = undefined;
+    }
+    const bubble = makeSpeechBubble(this.scene, message, durationMs, () => {
+      if (this.currentSpeechBubble === bubble) {
+        this.currentSpeechBubble = undefined;
+      }
+    });
+    this.add(bubble);
+    this.currentSpeechBubble = bubble;
   }
   updatePose(
     time: number,

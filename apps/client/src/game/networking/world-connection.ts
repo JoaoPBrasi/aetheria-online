@@ -28,6 +28,10 @@ export class WorldConnection {
     if (gameBridge.getSnapshot().status === 'connected')
       this.room?.send('sync');
   }
+  sendChat(text: string, channel: 'local' | 'global' = 'local') {
+    if (this.disposed || gameBridge.getSnapshot().status !== 'connected') return;
+    this.room?.send('chat', { text, channel });
+  }
   action(payload: Record<string, unknown>) {
     const current = gameBridge.getSnapshot();
     if (
@@ -194,6 +198,10 @@ export class WorldConnection {
           questPending: false,
         });
         room.send('sync');
+      });
+      room.onMessage('chat', (message: import('@aetheria/shared').ChatMessage) => {
+        if (this.disposed) return;
+        gameBridge.pushChatMessage(message);
       });
       room.send('sync');
       movement.send = (input) => room.send('move', input);

@@ -1,4 +1,4 @@
-import type { CombatFeedback, GameSnapshot } from '@aetheria/shared';
+import type { ChatMessage, CombatFeedback, GameSnapshot } from '@aetheria/shared';
 
 export interface ActiveCast {
   id: string;
@@ -31,6 +31,7 @@ export class GameBridge {
     local: boolean,
     attackerSession?: string,
   ) => void;
+  speechBubble?: (message: ChatMessage) => void;
   private snapshot: GameSnapshot = {
     status: 'offline',
     players: 0,
@@ -39,6 +40,7 @@ export class GameBridge {
     health: 100,
     maxHealth: 100,
     monsters: [],
+    chatMessages: [],
   };
   private listeners = new Set<() => void>();
   private activeCast: ActiveCast | null = null;
@@ -54,6 +56,13 @@ export class GameBridge {
   update(patch: Partial<GameSnapshot>) {
     this.snapshot = { ...this.snapshot, ...patch };
     this.listeners.forEach((fn) => fn());
+  }
+
+  pushChatMessage(message: ChatMessage) {
+    const list = this.snapshot.chatMessages ?? [];
+    const next = [...list.slice(-49), message];
+    this.update({ chatMessages: next });
+    this.speechBubble?.(message);
   }
 
   getCast = () => this.activeCast;

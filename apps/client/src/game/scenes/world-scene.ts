@@ -325,9 +325,21 @@ export class WorldScene extends Phaser.Scene {
       this.lastToolAnimTime = this.time.now;
       this.animateToolAction(action, false, 420);
     };
+    gameBridge.speechBubble = (msg) => {
+      const snap = gameBridge.getSnapshot();
+      if (msg.characterId === snap.gameplay?.characterId) {
+        this.avatar.showSpeechBubble(msg.text);
+      } else {
+        const remote = this.remoteSprites.get(msg.sessionId);
+        if (remote) {
+          remote.showSpeechBubble(msg.text);
+        }
+      }
+    };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       gameBridge.animateCharacter = undefined;
       gameBridge.combatFeedback = undefined;
+      gameBridge.speechBubble = undefined;
       this.lastToolAction = undefined;
     });
     this.avatar.setVisible(false);

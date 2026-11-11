@@ -18,6 +18,7 @@ import { gameBridge } from '../../game/managers/game-bridge';
 import type { WorldConnection } from '../../game/networking/world-connection';
 import { audioManager } from '../../game/audio/audio-manager';
 import { AudioModal } from './audio-modal';
+import { ChatBox } from './chat-box';
 import { GameplayPanel } from './gameplay-panel';
 import { CraftingPanel } from './crafting-panel';
 import { DialogueModal } from './dialogue-modal';
@@ -618,6 +619,7 @@ export function GameHud({
           </span>
         ))}
       </div>
+      <ChatBox connection={connection} />
       {panel === 'audio' && <AudioModal onClose={() => setPanel(null)} />}
       {panel && showModal && (
         <div

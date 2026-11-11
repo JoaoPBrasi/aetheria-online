@@ -95,5 +95,45 @@ describe('GameBridge - Sistema de Cast e Canalização', () => {
     expect(bridge.getCast()?.label).toBe('Segunda Ação');
     expect(bridge.getCast()?.status).toBe('channeling');
   });
+
+  it('armazena mensagens de chat no snapshot e dispara o balão de fala', () => {
+    const bubbleSpy = vi.fn();
+    bridge.speechBubble = bubbleSpy;
+
+    const msg = {
+      id: 'msg-1',
+      sessionId: 'session-a',
+      characterId: 'char-a',
+      author: 'Guerreiro',
+      channel: 'local' as const,
+      text: 'Olá mundo!',
+      createdAt: Date.now(),
+    };
+
+    bridge.pushChatMessage(msg);
+
+    const snapshot = bridge.getSnapshot();
+    expect(snapshot.chatMessages).toContainEqual(msg);
+    expect(bubbleSpy).toHaveBeenCalledWith(msg);
+  });
+
+  it('limita o histórico do chat a no máximo 50 mensagens mais recentes', () => {
+    for (let i = 1; i <= 60; i++) {
+      bridge.pushChatMessage({
+        id: `msg-${i}`,
+        sessionId: 'session-a',
+        characterId: 'char-a',
+        author: 'Guerreiro',
+        channel: 'local',
+        text: `Mensagem ${i}`,
+        createdAt: Date.now(),
+      });
+    }
+
+    const messages = bridge.getSnapshot().chatMessages ?? [];
+    expect(messages).toHaveLength(50);
+    expect(messages[0]?.id).toBe('msg-11');
+    expect(messages[49]?.id).toBe('msg-60');
+  });
 });
 

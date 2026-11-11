@@ -8,6 +8,10 @@ import {
   canStand,
   WORLD_SPAWN,
   isNearRestCampfire,
+  ChatSendSchema,
+  isWithinChatRange,
+  CHAT_COOLDOWN_MS,
+  type ChatMessage,
   type CombatFeedback,
   type CharacterSummary,
 } from '@aetheria/shared';
@@ -22,6 +26,7 @@ export class WorldRoom extends Room<{
   private inputs = new Map<string, MovementQueue>();
   private lastSync = new Map<string, number>();
   private lastCombat = new Map<string, number>();
+  private lastChat = new Map<string, number>();
   private pendingSaves = new Map<
     string,
     { x: number; y: number; direction: string }
@@ -54,6 +59,53 @@ export class WorldRoom extends Room<{
         client.send('quests', await this.gameplay.quests(p.characterId));
       } catch {
         client.send('gameplayError', 'Banco indisponível. Tente novamente.');
+      }
+    });
+    this.onMessage('chat', (client, raw: unknown) => {
+      const p = this.state.players.get(client.sessionId);
+      if (!p?.connected) return;
+
+      const now = Date.now();
+      const last = this.lastChat.get(client.sessionId) ?? 0;
+      if (now - last < CHAT_COOLDOWN_MS) {
+        client.send('gameplayError', 'Aguarde um momento antes de enviar outra mensagem.');
+        return;
+      }
+
+      const parsed = ChatSendSchema.safeParse(raw);
+      if (!parsed.success) {
+        client.send('gameplayError', parsed.error.issues[0]?.message ?? 'Mensagem inválida.');
+        return;
+      }
+
+      this.lastChat.set(client.sessionId, now);
+
+      const message: ChatMessage = {
+        id: crypto.randomUUID(),
+        sessionId: client.sessionId,
+        characterId: p.characterId,
+        author: p.name,
+        channel: parsed.data.channel,
+        text: parsed.data.text,
+        createdAt: now,
+        x: p.x,
+        y: p.y,
+      };
+
+      if (parsed.data.channel === 'global') {
+        this.broadcast('chat', message);
+      } else {
+        // Canal local: envia para todos os jogadores a até CHAT_LOCAL_RADIUS (320px)
+        for (const other of this.clients) {
+          const otherPlayer = this.state.players.get(other.sessionId);
+          if (!otherPlayer?.connected) continue;
+          if (
+            other.sessionId === client.sessionId ||
+            isWithinChatRange(p.x, p.y, otherPlayer.x, otherPlayer.y)
+          ) {
+            other.send('chat', message);
+          }
+        }
       }
     });
     this.onMessage('action', async (client, raw: unknown) => {
@@ -346,6 +398,7 @@ export class WorldRoom extends Room<{
   async onLeave(client: Client) {
     this.lastSync.delete(client.sessionId);
     this.lastCombat.delete(client.sessionId);
+    this.lastChat.delete(client.sessionId);
     this.inputs.delete(client.sessionId);
     const player = this.state.players.get(client.sessionId);
     if (player) {
