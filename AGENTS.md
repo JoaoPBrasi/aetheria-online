@@ -95,6 +95,7 @@ Consulte as notas antes de iniciar grandes mudanças:
 - `10 - 🎨 Direção de Arte e Cenografia de Brumavale.md`
 - `11 - 🤖 Integração MCP PixelLab (Geração de Personagens e Habilidades).md`
 - `12 - 🗺️ Proposta de Evolução — Funcionalidades Essenciais de MMORPG.md`
+- `13 - 🖼️ Linha do Tempo da Evolução Visual e Gráfica.md`
 
 ---
 
