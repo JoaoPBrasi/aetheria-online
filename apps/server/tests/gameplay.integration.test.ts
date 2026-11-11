@@ -4,6 +4,7 @@ import {
   GROVE_RESOURCES,
   QUARRY_RESOURCES,
   CRAFTING_STATIONS,
+  ROASTED_TURNIP_HEAL,
   treeStage,
 } from '@aetheria/shared';
 import { createDatabase } from '../src/database/client.js';
@@ -127,6 +128,77 @@ it('rejects invalid or out-of-range requests and rolls back without taking items
     1,
   );
   expect(restored.equipment).toHaveLength(0);
+});
+
+it('roasts turnips at the requested campfire and consumes one serving exactly once', async () => {
+  const id = await fixture();
+  const fire = CRAFTING_STATIONS.find(
+    (station) => station.id === 'campfire-plaza',
+  )!;
+  let snapshot = await service.sync(id);
+  const roast = () => ({
+    id: randomUUID(),
+    revision: snapshot.revision,
+    kind: 'craft',
+    recipeId: 'roasted_turnip',
+    stationId: fire.id,
+  });
+  await expect(service.act(id, roast(), at(fire))).rejects.toThrow(
+    'Materiais insuficientes',
+  );
+  await db.inventorySlot.create({
+    data: { characterId: id, index: 10, itemId: 'turnip', quantity: 2 },
+  });
+  const before = await service.sync(id);
+  await expect(
+    service.act(id, { ...roast(), stationId: 'workbench-plaza' }, at(fire)),
+  ).rejects.toThrow('Estação incorreta');
+  await expect(
+    service.act(id, roast(), at({ x: fire.x, y: fire.y + 67 })),
+  ).rejects.toThrow('fora de alcance');
+  expect(await service.sync(id)).toEqual(before);
+  snapshot = await service.act(id, roast(), at(fire));
+  snapshot = await service.act(id, roast(), at(fire));
+  expect(snapshot.inventory.some((slot) => slot.itemId === 'turnip')).toBe(
+    false,
+  );
+  const food = snapshot.inventory.find(
+    (slot) => slot.itemId === 'roasted_turnip',
+  )!;
+  expect(food.quantity).toBe(2);
+  expect(
+    snapshot.skills.find((skill) => skill.profession === 'farmer')?.xp,
+  ).toBe(10);
+
+  let health = 70;
+  const prepareConsumption = () => () => {
+    health += ROASTED_TURNIP_HEAL;
+  };
+  const eat = {
+    id: randomUUID(),
+    revision: snapshot.revision,
+    kind: 'consume',
+    from: food.index,
+  };
+  const otherServer = new GameplayService(new GameplayRepository(db));
+  await expect(
+    service.act(
+      id,
+      { ...eat, from: 0 },
+      position,
+      undefined,
+      prepareConsumption,
+    ),
+  ).rejects.toThrow('nabo assado');
+  const results = await Promise.all([
+    service.act(id, eat, position, undefined, prepareConsumption),
+    otherServer.act(id, eat, position, undefined, prepareConsumption),
+  ]);
+  expect(health).toBe(90);
+  for (const result of results)
+    expect(
+      result.inventory.find((slot) => slot.index === food.index)?.quantity,
+    ).toBe(1);
 });
 
 it('rolls back a full bag and permits the same uncommitted request after fixing space', async () => {

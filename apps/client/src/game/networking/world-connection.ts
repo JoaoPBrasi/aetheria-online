@@ -187,7 +187,7 @@ export class WorldConnection {
               : `${event.amount} de dano causado`
             : event.kind === 'hurt'
               ? `${event.amount} de dano recebido`
-              : `Fogueira · +${event.amount} de vida`;
+              : `${event.source === 'food' ? ITEMS.roasted_turnip.name : 'Fogueira'} · +${event.amount} de vida`;
         gameBridge.update({ combatText, combatAt: Date.now() });
       });
       room.onMessage('gameplayError', (message: string) => {

@@ -67,6 +67,7 @@ export class GameplayService {
     raw: unknown,
     getPosition: () => { x: number; y: number; direction: string } | undefined,
     onStrike?: (feedback: Extract<CombatFeedback, { kind: 'strike' }>) => void,
+    prepareConsumption?: () => () => void,
   ): Promise<GameplaySnapshot> {
     const parsed = GameActionSchema.safeParse(raw);
     if (!parsed.success) return Promise.reject(new Error('Comando inválido.'));
@@ -79,6 +80,17 @@ export class GameplayService {
       if (!position) throw new Error('Entre na vila para agir.');
       if (await this.repository.receipt(id, action.id))
         return this.repository.execute(id);
+      if (action.kind === 'consume') {
+        if (!prepareConsumption) throw new Error('Entre na vila para agir.');
+        return this.repository.execute(
+          id,
+          action,
+          undefined,
+          position,
+          undefined,
+          prepareConsumption(),
+        );
+      }
       if (action.kind === 'attack') {
         return this.serial(`monster:${action.targetId}`, async () => {
           const monster = this.monstersManager.get(action.targetId);

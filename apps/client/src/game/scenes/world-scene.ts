@@ -8,8 +8,6 @@ import {
   WORLD_REGIONS,
   QUARRY,
   CAMPFIRE,
-  PLAZA_CAMPFIRE,
-  REST_CAMPFIRES,
   RESOURCES,
   treeStage,
   FARM_PLOTS,
@@ -174,9 +172,11 @@ export class WorldScene extends Phaser.Scene {
       });
     }
 
-    for (const fire of REST_CAMPFIRES) {
+    for (const fire of CRAFTING_STATIONS.filter(
+      (station) => station.type === 'campfire',
+    )) {
       const { x, y } = fire;
-      const central = fire === PLAZA_CAMPFIRE;
+      const central = fire.id === 'campfire-plaza';
       this.add
         .ellipse(
           x,
@@ -191,7 +191,9 @@ export class WorldScene extends Phaser.Scene {
         .sprite(x, y, 'bonfire')
         .setScale(central ? 2.05 : 1.75)
         .setDepth(y)
-        .play('bonfire-burn');
+        .play('bonfire-burn')
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => gameBridge.interact?.(fire.id));
     }
 
     for (const plot of FARM_PLOTS) {
@@ -233,6 +235,7 @@ export class WorldScene extends Phaser.Scene {
         .image(x * TILE_SIZE, y * TILE_SIZE, 'resource-flower')
         .setDepth(y * TILE_SIZE);
     for (const station of CRAFTING_STATIONS) {
+      if (station.type === 'campfire') continue;
       const isFurnace = station.type === 'furnace';
       const textureKey = {
         forge: 'station-anvil',

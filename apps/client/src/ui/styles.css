@@ -808,7 +808,7 @@ footer {
   display: grid;
   gap: 8px;
 }
-.hud-modal:has(.farming-panel) {
+.hud-modal:has(.farming-panel, .campfire-cooking) {
   top: auto;
   bottom: 176px;
   max-height: calc(100% - 188px);

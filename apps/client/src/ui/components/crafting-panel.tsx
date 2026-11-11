@@ -3,7 +3,9 @@ import {
   ITEMS,
   CRAFTING_RECIPES,
   CRAFTING_STATIONS,
-  CRAFTING_INTERACTION_RANGE,
+  PROFESSION_NAMES,
+  ROASTED_TURNIP_HEAL,
+  craftingStationRange,
   canCraft,
   type CraftingStationId,
   type RecipeId,
@@ -34,6 +36,11 @@ const STATION_DETAILS: Record<
     description:
       'Alimente o fogo com lenha para queimar carvão vegetal e purificar minério de ferro bruto em lingotes de alto valor.',
   },
+  campfire: {
+    icon: '🔥',
+    specialty: 'Culinária',
+    description: `Asse os nabos da horta e leve-os na mochila. Cada porção recupera até ${ROASTED_TURNIP_HEAL} pontos de vida.`,
+  },
 };
 
 export function CraftingPanel({
@@ -57,6 +64,8 @@ export function CraftingPanel({
 
   const currentStation =
     CRAFTING_STATIONS.find((s) => s.id === stationId) ?? CRAFTING_STATIONS[0];
+  const range = craftingStationRange(currentStation.type);
+  const cooking = currentStation.type === 'campfire';
   const snapshot = state.gameplay;
 
   // Fecha o menu automaticamente se o jogador se afastar da estação
@@ -66,11 +75,11 @@ export function CraftingPanel({
         currentStation.x - state.position.x,
         currentStation.y - state.position.y,
       );
-      if (dist > CRAFTING_INTERACTION_RANGE) {
+      if (dist > range) {
         onClose?.();
       }
     }
-  }, [state.position, currentStation, onClose]);
+  }, [state.position, currentStation, range, onClose]);
 
   if (!snapshot) return null;
 
@@ -79,7 +88,7 @@ export function CraftingPanel({
     Math.hypot(
       currentStation.x - state.position.x,
       currentStation.y - state.position.y,
-    ) <= CRAFTING_INTERACTION_RANGE;
+    ) <= range;
 
   const recipes = Object.values(CRAFTING_RECIPES).filter(
     (r) => r.station === currentStation.type,
@@ -104,8 +113,8 @@ export function CraftingPanel({
     }
 
     const outputItem = ITEMS[recipe.output.itemId];
-    const label = `Forjando ${outputItem?.name ?? 'item'}…`;
-    const icon = recipe.station === 'furnace' ? '🔥' : '🔨';
+    const label = cooking ? 'Assando nabo…' : `Fabricando ${outputItem.name}…`;
+    const icon = cooking || recipe.station === 'furnace' ? '🔥' : '🔨';
 
     audioManager.unlockAudio();
     audioManager.playSfx('craft');
@@ -128,7 +137,7 @@ export function CraftingPanel({
 
   return (
     <section
-      className="crafting-panel dedicated-station-panel"
+      className={`crafting-panel dedicated-station-panel${cooking ? ' campfire-cooking' : ''}`}
       aria-label={currentStation.name}
     >
       <div className="station-banner">
@@ -153,7 +162,9 @@ export function CraftingPanel({
                 <strong>
                   {r.output.quantity} × {outputItem.name}
                 </strong>
-                <span className="recipe-xp">+{r.xp} XP Ferreiro</span>
+                <span className="recipe-xp">
+                  +{r.xp} XP {PROFESSION_NAMES[r.profession]}
+                </span>
               </div>
 
               <div className="recipe-ingredients">
@@ -183,14 +194,18 @@ export function CraftingPanel({
                   onClick={() => handleCraft(r.id)}
                 >
                   {isCasting
-                    ? 'Fabricando…'
+                    ? cooking
+                      ? 'Assando…'
+                      : 'Fabricando…'
                     : busy
                       ? 'Processando…'
                       : !isNear
                         ? 'Estação distante'
                         : !possible
                           ? 'Faltam materiais'
-                          : 'Fabricar'}
+                          : cooking
+                            ? 'Assar'
+                            : 'Fabricar'}
                 </button>
               </div>
             </div>

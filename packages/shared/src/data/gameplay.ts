@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CAMPFIRE, CAMPFIRE_REST_RANGE, PLAZA_CAMPFIRE } from './world.js';
 export * from './resources.js';
 export const ITEMS = {
   wood: { name: 'Madeira', stack: 99, tool: false },
@@ -17,6 +18,7 @@ export const ITEMS = {
   turnip_seed: { name: 'Semente de nabo', stack: 99, tool: false },
   pumpkin_seed: { name: 'Semente de abóbora', stack: 99, tool: false },
   turnip: { name: 'Nabo', stack: 99, tool: false },
+  roasted_turnip: { name: 'Nabo assado', stack: 99, tool: false },
   pumpkin: { name: 'Abóbora', stack: 99, tool: false },
   plank: { name: 'Tábua de madeira', stack: 99, tool: false },
   sword: { name: 'Espada de treino', stack: 1, tool: true },
@@ -24,6 +26,7 @@ export const ITEMS = {
   slime_goo: { name: 'Gosma de slime', stack: 99, tool: false },
 } as const;
 export type ItemId = keyof typeof ITEMS;
+export const ROASTED_TURNIP_HEAL = 20;
 export const PLAYER_ATTACK_RANGE = 64;
 export const PLAYER_ATTACK_COOLDOWN_MS = 400;
 export const UNARMED_DAMAGE = 20;
@@ -75,9 +78,28 @@ export const CRAFTING_STATIONS = [
     x: 1648,
     y: 832,
   },
+  {
+    id: 'campfire-plaza',
+    name: 'Fogueira da Praça',
+    type: 'campfire',
+    ...PLAZA_CAMPFIRE,
+  },
+  {
+    id: 'campfire-woodland',
+    name: 'Fogueira do Bosque',
+    type: 'campfire',
+    ...CAMPFIRE,
+  },
 ] as const;
 export type CraftingStationId = (typeof CRAFTING_STATIONS)[number]['id'];
 export type CraftingStationType = (typeof CRAFTING_STATIONS)[number]['type'];
+
+export function craftingStationRange(
+  type: CraftingStationType,
+  defaultRange = CRAFTING_INTERACTION_RANGE,
+) {
+  return type === 'campfire' ? CAMPFIRE_REST_RANGE : defaultRange;
+}
 
 const recipeIds = [
   'plank',
@@ -86,6 +108,7 @@ const recipeIds = [
   'iron_ingot',
   'iron_axe',
   'iron_sword',
+  'roasted_turnip',
 ] as const;
 export type RecipeId = (typeof recipeIds)[number];
 
@@ -100,6 +123,15 @@ export interface CraftingRecipe {
 }
 
 export const CRAFTING_RECIPES: Record<RecipeId, CraftingRecipe> = {
+  roasted_turnip: {
+    id: 'roasted_turnip',
+    name: 'Nabo assado',
+    station: 'campfire',
+    inputs: [{ itemId: 'turnip', quantity: 1 }],
+    output: { itemId: 'roasted_turnip', quantity: 1 },
+    profession: 'farmer',
+    xp: 5,
+  },
   plank: {
     id: 'plank',
     name: 'Tábua de madeira',
@@ -340,6 +372,7 @@ export type CombatFeedback =
     }
   | {
       kind: 'hurt' | 'heal';
+      source?: 'food';
       playerId: string;
       x: number;
       y: number;
@@ -368,6 +401,7 @@ export const GameActionSchema = z.discriminatedUnion('kind', [
     })
     .strict(),
   z.object({ ...base, kind: z.literal('equip'), from: slot }).strict(),
+  z.object({ ...base, kind: z.literal('consume'), from: slot }).strict(),
   z.object({ ...base, kind: z.literal('unequip') }).strict(),
   z
     .object({ ...base, kind: z.literal('gather'), node: z.string().max(40) })

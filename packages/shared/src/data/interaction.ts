@@ -3,7 +3,7 @@ import {
   RESOURCES,
   treeStage,
   CRAFTING_STATIONS,
-  CRAFTING_INTERACTION_RANGE,
+  craftingStationRange,
   MONSTERS,
   PLAYER_ATTACK_RANGE,
   addItem,
@@ -139,6 +139,9 @@ export function interaction(
   monsters: MonsterSnapshot[] = [],
   forage: ForageNode[] = [],
 ) {
+  const nearNpc = NPCS.some(
+    (npc) => Math.hypot(npc.x - position.x, npc.y - position.y) <= 72,
+  );
   const candidates = [
     ...[...RESOURCES, ...forage].map((r) => ({
       id: r.id,
@@ -163,7 +166,14 @@ export function interaction(
       monster: undefined as MonsterSnapshot | undefined,
       npc: undefined as NPCDefinition | undefined,
     })),
-    ...CRAFTING_STATIONS.map((st) => ({
+    ...CRAFTING_STATIONS.filter(
+      (st) =>
+        target ||
+        st.type !== 'campfire' ||
+        (!nearNpc &&
+          Math.hypot(st.x - position.x, st.y - position.y) <=
+            craftingStationRange(st.type)),
+    ).map((st) => ({
       id: st.id,
       x: st.x,
       y: st.y,
@@ -211,7 +221,7 @@ export function interaction(
     .sort((a, b) => a.distance - b.distance)[0];
   if (!chosen) return undefined;
   const maxRange = chosen.station
-    ? CRAFTING_INTERACTION_RANGE
+    ? craftingStationRange(chosen.station.type)
     : chosen.plot
       ? FARM_RANGE
       : 72;

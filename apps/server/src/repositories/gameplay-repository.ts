@@ -13,6 +13,7 @@ import {
   CRAFTING_RECIPES,
   CRAFTING_STATIONS,
   CRAFTING_SERVER_MAX_RANGE,
+  craftingStationRange,
   craftItem,
   DEFAULT_TREE_GROWTH_MS,
   type CropId,
@@ -47,8 +48,10 @@ export class GameplayRepository {
     },
     position?: Position,
     gatherNode?: ResourceDefinition,
+    onConsumed?: () => void,
   ): Promise<GameplaySnapshot> {
-    return this.db.$transaction(async (tx) => {
+    let consumed = false;
+    const result = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "Character" WHERE "id"=${characterId}::uuid FOR UPDATE`;
       const c = await tx.character.findUniqueOrThrow({
         where: { id: characterId },
@@ -231,6 +234,16 @@ export class GameplayRepository {
         equipment = [];
         changed = true;
       }
+      if (action?.kind === 'consume') {
+        const item = slots.find((slot) => slot.index === action.from);
+        if (!item || item.itemId !== 'roasted_turnip')
+          throw new Error('Escolha um nabo assado.');
+        if (!onConsumed) throw new Error('Entre na vila para agir.');
+        item.quantity -= 1;
+        slots = slots.filter((slot) => slot.quantity > 0);
+        changed = true;
+        consumed = true;
+      }
       if (action?.kind === 'gather') {
         const node = gatherNode;
         if (!node || node.id !== action.node)
@@ -269,16 +282,24 @@ export class GameplayRepository {
       if (action?.kind === 'craft') {
         const recipe = CRAFTING_RECIPES[action.recipeId];
         if (!recipe) throw new Error('Receita desconhecida.');
+        const namedStation = CRAFTING_STATIONS.find(
+          (s) => s.id === action.stationId,
+        );
+        if (
+          (recipe.station === 'campfire' ||
+            namedStation?.type === 'campfire') &&
+          namedStation?.type !== recipe.station
+        )
+          throw new Error('Estação incorreta para esta receita.');
         const matchingStation = CRAFTING_STATIONS.find(
           (s) =>
+            recipe.station !== 'campfire' &&
             s.type === recipe.station &&
             position &&
             Math.hypot(s.x - position.x, s.y - position.y) <=
               CRAFTING_SERVER_MAX_RANGE,
         );
-        const station =
-          CRAFTING_STATIONS.find((s) => s.id === action.stationId) ??
-          matchingStation;
+        const station = namedStation ?? matchingStation;
         if (!station) throw new Error('Estação de trabalho desconhecida.');
         if (station.type !== recipe.station && !matchingStation)
           throw new Error('Estação incorreta para esta receita.');
@@ -288,7 +309,8 @@ export class GameplayRepository {
           Math.hypot(
             activeStation.x - position.x,
             activeStation.y - position.y,
-          ) > CRAFTING_SERVER_MAX_RANGE
+          ) >
+            craftingStationRange(activeStation.type, CRAFTING_SERVER_MAX_RANGE)
         )
           throw new Error('Estação de trabalho fora de alcance.');
         slots = craftItem(slots, recipe);
@@ -388,6 +410,8 @@ export class GameplayRepository {
         })),
       };
     });
+    if (consumed) onConsumed?.();
+    return result;
   }
   async receipt(characterId: string, actionId: string) {
     return this.db.gameActionReceipt.findUnique({

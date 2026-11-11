@@ -1,6 +1,10 @@
 import { expect, it } from 'vitest';
 import { hasTool, interaction } from './interaction.js';
-import { GROVE_RESOURCES, type GameplaySnapshot } from './gameplay.js';
+import {
+  CRAFTING_STATIONS,
+  GROVE_RESOURCES,
+  type GameplaySnapshot,
+} from './gameplay.js';
 import { type FarmSnapshot } from './farming.js';
 const tree = GROVE_RESOURCES[0]!;
 const s: GameplaySnapshot = {
@@ -86,6 +90,34 @@ it('detects nearby NPCs and returns open_dialogue action payload', () => {
     npcId: 'elder-eldrin',
   });
   expect(target?.label).toBe('Conversar com Ancião Eldrin');
+});
+
+it('opens campfire cooking within range while keeping Eldrin available on arrival', () => {
+  const fire = CRAFTING_STATIONS.find(
+    (station) => station.id === 'campfire-plaza',
+  )!;
+  expect(interaction(s, { x: 1040, y: 1040 }, [], {}, 0)?.payload.kind).toBe(
+    'open_dialogue',
+  );
+  expect(interaction(s, fire, [], {}, 0, undefined, fire.id)?.payload).toEqual({
+    kind: 'open_crafting',
+    stationId: fire.id,
+    stationType: 'campfire',
+  });
+  expect(interaction(s, { x: fire.x, y: fire.y + 50 }, [], {}, 0)?.id).toBe(
+    fire.id,
+  );
+  expect(
+    interaction(
+      s,
+      { x: fire.x, y: fire.y + 67 },
+      [],
+      {},
+      0,
+      undefined,
+      fire.id,
+    ),
+  ).toBeUndefined();
 });
 
 it('opens seed selection independently of stock and validates the chosen seed', () => {

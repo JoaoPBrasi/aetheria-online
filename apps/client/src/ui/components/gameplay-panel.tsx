@@ -3,6 +3,7 @@ import {
   ITEMS,
   RESOURCES,
   WEAPON_DAMAGE,
+  ROASTED_TURNIP_HEAL,
   interaction,
   PROFESSION_NAMES,
   levelForXp,
@@ -75,6 +76,9 @@ export function GameplayPanel({
               melhor espada que você carrega.
             </p>
           )}
+          {source?.itemId === 'roasted_turnip' && (
+            <p>Recupera até {ROASTED_TURNIP_HEAL} pontos de vida.</p>
+          )}
           <div className="inventory-controls">
             <label>
               Quantidade
@@ -119,6 +123,21 @@ export function GameplayPanel({
             >
               Equipar
             </button>
+            {source?.itemId === 'roasted_turnip' && (
+              <button
+                type="button"
+                disabled={
+                  disabled || (state.health ?? 100) >= (state.maxHealth ?? 100)
+                }
+                onClick={() =>
+                  connection?.action({ kind: 'consume', from: source.index })
+                }
+              >
+                {(state.health ?? 100) >= (state.maxHealth ?? 100)
+                  ? 'Vida cheia'
+                  : 'Comer nabo assado'}
+              </button>
+            )}
           </div>
           <p data-testid="equipped-tool">
             Ferramenta:{' '}

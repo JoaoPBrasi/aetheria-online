@@ -8,6 +8,7 @@ import {
   canStand,
   WORLD_SPAWN,
   isNearRestCampfire,
+  ROASTED_TURNIP_HEAL,
   ChatSendSchema,
   CHAT_COOLDOWN_MS,
   type ChatMessage,
@@ -25,6 +26,7 @@ export class WorldRoom extends Room<{
   private inputs = new Map<string, MovementQueue>();
   private lastSync = new Map<string, number>();
   private lastCombat = new Map<string, number>();
+  private eating = new Set<string>();
   private lastChat = new Map<string, number>();
   private pendingSaves = new Map<
     string,
@@ -98,6 +100,7 @@ export class WorldRoom extends Room<{
     this.onMessage('action', async (client, raw: unknown) => {
       const p = this.state.players.get(client.sessionId);
       if (!p?.connected) return;
+      let startedEating = false;
       try {
         const snapshot = await this.gameplay.act(
           p.characterId,
@@ -111,6 +114,30 @@ export class WorldRoom extends Room<{
             if (this.state.players.has(client.sessionId))
               this.lastCombat.set(client.sessionId, Date.now());
             this.sendCombat(event);
+          },
+          () => {
+            if (!p.connected || !this.state.players.has(client.sessionId))
+              throw new Error('Entre na vila para agir.');
+            if (p.health >= p.maxHealth)
+              throw new Error('Sua vida já está cheia.');
+            this.eating.add(client.sessionId);
+            startedEating = true;
+            return () => {
+              const amount = Math.min(
+                ROASTED_TURNIP_HEAL,
+                p.maxHealth - p.health,
+              );
+              p.health += amount;
+              if (amount > 0)
+                this.sendCombat({
+                  kind: 'heal',
+                  source: 'food',
+                  playerId: p.characterId,
+                  x: p.x,
+                  y: p.y,
+                  amount,
+                });
+            };
           },
         );
         client.send('gameplay', snapshot);
@@ -165,6 +192,8 @@ export class WorldRoom extends Room<{
           'Para trocar, mova a pilha inteira.',
           'Limite da pilha excedido.',
           'Escolha uma ferramenta.',
+          'Escolha um nabo assado.',
+          'Sua vida já está cheia.',
           'Recurso indisponível.',
           'Equipe a ferramenta adequada.',
           'Receita desconhecida.',
@@ -183,6 +212,8 @@ export class WorldRoom extends Room<{
             ? error.message
             : 'Banco indisponível. A operação não foi confirmada.',
         );
+      } finally {
+        if (startedEating) this.eating.delete(client.sessionId);
       }
     });
     this.clock.setInterval(() => {
@@ -318,6 +349,7 @@ export class WorldRoom extends Room<{
     for (const [sessionId, player] of this.state.players) {
       if (
         !player.connected ||
+        this.eating.has(sessionId) ||
         player.health >= player.maxHealth ||
         now - (this.lastCombat.get(sessionId) ?? 0) < 4_000 ||
         !isNearRestCampfire(player) ||

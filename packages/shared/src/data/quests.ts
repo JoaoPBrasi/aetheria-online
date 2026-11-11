@@ -187,7 +187,7 @@ export const FARM_HARVEST_QUEST: QuestDefinition = {
     readyToTurnIn:
       'Que aroma revigorante de vegetais recém-colhidos! O solo de Brumavale é fértil quando cuidado com dedicação. Entregue a missão para receber sementes e experiência de Agricultor.',
     completed:
-      'Com este suprimento fresco, garantimos a provisão dos aldeões. Continue cultivando na horta sempre que precisar de mantimentos e novos plantios.',
+      'Com este suprimento fresco, garantimos a provisão dos aldeões. Você pode assar os próximos nabos na fogueira da Praça e levá-los para recuperar vida nas suas viagens.',
   },
   objectives: [
     {

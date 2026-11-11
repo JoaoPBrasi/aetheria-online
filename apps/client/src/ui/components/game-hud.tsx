@@ -11,7 +11,7 @@ import {
   TILE_SIZE,
   isNearRestCampfire,
   CRAFTING_STATIONS,
-  CRAFTING_INTERACTION_RANGE,
+  craftingStationRange,
   type CraftingStationId,
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
@@ -200,7 +200,7 @@ export function GameHud({
             station.x - now.position.x,
             station.y - now.position.y,
           );
-          if (dist > CRAFTING_INTERACTION_RANGE) {
+          if (dist > craftingStationRange(station.type)) {
             audioManager.playSfx('ui_click');
             gameBridge.update({
               feedback: `Aproxime-se de ${station.name} para utilizá-la.`,
@@ -352,7 +352,9 @@ export function GameHud({
           const equippedTool = currentSnap.equipment.find(
             (eq) => eq.slot === 'tool',
           )?.itemId;
-          if (slotItem && ITEMS[slotItem.itemId]?.tool) {
+          if (slotItem?.itemId === 'roasted_turnip') {
+            connection?.action({ kind: 'consume', from: slotIndex });
+          } else if (slotItem && ITEMS[slotItem.itemId]?.tool) {
             if (slotItem.itemId === equippedTool) {
               connection?.action({ kind: 'unequip' });
             } else {
@@ -532,6 +534,9 @@ export function GameHud({
         <Hotbar
           inventory={s.gameplay.inventory}
           equipment={s.gameplay.equipment}
+          onConsume={(fromIndex) =>
+            connection?.action({ kind: 'consume', from: fromIndex })
+          }
           onEquip={(fromIndex) =>
             connection?.action({ kind: 'equip', from: fromIndex })
           }

@@ -1,4 +1,9 @@
-import { ITEMS, type ItemId, type Slot } from '@aetheria/shared';
+import {
+  ITEMS,
+  ROASTED_TURNIP_HEAL,
+  type ItemId,
+  type Slot,
+} from '@aetheria/shared';
 
 const ITEM_ICONS: Record<ItemId, string> = {
   axe: '🪓',
@@ -13,6 +18,7 @@ const ITEM_ICONS: Record<ItemId, string> = {
   turnip_seed: '🌰',
   pumpkin_seed: '🌰',
   turnip: '🧅',
+  roasted_turnip: '🍲',
   pumpkin: '🎃',
   plank: '🪵',
   slime_goo: '🟢',
@@ -28,6 +34,7 @@ interface HotbarProps {
   inventory: Slot[];
   equipment: { slot: string; itemId: ItemId }[];
   onEquip: (index: number) => void;
+  onConsume: (index: number) => void;
   onUnequip: () => void;
 }
 
@@ -35,6 +42,7 @@ export function Hotbar({
   inventory,
   equipment,
   onEquip,
+  onConsume,
   onUnequip,
 }: HotbarProps) {
   const equippedToolId = equipment.find((e) => e.slot === 'tool')?.itemId;
@@ -52,7 +60,9 @@ export function Hotbar({
 
   const handleClick = (slotIndex: number, item?: Slot) => {
     if (!item) return;
-    if (ITEMS[item.itemId]?.tool) {
+    if (item.itemId === 'roasted_turnip') {
+      onConsume(slotIndex);
+    } else if (ITEMS[item.itemId]?.tool) {
       if (item.itemId === equippedToolId) {
         onUnequip();
       } else {
@@ -71,7 +81,7 @@ export function Hotbar({
             onClick={() => handleClick(index, item)}
             title={
               item
-                ? `${ITEMS[item.itemId].name} (Tecla ${keyNumber}) ${isEquipped ? '· Equipado' : ''}`
+                ? `${ITEMS[item.itemId].name} (Tecla ${keyNumber})${isEquipped ? ' · Equipado' : ''}${item.itemId === 'roasted_turnip' ? ` · Recupera até ${ROASTED_TURNIP_HEAL} de vida` : ''}`
                 : `Slot vazio (Tecla ${keyNumber})`
             }
             aria-label={`Slot ${keyNumber}: ${item ? ITEMS[item.itemId].name : 'Vazio'}`}
