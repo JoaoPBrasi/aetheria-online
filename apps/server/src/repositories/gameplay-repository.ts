@@ -258,15 +258,22 @@ export class GameplayRepository {
       if (action?.kind === 'craft') {
         const recipe = CRAFTING_RECIPES[action.recipeId];
         if (!recipe) throw new Error('Receita desconhecida.');
-        const station = CRAFTING_STATIONS.find(
-          (s) => s.id === action.stationId,
+        const matchingStation = CRAFTING_STATIONS.find(
+          (s) =>
+            s.type === recipe.station &&
+            position &&
+            Math.hypot(s.x - position.x, s.y - position.y) <= 140,
         );
+        const station =
+          CRAFTING_STATIONS.find((s) => s.id === action.stationId) ??
+          matchingStation;
         if (!station) throw new Error('Estação de trabalho desconhecida.');
-        if (station.type !== recipe.station)
+        if (station.type !== recipe.station && !matchingStation)
           throw new Error('Estação incorreta para esta receita.');
+        const activeStation = matchingStation ?? station;
         if (
           !position ||
-          Math.hypot(station.x - position.x, station.y - position.y) > 72
+          Math.hypot(activeStation.x - position.x, activeStation.y - position.y) > 140
         )
           throw new Error('Estação de trabalho fora de alcance.');
         slots = craftItem(slots, recipe);

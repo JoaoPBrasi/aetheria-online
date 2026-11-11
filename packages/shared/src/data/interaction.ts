@@ -107,7 +107,9 @@ export function interaction(
       distance: Math.hypot(c.x - position.x, c.y - position.y),
     }))
     .sort((a, b) => a.distance - b.distance)[0];
-  if (!chosen || chosen.distance > 72) return undefined;
+  if (!chosen) return undefined;
+  const maxRange = chosen.station ? 140 : 72;
+  if (chosen.distance > maxRange) return undefined;
   let label = '',
     tool: ItemId | undefined,
     enabled = true,

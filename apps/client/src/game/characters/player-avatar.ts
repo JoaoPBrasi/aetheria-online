@@ -17,7 +17,12 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
   private frameKey = '';
   private startedAt = 0;
   private movingUntil = 0;
-  private action?: { state: PlayerAnimation; until: number; facing?: Facing };
+  private action?: {
+    state: PlayerAnimation;
+    until: number;
+    facing?: Facing;
+    durationMs?: number;
+  };
   state: PlayerAnimation = 'idle';
   facing: Facing = 'down';
   constructor(scene: Phaser.Scene, name?: string) {
@@ -34,12 +39,19 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
     if (name) this.add(makeNameplate(scene, name, 'player', 0, -72));
     scene.add.existing(this);
   }
-  playGesture(state: PlayerAnimation, time: number, facing?: Facing) {
+  playGesture(
+    state: PlayerAnimation,
+    time: number,
+    facing?: Facing,
+    durationMs?: number,
+  ) {
     const animation = PLAYER_ANIMATIONS[state];
+    const dur = durationMs ?? (animation.frames * 1000) / animation.fps;
     this.action = {
       state,
-      until: time + (animation.frames * 1000) / animation.fps,
+      until: time + dur,
       facing,
+      durationMs: dur,
     };
     this.startedAt = time;
     this.state = state;
@@ -87,7 +99,12 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
         else sprite.clearTint();
       }
     }
-    const pose = poseAt(state, facing, time - this.startedAt),
+    const pose = poseAt(
+      state,
+      facing,
+      time - this.startedAt,
+      this.action?.durationMs,
+    ),
       frameKey = pose.key + facing;
     if (frameKey !== this.frameKey) {
       for (const [layer, sprite] of this.layers)

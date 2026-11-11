@@ -28,9 +28,18 @@ export function CraftingPanel({
   );
   const isCasting = activeCast?.status === 'channeling';
 
-  const [stationId, setStationId] = useState<CraftingStationId>(
-    initialStation ?? 'workbench-plaza',
-  );
+  const [stationId, setStationId] = useState<CraftingStationId>(() => {
+    if (initialStation) return initialStation;
+    if (state.position) {
+      const nearest = [...CRAFTING_STATIONS].sort(
+        (a, b) =>
+          Math.hypot(a.x - state.position!.x, a.y - state.position!.y) -
+          Math.hypot(b.x - state.position!.x, b.y - state.position!.y),
+      )[0];
+      if (nearest) return nearest.id;
+    }
+    return 'workbench-plaza';
+  });
 
   const currentStation = CRAFTING_STATIONS.find((s) => s.id === stationId);
   const snapshot = state.gameplay;
@@ -42,7 +51,7 @@ export function CraftingPanel({
     Math.hypot(
       currentStation.x - state.position.x,
       currentStation.y - state.position.y,
-    ) <= 72;
+    ) <= 140;
 
   const recipes = Object.values(CRAFTING_RECIPES).filter(
     (r) => currentStation && r.station === currentStation.type,
@@ -96,7 +105,7 @@ export function CraftingPanel({
         {CRAFTING_STATIONS.map((st) => {
           const nearThis =
             state.position &&
-            Math.hypot(st.x - state.position.x, st.y - state.position.y) <= 72;
+            Math.hypot(st.x - state.position.x, st.y - state.position.y) <= 140;
           return (
             <button
               key={st.id}

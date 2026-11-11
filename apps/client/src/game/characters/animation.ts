@@ -43,13 +43,20 @@ export function poseAt(
   state: PlayerAnimation,
   direction: Facing,
   elapsed: number,
+  durationMs?: number,
 ) {
   const { frames, fps } = PLAYER_ANIMATIONS[state];
-  const step = Math.max(0, Math.floor((elapsed * fps) / 1000));
-  const frame =
-    state === 'idle' || state === 'walk'
-      ? step % frames
-      : Math.min(frames - 1, step);
+  let frame: number;
+  if (state === 'idle' || state === 'walk') {
+    const step = Math.max(0, Math.floor((elapsed * fps) / 1000));
+    frame = step % frames;
+  } else if (durationMs && durationMs > 0) {
+    const progress = Math.max(0, Math.min(0.999, elapsed / durationMs));
+    frame = Math.min(frames - 1, Math.floor(progress * frames));
+  } else {
+    const step = Math.max(0, Math.floor((elapsed * fps) / 1000));
+    frame = Math.min(frames - 1, step);
+  }
   return {
     key: `${state === 'attack' ? 'chop' : state}-${direction === 'left' || direction === 'right' ? 'side' : direction}-${frame}`,
     flip: direction === 'left',

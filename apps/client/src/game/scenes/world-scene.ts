@@ -303,7 +303,7 @@ export class WorldScene extends Phaser.Scene {
     gameBridge.animateCharacter = (action) => {
       this.lastToolAction = action;
       this.lastToolAnimTime = this.time.now;
-      this.animateToolAction(action);
+      this.animateToolAction(action, false, 420);
     };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       gameBridge.animateCharacter = undefined;
@@ -589,6 +589,7 @@ export class WorldScene extends Phaser.Scene {
   private animateToolAction(
     action: Record<string, unknown>,
     playSound = false,
+    durationMs?: number,
   ) {
     const kind = action.kind as string;
     const resource = RESOURCES.find((r) => r.id === action.node);
@@ -658,7 +659,7 @@ export class WorldScene extends Phaser.Scene {
       toolEffect = 'sword';
     }
 
-    this.avatar.playGesture(gesture, this.time.now);
+    this.avatar.playGesture(gesture, this.time.now, undefined, durationMs);
     showToolEffect(
       this,
       this.avatar.x,
@@ -735,14 +736,22 @@ export class WorldScene extends Phaser.Scene {
     const isMoving = dx !== 0 || dy !== 0;
     if (isMoving && gameBridge.getCast()?.status === 'channeling') {
       gameBridge.cancelCast('Movimento cancelou a ação!');
+      this.avatar.playGesture('idle', this.time.now);
       this.lastToolAction = undefined;
     }
 
     const activeCast = gameBridge.getCast();
     if (activeCast && activeCast.status === 'channeling') {
-      if (this.lastToolAction && time - this.lastToolAnimTime >= 650) {
+      const strikeInterval = Math.max(
+        300,
+        Math.min(500, Math.floor(activeCast.durationMs / 3.4)),
+      );
+      if (
+        this.lastToolAction &&
+        time - this.lastToolAnimTime >= strikeInterval
+      ) {
         this.lastToolAnimTime = time;
-        this.animateToolAction(this.lastToolAction, true);
+        this.animateToolAction(this.lastToolAction, true, strikeInterval);
       }
     } else if (this.lastToolAction) {
       this.lastToolAction = undefined;
