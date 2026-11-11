@@ -7,6 +7,8 @@ import {
   levelForXp,
   WORLD_REGIONS,
   TILE_SIZE,
+  CAMPFIRE,
+  CAMPFIRE_REST_RANGE,
   type CropId,
   type CraftingStationId,
 } from '@aetheria/shared';
@@ -16,8 +18,10 @@ import { GameplayPanel } from './gameplay-panel';
 import { CraftingPanel } from './crafting-panel';
 import { DialogueModal } from './dialogue-modal';
 import { Hotbar } from './hotbar';
+import { Minimap } from './minimap';
 import { QuestTracker } from './quest-tracker';
 import { QuestJournal } from './quest-journal';
+import { soloGuide } from '../solo-guide';
 import {
   activeQuests,
   readHiddenQuests,
@@ -65,6 +69,10 @@ export function GameHud({
   const [dialogueNpc, setDialogueNpc] = useState<string | null>(null);
   const [crop, setCrop] = useState<CropId>('turnip');
   const close = useRef<HTMLButtonElement>(null);
+  const guide =
+    s.status === 'connected' && s.position && s.quests
+      ? soloGuide(s.quests, s.position, hiddenQuests)
+      : undefined;
   const nearby =
     s.gameplay && s.position
       ? interaction(
@@ -205,7 +213,7 @@ export function GameHud({
                 )}%`,
               }}
             />
-            <span className="hud-health-text">
+            <span className="hud-health-text" data-testid="player-health">
               {s.health ?? 100} / {s.maxHealth ?? 100} HP
             </span>
           </div>
@@ -215,14 +223,13 @@ export function GameHud({
           </small>
         </div>
       </div>
-      <div className="hud-location">
-        <span>AETHERIA / TERRAS LIVRES</span>
-        <strong data-testid="world-region">
-          {region?.name ?? 'Terras de Brumavale'}
-        </strong>
-        <small>WASD · mover &nbsp; E · interagir</small>
-        <button onClick={onExit}>Sair da sala</button>
-      </div>
+      <Minimap
+        position={s.position}
+        regionName={region?.name}
+        nearby={s.nearby}
+        monsters={s.monsters}
+        onExit={onExit}
+      />
       <QuestTracker
         quests={activeQuests(s.quests ?? []).filter(
           (q) => !hiddenQuests.includes(q.questId),
@@ -230,6 +237,29 @@ export function GameHud({
         onOpenJournal={() => setPanel('quests')}
         onUntrack={toggleQuest}
       />
+      {!panel && guide && (
+        <div className="solo-guide" data-testid="solo-guide">
+          <strong>{guide.title}</strong>
+          <span className="solo-guide-route">{guide.route}</span>
+          <small>{guide.hint}</small>
+        </div>
+      )}
+      {!panel && nearby?.monster?.state === 'windup' && (
+        <div className="combat-warning" data-testid="enemy-windup">
+          Recue do círculo!
+        </div>
+      )}
+      {s.combatText &&
+        s.combatAt !== undefined &&
+        (s.worldTime ?? 0) - s.combatAt < 1400 && (
+          <div
+            className="combat-feedback"
+            data-testid="combat-feedback"
+            aria-live="polite"
+          >
+            {s.combatText}
+          </div>
+        )}
       <div className="hud-context" aria-live="polite">
         {s.status !== 'connected' ? (
           <p>Reconectando… As ações estão pausadas.</p>
@@ -261,6 +291,10 @@ export function GameHud({
               </div>
             )}
           </>
+        ) : s.position &&
+          Math.hypot(s.position.x - CAMPFIRE.x, s.position.y - CAMPFIRE.y) <=
+            CAMPFIRE_REST_RANGE ? (
+          <p>Fogueira · recupere vida fora de combate</p>
         ) : (
           <p>Explore. Aproxime-se de um recurso para interagir.</p>
         )}

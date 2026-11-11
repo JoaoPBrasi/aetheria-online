@@ -693,6 +693,57 @@ footer {
   min-width: 260px;
   text-shadow: 0 2px 4px #15261b;
 }
+.solo-guide,
+.combat-warning,
+.combat-feedback {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  border-radius: 8px;
+  pointer-events: none;
+}
+.solo-guide {
+  top: 22px;
+  width: min(350px, calc(100vw - 540px));
+  display: grid;
+  gap: 4px;
+  padding: 9px 13px;
+  border: 1px solid #9a9161;
+  background: #182e25ed;
+  color: #f6e7bf;
+}
+.solo-guide small {
+  color: #d0dbbd;
+  line-height: 1.35;
+}
+.solo-guide-route {
+  color: #f0cc87;
+  font-weight: bold;
+}
+.combat-warning,
+.combat-feedback {
+  padding: 5px 12px;
+  color: #fff1cf;
+  font-weight: bold;
+}
+.combat-warning {
+  top: calc(50% - 136px);
+  border: 1px solid #ff9673;
+  background: #662d23ed;
+}
+.combat-feedback {
+  top: calc(50% - 102px);
+  background: #203327ed;
+  border: 1px solid #a89862;
+}
+@media (max-width: 760px) {
+  .solo-guide {
+    top: auto;
+    bottom: 235px;
+    width: min(330px, calc(100vw - 24px));
+  }
+}
 .hud-context > small {
   display: block;
   color: #e1dfbd;
@@ -1591,11 +1642,136 @@ footer {
 }
 
 /* ==========================================================================
+   MINIMAP / RADAR DE NAVEGAÇÃO DE BRUMAVALE
+   ========================================================================== */
+.minimap-shell {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(135deg, #1d302bec, #12251ff2);
+  border: 1px solid #8d8d60;
+  box-shadow:
+    0 6px 24px #0a1a1a65,
+    inset 0 0 0 3px #243b2e;
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  padding: 10px 14px 12px;
+  width: 176px;
+  pointer-events: auto;
+  user-select: none;
+  transition: all 0.25s ease-in-out;
+}
+
+.minimap-shell.expanded {
+  width: 260px;
+}
+
+.minimap-header {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 6px;
+}
+
+.minimap-location-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.minimap-realm {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: #b6c4a5;
+  text-transform: uppercase;
+}
+
+.minimap-region-name {
+  font: 14px Georgia, serif;
+  color: #f7df94;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.minimap-actions {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.minimap-btn {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #243d2f;
+  border: 1px solid #8d8d6088;
+  border-radius: 4px;
+  color: #eedca4;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.minimap-btn:hover {
+  background: #365743;
+  color: #fff;
+  border-color: #eed69b;
+}
+
+.minimap-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.minimap-canvas {
+  border-radius: 50%;
+  background: #111a15;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  display: block;
+}
+
+.minimap-coords {
+  margin-top: 6px;
+  font-family: monospace;
+  font-size: 9.5px;
+  color: #c6c9b0;
+  letter-spacing: 0.5px;
+}
+
+.minimap-exit-btn {
+  margin-top: 6px;
+  background: transparent;
+  border: none;
+  font-size: 9.5px;
+  color: #d3c69e;
+  text-decoration: underline;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.minimap-exit-btn:hover {
+  opacity: 1;
+  color: #fff;
+}
+
+/* ==========================================================================
    Rastreador de Missões (Quest Tracker) e Diálogos de Missões
    ========================================================================== */
 .quest-tracker-shell {
   position: absolute;
-  top: 130px;
+  top: 250px;
   right: 20px;
   z-index: 45;
   width: min(310px, calc(100vw - 32px));
@@ -2128,9 +2304,19 @@ footer {
   .journal-footer {
     padding: 12px;
   }
+  .minimap-shell {
+    top: 10px;
+    right: 10px;
+    width: 145px;
+    padding: 6px 8px 8px;
+  }
+  .minimap-canvas {
+    width: 100px;
+    height: 100px;
+  }
   .quest-tracker-shell {
-    top: 105px;
-    right: 12px;
+    top: 200px;
+    right: 10px;
     width: 260px;
   }
   .hud-dock {
