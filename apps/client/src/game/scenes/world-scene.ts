@@ -704,7 +704,7 @@ export class WorldScene extends Phaser.Scene {
         farmState.plots ?? [],
         farmState.resources ?? {},
         Date.now(),
-        farmState.farmCrop ?? 'turnip',
+        undefined,
         nearbyFarmTarget(
           farmState.plots ?? [],
           farmState.farmTarget,

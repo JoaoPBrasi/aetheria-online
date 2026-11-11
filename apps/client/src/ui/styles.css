@@ -577,6 +577,7 @@ footer {
 .hud-location,
 .hud-dock,
 .hud-modal,
+.seed-picker,
 .hud-context > button {
   background: linear-gradient(135deg, #1d302bec, #12251ff2);
   border: 1px solid #8d8d60;
@@ -807,21 +808,18 @@ footer {
   display: grid;
   gap: 8px;
 }
-.farm-plot-detail select {
-  max-width: 100%;
-}
 .hud-modal:has(.farming-panel) {
   top: auto;
   bottom: 176px;
   max-height: calc(100% - 188px);
   z-index: 55;
 }
-.crop-quick button {
-  max-width: min(220px, calc(50vw - 18px));
-}
 @media (max-width: 760px) {
-  .game-hud:has(.crop-quick, .hud-cast-bar) .solo-guide {
+  .game-hud:has(.hud-cast-bar) .solo-guide {
     bottom: 300px;
+  }
+  .game-hud:has(.seed-picker) .solo-guide {
+    display: none;
   }
 }
 
@@ -952,21 +950,78 @@ footer {
   80% { transform: translate(calc(-50% + 3px), 0); }
   100% { transform: translate(-50%, 0); }
 }
-.crop-quick {
-  display: flex;
-  gap: 5px;
-  margin-top: 8px;
-  justify-content: center;
+.hud-context:has(.seed-picker) {
+  z-index: 55;
 }
-.crop-quick button {
-  padding: 6px 10px;
-  border-radius: 7px;
-  background: #293f2f;
-  border: 1px solid #a4a178;
+.seed-picker {
+  width: min(340px, calc(100vw - 24px));
+  max-height: calc(100dvh - 190px);
+  overflow: auto;
+  padding: 12px;
+  text-align: left;
+  pointer-events: auto;
+}
+.seed-picker header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.seed-picker h3 {
+  margin: 0;
+  color: #f6e7bf;
+  font-size: 15px;
+}
+.seed-picker header button {
+  padding: 6px;
+}
+.seed-picker small {
+  display: block;
+  color: #c5d0b6;
   font-size: 11px;
 }
-.crop-quick button[aria-pressed='true'] {
-  background: #7c774e;
+.seed-picker ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.seed-picker li button {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: #293f2f;
+  border: 1px solid #6c805f;
+  text-align: left;
+  font-size: 13px;
+}
+.seed-picker button:focus-visible {
+  outline: 2px solid #e8c87b;
+  outline-offset: -2px;
+}
+.seed-picker-count {
+  color: #f0cc87;
+  font-size: 11px;
+}
+.seed-picker-icon {
+  /* Bolsas do atlas da fazenda, em células de 16 px exibidas em escala 2×. */
+  width: 32px;
+  height: 32px;
+  background-image: url('../../../../art/sprites/farm.png');
+  background-size: 800px 800px;
+  image-rendering: pixelated;
+}
+.seed-picker-icon--turnip {
+  background-position: 0 -64px;
+}
+.seed-picker-icon--pumpkin {
+  background-position: 0 0;
 }
 .hotbar-container {
   position: absolute;

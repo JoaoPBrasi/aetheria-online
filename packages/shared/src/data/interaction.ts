@@ -62,7 +62,7 @@ export function farmInteraction(
   plots: FarmSnapshot[],
   position: { x: number; y: number } | undefined,
   now: number,
-  crop: CropId,
+  crop?: CropId,
 ) {
   const point = plotPosition(p);
   const distance = position
@@ -79,7 +79,9 @@ export function farmInteraction(
   const name = p.cropId ? CROPS[p.cropId].name.toLocaleLowerCase('pt-BR') : '';
   const label = {
     empty: 'Preparar terra',
-    prepared: `Plantar ${CROPS[crop].name.toLocaleLowerCase('pt-BR')}`,
+    prepared: crop
+      ? `Plantar ${CROPS[crop].name.toLocaleLowerCase('pt-BR')}`
+      : 'Escolher semente',
     thirsty: `Regar ${name}`,
     ready: `Colher ${name}`,
     growing: cropStatusLabel(p, now),
@@ -97,7 +99,7 @@ export function farmInteraction(
       MAX_OWNED_PLOTS
   )
     reason = 'Limite de quatro parcelas';
-  else if (state === 'prepared' && seedCount(s, crop) === 0)
+  else if (state === 'prepared' && crop && seedCount(s, crop) === 0)
     reason = `Sem sementes de ${CROPS[crop].name.toLocaleLowerCase('pt-BR')}`;
   else if (state === 'thirsty' && !hasTool(s, 'watering_can'))
     reason = 'Regador necessário na mochila';
@@ -122,7 +124,7 @@ export function farmInteraction(
       kind: 'farm',
       plot: p.id,
       operation,
-      ...(operation === 'plant' ? { crop } : {}),
+      ...(operation === 'plant' && crop ? { crop } : {}),
     },
   };
 }
@@ -132,7 +134,7 @@ export function interaction(
   plots: FarmSnapshot[],
   resources: ResourceStates,
   now: number,
-  crop: CropId,
+  crop?: CropId,
   target?: string,
   monsters: MonsterSnapshot[] = [],
   forage: ForageNode[] = [],

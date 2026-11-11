@@ -26,7 +26,6 @@ export interface GameSnapshot {
   combatAt?: number;
   plots?: import('../data/farming.js').FarmSnapshot[];
   farmTarget?: string;
-  farmCrop?: import('../data/farming.js').CropId;
   quests?: import('../data/quests.js').CharacterQuestState[];
   status: ConnectionStatus;
   players: number;

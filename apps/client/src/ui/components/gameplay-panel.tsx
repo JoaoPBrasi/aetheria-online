@@ -147,7 +147,7 @@ export function GameplayPanel({
                 [],
                 state.resources ?? {},
                 state.worldTime ?? 0,
-                'turnip',
+                undefined,
                 r.id,
                 [],
                 state.forage,

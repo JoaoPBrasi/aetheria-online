@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 import { hasTool, interaction } from './interaction.js';
 import { GROVE_RESOURCES, type GameplaySnapshot } from './gameplay.js';
+import { type FarmSnapshot } from './farming.js';
 const tree = GROVE_RESOURCES[0]!;
 const s: GameplaySnapshot = {
   characterId: 'a',
@@ -85,4 +86,47 @@ it('detects nearby NPCs and returns open_dialogue action payload', () => {
     npcId: 'elder-eldrin',
   });
   expect(target?.label).toBe('Conversar com Ancião Eldrin');
+});
+
+it('opens seed selection independently of stock and validates the chosen seed', () => {
+  const plot: FarmSnapshot = {
+    id: 'p',
+    tileX: 10,
+    tileY: 38,
+    ownerId: s.characterId,
+    prepared: true,
+    cropId: null,
+    harvestAt: null,
+    wateredAt: null,
+    plantedAt: null,
+  };
+  const position = { x: 336, y: 1232 };
+  expect(
+    interaction(s, position, [plot], {}, 0, undefined, plot.id),
+  ).toMatchObject({
+    enabled: true,
+    label: 'Escolher semente',
+    payload: { kind: 'farm', plot: plot.id, operation: 'plant' },
+  });
+  expect(
+    interaction(s, position, [plot], {}, 0, 'turnip', plot.id),
+  ).toMatchObject({
+    enabled: false,
+    label: 'Sem sementes de nabo',
+  });
+  const player: GameplaySnapshot = {
+    ...s,
+    inventory: [{ index: 0, itemId: 'pumpkin_seed', quantity: 1 }],
+  };
+  expect(
+    interaction(player, position, [plot], {}, 0, 'pumpkin', plot.id),
+  ).toMatchObject({
+    enabled: true,
+    payload: {
+      kind: 'farm',
+      plot: plot.id,
+      operation: 'plant',
+      crop: 'pumpkin',
+    },
+  });
 });

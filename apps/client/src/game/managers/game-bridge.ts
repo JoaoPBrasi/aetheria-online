@@ -18,7 +18,10 @@ export interface ActiveCast {
 export class GameBridge {
   interact?: (
     target?: string,
-    farmCropFromPanel?: import('@aetheria/shared').CropId,
+    options?: {
+      fromFarmPanel?: boolean;
+      crop?: import('@aetheria/shared').CropId;
+    },
   ) => void;
   acceptQuest?: (questId: string) => void;
   turnInQuest?: (questId: string) => void;

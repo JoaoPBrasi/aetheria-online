@@ -111,7 +111,7 @@ function harvestStep(
           : plot.cropId === 'pumpkin'
             ? 'Termine o cultivo da abóbora ou prepare outra parcela para plantar nabo.'
             : state === 'prepared'
-              ? 'Escolha nabo e pressione E ou clique. Depois regue.'
+              ? 'Pressione E ou clique para escolher sementes de nabo. Depois regue.'
               : 'Pressione E ou clique na parcela.'));
   return {
     title: state === 'growing' ? cropStatusLabel(plot, now) : action.label,

@@ -4,8 +4,6 @@ import {
   ITEMS,
   interaction,
   nearbyFarmTarget,
-  seedCount,
-  CROPS,
   cropStatusLabel,
   PROFESSION_NAMES,
   levelForXp,
@@ -14,7 +12,6 @@ import {
   isNearRestCampfire,
   CRAFTING_STATIONS,
   CRAFTING_INTERACTION_RANGE,
-  type CropId,
   type CraftingStationId,
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
@@ -29,6 +26,7 @@ import { Hotbar } from './hotbar';
 import { Minimap } from './minimap';
 import { QuestTracker } from './quest-tracker';
 import { QuestJournal } from './quest-journal';
+import { SeedPicker } from './seed-picker';
 import { soloGuide } from '../solo-guide';
 import {
   activeQuests,
@@ -62,12 +60,15 @@ export function GameHud({
     | 'bag'
     | 'skills'
     | 'farm'
+    | 'seeds'
     | 'crafting'
     | 'dialogue'
     | 'quests'
     | 'audio'
     | null
   >(null);
+  const showModal =
+    panel !== 'dialogue' && panel !== 'audio' && panel !== 'seeds';
   const [hiddenQuests, setHiddenQuests] = useState(() =>
     readHiddenQuests(characterId),
   );
@@ -81,7 +82,7 @@ export function GameHud({
   const [craftStation, setCraftStation] =
     useState<CraftingStationId>('workbench-plaza');
   const [dialogueNpc, setDialogueNpc] = useState<string | null>(null);
-  const crop = s.farmCrop ?? 'turnip';
+  const [seedPlotId, setSeedPlotId] = useState<string>();
   const cast = useSyncExternalStore(
     gameBridge.subscribeCast,
     gameBridge.getCast,
@@ -121,7 +122,7 @@ export function GameHud({
           s.plots ?? [],
           s.resources ?? {},
           s.worldTime ?? 0,
-          crop,
+          undefined,
           nearbyFarmTarget(s.plots ?? [], s.farmTarget, s.position),
           s.monsters ?? [],
           s.forage,
@@ -133,13 +134,16 @@ export function GameHud({
     return () => gameBridge.update({ inputBlocked: false });
   }, [panel]);
   useEffect(() => {
-    const act = (target?: string, farmCropFromPanel?: CropId) => {
+    const act: NonNullable<typeof gameBridge.interact> = (target, options) => {
       const now = gameBridge.getSnapshot();
-      const fromFarmPanel = panel === 'farm' && farmCropFromPanel !== undefined;
+      const fromFarmPanel = panel === 'farm' && options?.fromFarmPanel;
+      const crop = options?.crop;
+      const fromSeedPicker =
+        panel === 'seeds' && !!crop && target === seedPlotId;
       if (
         now.status !== 'connected' ||
         now.actionPending ||
-        (now.inputBlocked && !fromFarmPanel) ||
+        ((panel || now.inputBlocked) && !fromFarmPanel && !fromSeedPicker) ||
         !now.gameplay ||
         !now.position
       )
@@ -154,20 +158,36 @@ export function GameHud({
         now.plots ?? [],
         now.resources ?? {},
         now.worldTime ?? 0,
-        farmCropFromPanel ?? crop,
+        crop,
         target ??
           nearbyFarmTarget(now.plots ?? [], now.farmTarget, now.position),
         now.monsters ?? [],
         now.forage,
       );
       if (fromFarmPanel && !item?.plot) return;
-      if (item?.plot) {
+      if (fromSeedPicker && item?.payload.operation !== 'plant') {
+        setPanel(null);
         gameBridge.update({
-          farmTarget: item.plot.id,
-          farmCrop: farmCropFromPanel ?? crop,
+          feedback: 'A parcela precisa estar preparada para plantar.',
+          feedbackAt: Date.now(),
         });
+        return;
+      }
+      if (item?.plot) {
+        gameBridge.update({ farmTarget: item.plot.id });
         if (target && !item.enabled) {
           gameBridge.update({ feedback: item.label, feedbackAt: Date.now() });
+          return;
+        }
+        if (
+          item.enabled &&
+          item.payload.operation === 'plant' &&
+          !fromSeedPicker
+        ) {
+          audioManager.unlockAudio();
+          audioManager.playSfx('ui_open');
+          setSeedPlotId(item.plot.id);
+          setPanel('seeds');
           return;
         }
       }
@@ -240,7 +260,7 @@ export function GameHud({
             },
           });
         } else if (item.payload.kind === 'farm') {
-          if (fromFarmPanel) setPanel(null);
+          if (fromFarmPanel || fromSeedPicker) setPanel(null);
           const op = item.payload.operation;
           let label = 'Trabalho Agrícola…';
           let icon = '🌱';
@@ -306,6 +326,8 @@ export function GameHud({
         setPanel(null);
         return;
       }
+      // Deixa Espaço e Enter ativarem os botões da lista normalmente.
+      if (panel === 'seeds') return;
       if (
         e.target instanceof HTMLElement &&
         e.target.closest('input,textarea,select,[contenteditable=true]')
@@ -374,7 +396,7 @@ export function GameHud({
       window.removeEventListener('keydown', key);
       gameBridge.interact = undefined;
     };
-  }, [connection, crop, panel]);
+  }, [connection, panel, seedPlotId]);
   return (
     <div className="game-hud">
       <div className="hud-identity">
@@ -449,6 +471,14 @@ export function GameHud({
       <div className="hud-context" aria-live="polite">
         {s.status !== 'connected' ? (
           <p>Reconectando… As ações estão pausadas.</p>
+        ) : panel === 'seeds' && s.gameplay && seedPlotId ? (
+          <SeedPicker
+            plotId={seedPlotId}
+            gameplay={s.gameplay}
+            disabled={!!s.actionPending}
+            onChoose={(crop) => gameBridge.interact?.(seedPlotId, { crop })}
+            onClose={() => setPanel(null)}
+          />
         ) : nearby ? (
           <>
             <small>
@@ -476,21 +506,6 @@ export function GameHud({
               isNearRestCampfire(s.position) && (
                 <p>Fogueira · recupere vida fora de combate</p>
               )}
-            {nearby.payload.operation === 'plant' && !casting && (
-              <div className="crop-quick" aria-label="Culturas disponíveis">
-                {(Object.keys(CROPS) as CropId[]).map((id) => (
-                  <button
-                    key={id}
-                    aria-pressed={crop === id}
-                    onClick={() => gameBridge.update({ farmCrop: id })}
-                  >
-                    {CROPS[id].name} ·{' '}
-                    {s.gameplay ? seedCount(s.gameplay, id) : 0} sementes ·{' '}
-                    {CROPS[id].growMs / 1000} s após regar
-                  </button>
-                ))}
-              </div>
-            )}
           </>
         ) : s.position && isNearRestCampfire(s.position) ? (
           <p>Fogueira · recupere vida fora de combate</p>
@@ -604,7 +619,7 @@ export function GameHud({
         ))}
       </div>
       {panel === 'audio' && <AudioModal onClose={() => setPanel(null)} />}
-      {panel && panel !== 'dialogue' && panel !== 'audio' && (
+      {panel && showModal && (
         <div
           className={`hud-modal ${panel === 'quests' ? 'quest-journal-window' : ''}`}
           role="dialog"

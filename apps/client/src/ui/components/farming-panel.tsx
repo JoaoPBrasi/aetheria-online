@@ -6,8 +6,6 @@ import {
   cropStatusLabel,
   farmInteraction,
   plotPosition,
-  seedCount,
-  type CropId,
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
 import type { WorldConnection } from '../../game/networking/world-connection';
@@ -29,7 +27,6 @@ export function FarmingPanel({
   const gameplay = state.gameplay;
   if (!gameplay) return null;
 
-  const crop = state.farmCrop ?? 'turnip';
   const plots = state.plots ?? [];
   const now = state.worldTime ?? 0;
   const owned = plots.filter((p) => p.ownerId === gameplay.characterId);
@@ -47,7 +44,7 @@ export function FarmingPanel({
     owned[0] ??
     closestFree;
   const action =
-    plot && farmInteraction(gameplay, plot, plots, state.position, now, crop);
+    plot && farmInteraction(gameplay, plot, plots, state.position, now);
   const busy =
     state.status !== 'connected' ||
     state.actionPending ||
@@ -64,14 +61,7 @@ export function FarmingPanel({
       )}
       <ul className="farm-plot-list" aria-label="Parcelas do personagem">
         {owned.map((p) => {
-          const next = farmInteraction(
-            gameplay,
-            p,
-            plots,
-            state.position,
-            now,
-            crop,
-          );
+          const next = farmInteraction(gameplay, p, plots, state.position, now);
           return (
             <li key={p.id}>
               <button
@@ -109,32 +99,15 @@ export function FarmingPanel({
           <p data-testid="farm-status">
             {name(plot.id)} · {cropStatusLabel(plot, now)}
           </p>
-          {action.payload.operation === 'plant' && (
-            <label>
-              Cultura{' '}
-              <select
-                aria-label="Cultura"
-                value={crop}
-                onChange={(event) =>
-                  gameBridge.update({ farmCrop: event.target.value as CropId })
-                }
-              >
-                {(Object.keys(CROPS) as CropId[]).map((id) => (
-                  <option key={id} value={id}>
-                    {CROPS[id].name} · {seedCount(gameplay, id)} sementes ·{' '}
-                    {CROPS[id].growMs / 1000} s após regar
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
           {action.reason && <p>{action.reason}</p>}
           <div className="resource-controls">
             {action.payload.operation && (
               <button
                 type="button"
                 disabled={busy || !action.enabled}
-                onClick={() => gameBridge.interact?.(plot.id, crop)}
+                onClick={() =>
+                  gameBridge.interact?.(plot.id, { fromFarmPanel: true })
+                }
               >
                 {action.label}
               </button>
