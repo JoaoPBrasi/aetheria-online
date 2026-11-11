@@ -5,6 +5,10 @@ import {
   ITEMS,
   transferItem,
   CROPS,
+  FARM_RANGE,
+  MAX_OWNED_PLOTS,
+  HARVEST_YIELD,
+  plotPosition,
   hasTool,
   CRAFTING_RECIPES,
   CRAFTING_STATIONS,
@@ -101,13 +105,12 @@ export class GameplayRepository {
         const plot = await tx.farmPlot.findUnique({
           where: { id: action.plot },
         });
+        const point = plot && plotPosition(plot);
         if (
           !plot ||
+          !point ||
           !position ||
-          Math.hypot(
-            plot.tileX * 32 + 16 - position.x,
-            plot.tileY * 32 + 16 - position.y,
-          ) > 72
+          Math.hypot(point.x - position.x, point.y - position.y) > FARM_RANGE
         )
           throw new Error('Parcela fora de alcance.');
         if (plot.ownerId && plot.ownerId !== characterId)
@@ -119,7 +122,8 @@ export class GameplayRepository {
             throw new Error('A parcela já está preparada ou plantada.');
           if (
             !plot.ownerId &&
-            (await tx.farmPlot.count({ where: { ownerId: characterId } })) >= 4
+            (await tx.farmPlot.count({ where: { ownerId: characterId } })) >=
+              MAX_OWNED_PLOTS
           )
             throw new Error('Limite de quatro parcelas por personagem.');
           await tx.farmPlot.update({
@@ -172,9 +176,15 @@ export class GameplayRepository {
               throw new Error('A cultura ainda não está pronta.');
             const crop = CROPS[plot.cropId as CropId];
             if (!crop) throw new Error('Cultura inválida.');
-            slots = addItem(slots, crop.item, 3);
-            slots = addItem(slots, crop.seed, 2);
-            await advanceQuests(tx, characterId, 'gather', crop.item, 3);
+            slots = addItem(slots, crop.item, HARVEST_YIELD.produce);
+            slots = addItem(slots, crop.seed, HARVEST_YIELD.seeds);
+            await advanceQuests(
+              tx,
+              characterId,
+              'gather',
+              crop.item,
+              HARVEST_YIELD.produce,
+            );
             await tx.characterSkill.update({
               where: {
                 characterId_profession: { characterId, profession: 'farmer' },
@@ -275,8 +285,10 @@ export class GameplayRepository {
         const activeStation = matchingStation ?? station;
         if (
           !position ||
-          Math.hypot(activeStation.x - position.x, activeStation.y - position.y) >
-            CRAFTING_SERVER_MAX_RANGE
+          Math.hypot(
+            activeStation.x - position.x,
+            activeStation.y - position.y,
+          ) > CRAFTING_SERVER_MAX_RANGE
         )
           throw new Error('Estação de trabalho fora de alcance.');
         slots = craftItem(slots, recipe);

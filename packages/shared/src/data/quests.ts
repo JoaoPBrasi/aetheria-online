@@ -181,9 +181,9 @@ export const FARM_HARVEST_QUEST: QuestDefinition = {
   requires: TUTORIAL_QUEST_ID,
   dialogues: {
     offer:
-      'Nossa vila precisa de mais do que lâminas afiadas: nossos celeiros exigem sustento. Pegue sua enxada e regador, vá até a horta comunitária a sudoeste da praça, plante as sementes que recebeu e traga 3 nabos frescos colhidos da terra.',
+      'A horta fica a sudoeste da Praça, marcada no minimapa. A enxada, o regador e as sementes vêm no kit inicial. Se o kit ainda não coube na mochila, libere espaço e use Atualizar horta / receber kit no painel H. Plante, regue e colha 3 nabos.',
     inProgress:
-      'Lembre-se do ciclo agrícola: use a enxada para preparar um canteiro vazio, plante a semente de nabo e umedeça o solo com o regador. Em poucos instantes, as folhagens brotarão prontas para a colheita com a tecla de interação.',
+      'Siga o minimapa até a horta, a sudoeste da Praça. Use a enxada, o regador e as sementes do kit inicial. Se o kit ainda não coube, libere espaço na mochila e solicite-o no painel H. Prepare a terra, plante nabo e regue. Ele amadurece em 60 segundos e a colheita também rende sementes.',
     readyToTurnIn:
       'Que aroma revigorante de vegetais recém-colhidos! O solo de Brumavale é fértil quando cuidado com dedicação. Entregue a missão para receber sementes e experiência de Agricultor.',
     completed:

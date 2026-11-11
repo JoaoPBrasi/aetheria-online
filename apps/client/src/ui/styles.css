@@ -772,15 +772,57 @@ footer {
    ========================================================================== */
 .hud-cast-bar {
   position: absolute;
-  bottom: 236px;
+  bottom: 258px;
   left: 50%;
   transform: translateX(-50%);
-  width: 320px;
+  width: min(320px, calc(100vw - 24px));
   height: 34px;
   z-index: 60;
   pointer-events: none;
   user-select: none;
   animation: cast-appear 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.farming-panel {
+  display: grid;
+  gap: 10px;
+}
+.farm-plot-list {
+  display: grid;
+  gap: 5px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.farm-plot-list button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+}
+.farm-plot-list button[aria-pressed='true'] {
+  outline: 1px solid #e8c87b;
+}
+.farm-plot-detail {
+  display: grid;
+  gap: 8px;
+}
+.farm-plot-detail select {
+  max-width: 100%;
+}
+.hud-modal:has(.farming-panel) {
+  top: auto;
+  bottom: 176px;
+  max-height: calc(100% - 188px);
+  z-index: 55;
+}
+.crop-quick button {
+  max-width: min(220px, calc(50vw - 18px));
+}
+@media (max-width: 760px) {
+  .game-hud:has(.crop-quick, .hud-cast-bar) .solo-guide {
+    bottom: 300px;
+  }
 }
 
 .cast-bar-inner {

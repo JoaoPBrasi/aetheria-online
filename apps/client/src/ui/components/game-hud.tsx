@@ -3,6 +3,10 @@ import {
   hasTool,
   ITEMS,
   interaction,
+  nearbyFarmTarget,
+  seedCount,
+  CROPS,
+  cropStatusLabel,
   PROFESSION_NAMES,
   levelForXp,
   WORLD_REGIONS,
@@ -77,7 +81,12 @@ export function GameHud({
   const [craftStation, setCraftStation] =
     useState<CraftingStationId>('workbench-plaza');
   const [dialogueNpc, setDialogueNpc] = useState<string | null>(null);
-  const [crop, setCrop] = useState<CropId>('turnip');
+  const crop = s.farmCrop ?? 'turnip';
+  const cast = useSyncExternalStore(
+    gameBridge.subscribeCast,
+    gameBridge.getCast,
+  );
+  const casting = cast?.status === 'channeling';
   const close = useRef<HTMLButtonElement>(null);
   const audioSettings = useSyncExternalStore(
     audioManager.subscribe,
@@ -85,7 +94,14 @@ export function GameHud({
   );
   const guide =
     s.status === 'connected' && s.position && s.quests
-      ? soloGuide(s.quests, s.position, hiddenQuests, s.gameplay)
+      ? soloGuide(
+          s.quests,
+          s.position,
+          hiddenQuests,
+          s.gameplay,
+          s.plots,
+          s.worldTime,
+        )
       : undefined;
   const position = s.position;
   const threatened =
@@ -106,7 +122,7 @@ export function GameHud({
           s.resources ?? {},
           s.worldTime ?? 0,
           crop,
-          undefined,
+          nearbyFarmTarget(s.plots ?? [], s.farmTarget, s.position),
           s.monsters ?? [],
           s.forage,
         )
@@ -117,12 +133,13 @@ export function GameHud({
     return () => gameBridge.update({ inputBlocked: false });
   }, [panel]);
   useEffect(() => {
-    const act = (target?: string) => {
+    const act = (target?: string, farmCropFromPanel?: CropId) => {
       const now = gameBridge.getSnapshot();
+      const fromFarmPanel = panel === 'farm' && farmCropFromPanel !== undefined;
       if (
         now.status !== 'connected' ||
         now.actionPending ||
-        now.inputBlocked ||
+        (now.inputBlocked && !fromFarmPanel) ||
         !now.gameplay ||
         !now.position
       )
@@ -137,11 +154,23 @@ export function GameHud({
         now.plots ?? [],
         now.resources ?? {},
         now.worldTime ?? 0,
-        crop,
-        target,
+        farmCropFromPanel ?? crop,
+        target ??
+          nearbyFarmTarget(now.plots ?? [], now.farmTarget, now.position),
         now.monsters ?? [],
         now.forage,
       );
+      if (fromFarmPanel && !item?.plot) return;
+      if (item?.plot) {
+        gameBridge.update({
+          farmTarget: item.plot.id,
+          farmCrop: farmCropFromPanel ?? crop,
+        });
+        if (target && !item.enabled) {
+          gameBridge.update({ feedback: item.label, feedbackAt: Date.now() });
+          return;
+        }
+      }
 
       if (!item && target && CRAFTING_STATIONS.some((st) => st.id === target)) {
         const station = CRAFTING_STATIONS.find((st) => st.id === target);
@@ -211,6 +240,7 @@ export function GameHud({
             },
           });
         } else if (item.payload.kind === 'farm') {
+          if (fromFarmPanel) setPanel(null);
           const op = item.payload.operation;
           let label = 'Trabalho Agrícola…';
           let icon = '🌱';
@@ -379,6 +409,7 @@ export function GameHud({
         </div>
       </div>
       <Minimap
+        objective={guide?.mapMarker}
         position={s.position}
         regionName={region?.name}
         nearby={s.nearby}
@@ -420,19 +451,21 @@ export function GameHud({
           <p>Reconectando… As ações estão pausadas.</p>
         ) : nearby ? (
           <>
-            <small>{nearby.name}</small>
+            <small>
+              {nearby.name}
+              {nearby.plot
+                ? ` · ${cropStatusLabel(nearby.plot, s.worldTime ?? 0)}`
+                : ''}
+            </small>
             <button
               data-testid="context-action"
               disabled={
-                !nearby.enabled ||
-                s.actionPending ||
-                !!panel ||
-                gameBridge.getCast()?.status === 'channeling'
+                !nearby.enabled || s.actionPending || !!panel || casting
               }
               onClick={() => gameBridge.interact?.()}
             >
               <kbd>E</kbd>
-              {gameBridge.getCast()?.status === 'channeling'
+              {casting
                 ? 'Canalizando…'
                 : s.actionPending
                   ? 'Trabalhando…'
@@ -443,20 +476,19 @@ export function GameHud({
               isNearRestCampfire(s.position) && (
                 <p>Fogueira · recupere vida fora de combate</p>
               )}
-            {nearby.payload.operation === 'plant' && (
-              <div className="crop-quick">
-                <button
-                  aria-pressed={crop === 'turnip'}
-                  onClick={() => setCrop('turnip')}
-                >
-                  Nabo · 60s
-                </button>
-                <button
-                  aria-pressed={crop === 'pumpkin'}
-                  onClick={() => setCrop('pumpkin')}
-                >
-                  Abóbora · 120s
-                </button>
+            {nearby.payload.operation === 'plant' && !casting && (
+              <div className="crop-quick" aria-label="Culturas disponíveis">
+                {(Object.keys(CROPS) as CropId[]).map((id) => (
+                  <button
+                    key={id}
+                    aria-pressed={crop === id}
+                    onClick={() => gameBridge.update({ farmCrop: id })}
+                  >
+                    {CROPS[id].name} ·{' '}
+                    {s.gameplay ? seedCount(s.gameplay, id) : 0} sementes ·{' '}
+                    {CROPS[id].growMs / 1000} s após regar
+                  </button>
+                ))}
               </div>
             )}
           </>

@@ -59,6 +59,8 @@ export class WorldConnection {
       actionPending: false,
       questPending: false,
       quests: undefined,
+      plots: undefined,
+      farmTarget: undefined,
       resources: undefined,
       forage: undefined,
       combatText: undefined,

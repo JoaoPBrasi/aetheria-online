@@ -3,6 +3,7 @@ import {
   MAP_SIZE,
   PLAZA_CAMPFIRE,
   TILE_SIZE,
+  WORLD_SPAWN,
   worldTiles,
 } from '@aetheria/shared';
 import {
@@ -89,6 +90,7 @@ const STATIC_LANDMARKS: MinimapMarker[] = [
 ];
 
 interface MinimapProps {
+  objective?: 'farm';
   position?: { x: number; y: number };
   regionName?: string;
   nearby?: { name: string; x: number; y: number }[];
@@ -97,6 +99,7 @@ interface MinimapProps {
 }
 
 export function Minimap({
+  objective,
   position,
   regionName,
   nearby = [],
@@ -108,7 +111,7 @@ export function Minimap({
   const [zoom, setZoom] = useState(0.08); // Escala balanceada para visão de radar
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const playerPos = position ?? { x: 1040, y: 1040 };
+  const playerPos = position ?? WORLD_SPAWN;
 
   // Pré-renderiza a matriz do mapa de Brumavale (96×96) em um canvas auxiliar cacheado
   useEffect(() => {
@@ -192,6 +195,13 @@ export function Minimap({
       ctx.beginPath();
       ctx.arc(px, py, proj.isClamped ? 3 : 4, 0, Math.PI * 2);
       ctx.fill();
+      if (m.id === objective) {
+        ctx.beginPath();
+        ctx.arc(px, py, 7, 0, Math.PI * 2);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#ffe099';
+        ctx.stroke();
+      }
 
       if (!proj.isClamped) {
         ctx.font = '10px sans-serif';
@@ -259,7 +269,7 @@ export function Minimap({
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('N', centerX, 11);
-  }, [playerPos, zoom, nearby, monsters]);
+  }, [playerPos, zoom, nearby, monsters, objective]);
 
   return (
     <div className={`minimap-shell ${isExpanded ? 'expanded' : ''}`}>

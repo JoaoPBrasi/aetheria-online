@@ -101,7 +101,20 @@ it('claims, plants, waters and harvests atomically with ownership and idempotenc
     plot: persisted.id,
     operation: 'harvest',
   };
-  p.state = await service.act(p.id, request, position());
+  const competing = { ...request, id: randomUUID() };
+  const otherServer = new GameplayService(new GameplayRepository(db));
+  const results = await Promise.allSettled([
+    service.act(p.id, request, position()),
+    otherServer.act(p.id, competing, position()),
+  ]);
+  const winner = results.findIndex((result) => result.status === 'fulfilled');
+  expect(
+    results.filter((result) => result.status === 'fulfilled'),
+  ).toHaveLength(1);
+  const harvest = results[winner];
+  if (harvest?.status !== 'fulfilled')
+    throw new Error('Colheita não confirmada');
+  p.state = harvest.value;
   expect(p.state.inventory.find((v) => v.itemId === 'turnip')?.quantity).toBe(
     3,
   );
@@ -109,9 +122,10 @@ it('claims, plants, waters and harvests atomically with ownership and idempotenc
     p.state.inventory.find((v) => v.itemId === 'turnip_seed')?.quantity,
   ).toBe(6);
   expect(p.state.skills.find((v) => v.profession === 'farmer')?.xp).toBe(25);
-  expect((await service.act(p.id, request, position())).revision).toBe(
-    p.state.revision,
-  );
+  expect(
+    (await service.act(p.id, winner === 0 ? request : competing, position()))
+      .revision,
+  ).toBe(p.state.revision);
   await expect(
     act(p, { kind: 'farm', plot: persisted.id, operation: 'harvest' }),
   ).rejects.toThrow('não está pronta');

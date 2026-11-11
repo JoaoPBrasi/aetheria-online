@@ -7,6 +7,13 @@ import {
   QUARRY_RESOURCES,
   TILE_SIZE,
   TUTORIAL_QUEST,
+  FARM_HARVEST_QUEST,
+  FARM_RANGE,
+  plotPosition,
+  cropStatus,
+  cropStatusLabel,
+  farmInteraction,
+  type FarmSnapshot,
   hasTool,
   type CharacterQuestState,
   type GameplaySnapshot,
@@ -14,7 +21,12 @@ import {
 } from '@aetheria/shared';
 
 type Point = { x: number; y: number };
-type GuideStep = { title: string; hint: string; target: Point };
+type GuideStep = {
+  title: string;
+  hint: string;
+  target: Point;
+  mapMarker?: 'farm';
+};
 const directions = [
   ['→', 'Leste'],
   ['↘', 'Sudeste'],
@@ -36,6 +48,78 @@ const forge = CRAFTING_STATIONS.find((station) => station.type === 'forge')!;
 const quarry = QUARRY_RESOURCES.find((node) => node.kind === 'ore')!;
 const scout = MONSTERS.find((monster) => monster.id === IRON_BLADE_SCOUTS[0])!;
 const grove = { x: 592, y: 720 };
+const garden = { x: 432, y: 1328 };
+
+function harvestStep(
+  quest: CharacterQuestState,
+  gameplay: GameplaySnapshot,
+  plots: FarmSnapshot[],
+  position: Point,
+  now: number,
+): GuideStep {
+  if (quest.status === 'ready_to_turn_in')
+    return {
+      title: 'Volte ao Ancião Eldrin',
+      hint: 'Entregue A Primeira Colheita de Brumavale.',
+      target: eldrin,
+    };
+
+  const owned = plots.filter((p) => p.ownerId === gameplay.characterId);
+  const rank = (p: FarmSnapshot) =>
+    ({ ready: 0, thirsty: 1, growing: 2, prepared: 3, empty: 4 })[
+      cropStatus(p, now)
+    ];
+  const distance = (p: FarmSnapshot) => {
+    const { x, y } = plotPosition(p);
+    return Math.hypot(x - position.x, y - position.y);
+  };
+  const plot =
+    [...owned].sort(
+      (a, b) =>
+        Number(b.cropId === 'turnip') - Number(a.cropId === 'turnip') ||
+        rank(a) - rank(b) ||
+        distance(a) - distance(b),
+    )[0] ??
+    plots
+      .filter((p) => !p.ownerId)
+      .sort((a, b) => distance(a) - distance(b))[0];
+  if (!plot)
+    return {
+      title: 'Vá à Horta de Brumavale',
+      hint: 'Siga o marcador da horta no minimapa e procure terra livre.',
+      target: garden,
+      mapMarker: 'farm',
+    };
+
+  const target = plotPosition(plot);
+  const action = farmInteraction(
+    gameplay,
+    plot,
+    plots,
+    position,
+    now,
+    'turnip',
+  );
+  const label = 'Parcela ' + plot.id.split('-').at(-1);
+  const state = cropStatus(plot, now);
+  const hint =
+    action.distance > FARM_RANGE
+      ? `Siga o marcador da horta no minimapa até a ${label.toLowerCase()}.`
+      : (action.reason ??
+        (state === 'growing'
+          ? 'Confira o tempo aqui ou no painel H. A planta continua crescendo ao sair.'
+          : plot.cropId === 'pumpkin'
+            ? 'Termine o cultivo da abóbora ou prepare outra parcela para plantar nabo.'
+            : state === 'prepared'
+              ? 'Escolha nabo e pressione E ou clique. Depois regue.'
+              : 'Pressione E ou clique na parcela.'));
+  return {
+    title: state === 'growing' ? cropStatusLabel(plot, now) : action.label,
+    hint,
+    target,
+    mapMarker: 'farm',
+  };
+}
 
 function viaBridge(step: GuideStep, position: Point): GuideStep {
   const east = position.x >= 2130 || (position.y < 620 && position.x >= 1920);
@@ -129,7 +213,23 @@ export function soloGuide(
   position: Point,
   hidden: string[],
   gameplay?: GameplaySnapshot,
+  plots: FarmSnapshot[] = [],
+  now = 0,
 ) {
+  const harvest = quests.find(
+    (entry) => entry.questId === FARM_HARVEST_QUEST.id,
+  );
+  if (
+    gameplay &&
+    harvest &&
+    (harvest.status === 'in_progress' ||
+      harvest.status === 'ready_to_turn_in') &&
+    !hidden.includes(harvest.questId)
+  )
+    return guideWithDirection(
+      harvestStep(harvest, gameplay, plots, position, now),
+      position,
+    );
   const quest = quests.find((entry) => entry.questId === TUTORIAL_QUEST.id);
   if (quest?.status === 'completed') {
     const next = quests.find((entry) => entry.questId === IRON_BLADE_QUEST.id);
@@ -174,7 +274,7 @@ export function soloGuide(
 }
 
 function guideWithDirection(
-  { title, hint, target }: GuideStep,
+  { title, hint, target, mapMarker }: GuideStep,
   position: Point,
 ) {
   const dx = target.x - position.x;
@@ -185,6 +285,7 @@ function guideWithDirection(
   return {
     title,
     hint,
+    mapMarker,
     route:
       distance < 72
         ? 'Por aqui'

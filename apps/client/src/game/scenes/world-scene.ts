@@ -15,6 +15,7 @@ import {
   FARM_PLOTS,
   CRAFTING_STATIONS,
   cropStatus,
+  nearbyFarmTarget,
   interaction,
   MONSTERS,
   NPCS,
@@ -24,6 +25,7 @@ import {
   type ForageNode,
   type CombatFeedback,
 } from '@aetheria/shared';
+import { paintFarmPlot } from '../farm-plot-art';
 import { gameBridge } from '../managers/game-bridge';
 import { movement } from '../networking/movement';
 import { PlayerAvatar } from '../characters/player-avatar';
@@ -46,7 +48,14 @@ export class WorldScene extends Phaser.Scene {
   private walking = false;
   private lastFootstepTime = 0;
   private dangerRing!: Phaser.GameObjects.Graphics;
-  private plots = new Map<string, Phaser.GameObjects.Rectangle>();
+  private plots = new Map<
+    string,
+    {
+      shape: Phaser.GameObjects.Rectangle;
+      art: Phaser.GameObjects.Graphics;
+      appearance: string;
+    }
+  >();
   private accumulator = 0;
   private lastToolAction?: Record<string, unknown>;
   private lastToolAnimTime = 0;
@@ -189,11 +198,13 @@ export class WorldScene extends Phaser.Scene {
       const px = plot.tileX * 32 + 16;
       const py = plot.tileY * 32 + 16;
       this.add.image(px, py, 'farm-plot-tilled').setDepth(0.5);
+      const art = this.add.graphics({ x: px, y: py }).setDepth(0.6);
+      paintFarmPlot(art, 'empty', null);
       const shape = this.add
-        .rectangle(px, py, 28, 28, 0x775037, 0.45)
+        .rectangle(px, py, 28, 28)
         .setStrokeStyle(2, 0xc2ad79)
         .setDepth(1);
-      this.plots.set(plot.id, shape);
+      this.plots.set(plot.id, { shape, art, appearance: 'empty:null' });
       shape
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => gameBridge.interact?.(plot.id));
@@ -205,11 +216,11 @@ export class WorldScene extends Phaser.Scene {
     for (let fx = minPlotX - 16; fx <= maxPlotX + 16; fx += 32) {
       if (fx < minPlotX + 48 || fx > minPlotX + 112)
         this.add
-          .image(fx, minPlotY - 24, 'world-props', 'fence:white')
-          .setDepth(minPlotY - 24);
+          .image(fx, minPlotY - 36, 'world-props', 'fence:white')
+          .setDepth(minPlotY - 36);
       this.add
-        .image(fx, maxPlotY + 24, 'world-props', 'fence:white')
-        .setDepth(maxPlotY + 24);
+        .image(fx, maxPlotY + 36, 'world-props', 'fence:white')
+        .setDepth(maxPlotY + 36);
     }
     this.createResources();
     for (const [x, y] of [
@@ -288,7 +299,7 @@ export class WorldScene extends Phaser.Scene {
       );
     this.label('BRUMAVALE · PRAÇA', 1040, 910);
     this.label('LAGO DOS JUNCOS', 1600, 250);
-    this.label('FAZENDA', 440, 1100);
+    this.label('HORTA DE BRUMAVALE', 440, 1100);
     this.label('BOSQUE ANTIGO', 370, 300);
     this.label(
       'PEDREIRA',
@@ -693,37 +704,35 @@ export class WorldScene extends Phaser.Scene {
         farmState.plots ?? [],
         farmState.resources ?? {},
         Date.now(),
-        'turnip',
-        undefined,
+        farmState.farmCrop ?? 'turnip',
+        nearbyFarmTarget(
+          farmState.plots ?? [],
+          farmState.farmTarget,
+          farmState.position,
+        ),
         farmState.monsters ?? [],
         farmState.forage,
       );
-      if (target)
-        this.focusRing
-          .lineStyle(2, target.enabled ? 0xf0d783 : 0x9caa94, 0.9)
-          .strokeEllipse(target.x, target.y, 44, 26);
+      if (target) {
+        this.focusRing.lineStyle(2, target.enabled ? 0xf0d783 : 0x9caa94, 0.9);
+        if (target.plot)
+          this.focusRing.strokeRect(target.x - 16, target.y - 16, 32, 32);
+        else this.focusRing.strokeEllipse(target.x, target.y, 44, 26);
+      }
     }
     for (const plot of farmState.plots ?? []) {
       const status = cropStatus(plot, Date.now());
-      const color =
-        status === 'ready'
-          ? 0xe8b64e
-          : status === 'growing'
-            ? 0x659c54
-            : status === 'thirsty'
-              ? 0x91ae68
-              : status === 'prepared'
-                ? 0x493323
-                : 0x775037;
-      this.plots
-        .get(plot.id)
-        ?.setFillStyle(color)
-        .setStrokeStyle(
-          2,
-          plot.ownerId === farmState.gameplay?.characterId
-            ? 0xf2e0a3
-            : 0xa59670,
-        );
+      const display = this.plots.get(plot.id);
+      const appearance = `${status}:${plot.cropId}`;
+      if (!display) continue;
+      if (display.appearance !== appearance) {
+        paintFarmPlot(display.art, status, plot.cropId);
+        display.appearance = appearance;
+      }
+      display.shape.setStrokeStyle(
+        2,
+        plot.ownerId === farmState.gameplay?.characterId ? 0xf2e0a3 : 0xa59670,
+      );
     }
     if (!this.avatar) return;
     const focused = document.activeElement;
@@ -782,6 +791,8 @@ export class WorldScene extends Phaser.Scene {
       movement.cosmetics,
     );
     this.walking = this.avatar.state === 'walk';
+    if (this.walking && farmState.farmTarget)
+      gameBridge.update({ farmTarget: undefined });
     if (this.walking && time - this.lastFootstepTime > 340) {
       this.lastFootstepTime = time;
       audioManager.playSfx('footstep');

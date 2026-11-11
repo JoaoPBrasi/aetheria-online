@@ -16,7 +16,10 @@ export interface ActiveCast {
 
 /** External store: React receives coarse snapshots, never frame-by-frame updates. */
 export class GameBridge {
-  interact?: (target?: string) => void;
+  interact?: (
+    target?: string,
+    farmCropFromPanel?: import('@aetheria/shared').CropId,
+  ) => void;
   acceptQuest?: (questId: string) => void;
   turnInQuest?: (questId: string) => void;
   animateCharacter?: (action: Record<string, unknown>) => void;
@@ -89,7 +92,11 @@ export class GameBridge {
 
     // Timer de conclusão
     setTimeout(() => {
-      if (this.activeCast && this.activeCast.id === cast.id && this.activeCast.status === 'channeling') {
+      if (
+        this.activeCast &&
+        this.activeCast.id === cast.id &&
+        this.activeCast.status === 'channeling'
+      ) {
         this.activeCast.status = 'completed';
         this.notifyCast();
         try {

@@ -6,6 +6,7 @@ import {
   CRAFTING_INTERACTION_RANGE,
   MONSTERS,
   PLAYER_ATTACK_RANGE,
+  addItem,
   type GameplaySnapshot,
   type ItemId,
   type CraftingStationType,
@@ -13,7 +14,17 @@ import {
   type ResourceStates,
   type ForageNode,
 } from './gameplay.js';
-import { cropStatus, type FarmSnapshot, type CropId } from './farming.js';
+import {
+  CROPS,
+  FARM_RANGE,
+  MAX_OWNED_PLOTS,
+  HARVEST_YIELD,
+  plotPosition,
+  cropStatus,
+  cropStatusLabel,
+  type FarmSnapshot,
+  type CropId,
+} from './farming.js';
 import { NPCS, type NPCDefinition } from './npcs.js';
 export function hasTool(
   s: Pick<GameplaySnapshot, 'inventory' | 'equipment'>,
@@ -25,6 +36,95 @@ export function hasTool(
     s.inventory.some((i) => matches(i.itemId) && i.quantity > 0) ||
     s.equipment.some((i) => matches(i.itemId))
   );
+}
+
+export function seedCount(s: GameplaySnapshot, crop: CropId) {
+  return s.inventory.reduce(
+    (sum, slot) => sum + (slot.itemId === CROPS[crop].seed ? slot.quantity : 0),
+    0,
+  );
+}
+
+export function nearbyFarmTarget(
+  plots: FarmSnapshot[],
+  id: string | undefined,
+  position: { x: number; y: number },
+) {
+  const plot = plots.find((p) => p.id === id);
+  if (!plot) return;
+  const { x, y } = plotPosition(plot);
+  if (Math.hypot(x - position.x, y - position.y) <= FARM_RANGE) return plot.id;
+}
+
+export function farmInteraction(
+  s: GameplaySnapshot,
+  p: FarmSnapshot,
+  plots: FarmSnapshot[],
+  position: { x: number; y: number } | undefined,
+  now: number,
+  crop: CropId,
+) {
+  const point = plotPosition(p);
+  const distance = position
+    ? Math.hypot(point.x - position.x, point.y - position.y)
+    : Infinity;
+  const state = cropStatus(p, now);
+  const operation = {
+    empty: 'prepare',
+    prepared: 'plant',
+    thirsty: 'water',
+    ready: 'harvest',
+    growing: undefined,
+  }[state];
+  const name = p.cropId ? CROPS[p.cropId].name.toLocaleLowerCase('pt-BR') : '';
+  const label = {
+    empty: 'Preparar terra',
+    prepared: `Plantar ${CROPS[crop].name.toLocaleLowerCase('pt-BR')}`,
+    thirsty: `Regar ${name}`,
+    ready: `Colher ${name}`,
+    growing: cropStatusLabel(p, now),
+  }[state];
+  let reason: string | undefined;
+  if (distance > FARM_RANGE) reason = 'Aproxime-se da parcela';
+  else if (p.ownerId && p.ownerId !== s.characterId)
+    reason = 'Parcela de outro jogador';
+  else if (state === 'empty' && !hasTool(s, 'hoe'))
+    reason = 'Enxada necessária na mochila';
+  else if (
+    state === 'empty' &&
+    !p.ownerId &&
+    plots.filter((plot) => plot.ownerId === s.characterId).length >=
+      MAX_OWNED_PLOTS
+  )
+    reason = 'Limite de quatro parcelas';
+  else if (state === 'prepared' && seedCount(s, crop) === 0)
+    reason = `Sem sementes de ${CROPS[crop].name.toLocaleLowerCase('pt-BR')}`;
+  else if (state === 'thirsty' && !hasTool(s, 'watering_can'))
+    reason = 'Regador necessário na mochila';
+  else if (state === 'ready' && p.cropId) {
+    const plant = CROPS[p.cropId];
+    try {
+      addItem(
+        addItem(s.inventory, plant.item, HARVEST_YIELD.produce),
+        plant.seed,
+        HARVEST_YIELD.seeds,
+      );
+    } catch {
+      reason = 'Mochila cheia para a colheita';
+    }
+  }
+  return {
+    label,
+    reason,
+    enabled: !!operation && !reason,
+    distance,
+    payload: {
+      kind: 'farm',
+      plot: p.id,
+      operation,
+      ...(operation === 'plant' ? { crop } : {}),
+    },
+  };
 }
 export function interaction(
   s: GameplaySnapshot,
@@ -52,8 +152,7 @@ export function interaction(
     })),
     ...plots.map((p) => ({
       id: p.id,
-      x: p.tileX * 32 + 16,
-      y: p.tileY * 32 + 16,
+      ...plotPosition(p),
       name: 'Parcela ' + p.id.split('-').at(-1),
       node: undefined,
       plot: p,
@@ -109,8 +208,12 @@ export function interaction(
     }))
     .sort((a, b) => a.distance - b.distance)[0];
   if (!chosen) return undefined;
-  const maxRange = chosen.station ? CRAFTING_INTERACTION_RANGE : 72;
-  if (chosen.distance > maxRange) return undefined;
+  const maxRange = chosen.station
+    ? CRAFTING_INTERACTION_RANGE
+    : chosen.plot
+      ? FARM_RANGE
+      : 72;
+  if (chosen.distance > maxRange && !(target && chosen.plot)) return undefined;
   let label = '',
     tool: ItemId | undefined,
     enabled = true,
@@ -130,34 +233,10 @@ export function interaction(
       } else label = 'Recurso se recuperando';
     }
   } else if (chosen.plot) {
-    const p = chosen.plot,
-      status = cropStatus(p, now);
-    payload = { kind: 'farm', plot: p.id };
-    if (p.ownerId && p.ownerId !== s.characterId) {
-      enabled = false;
-      label = 'Parcela de outro jogador';
-    } else if (status === 'empty') {
-      tool = 'hoe';
-      label = 'Preparar terra';
-      payload.operation = 'prepare';
-    } else if (status === 'prepared') {
-      label = 'Plantar';
-      payload.operation = 'plant';
-      payload.crop = crop;
-    } else if (status === 'thirsty') {
-      tool = 'watering_can';
-      label = 'Regar';
-      payload.operation = 'water';
-    } else if (status === 'ready') {
-      label = 'Colher';
-      payload.operation = 'harvest';
-    } else {
-      enabled = false;
-      label =
-        'Crescendo · ' +
-        Math.max(0, Math.ceil(((p.harvestAt ?? 0) - now) / 1000)) +
-        ' s';
-    }
+    const farm = farmInteraction(s, chosen.plot, plots, position, now, crop);
+    label = farm.reason ?? farm.label;
+    enabled = farm.enabled;
+    payload = farm.payload;
   } else if (chosen.station) {
     label = 'Usar ' + chosen.station.name;
     payload = {
