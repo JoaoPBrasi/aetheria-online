@@ -24,6 +24,10 @@ export const ITEMS = {
   slime_goo: { name: 'Gosma de slime', stack: 99, tool: false },
 } as const;
 export type ItemId = keyof typeof ITEMS;
+export const PLAYER_ATTACK_RANGE = 64;
+export const PLAYER_ATTACK_COOLDOWN_MS = 400;
+export const UNARMED_DAMAGE = 20;
+export const WEAPON_DAMAGE = { sword: 30, iron_sword: 45 } as const;
 export interface Slot {
   index: number;
   itemId: ItemId;
@@ -314,9 +318,30 @@ export interface MonsterSnapshot {
   y: number;
   health: number;
   maxHealth: number;
-  state: 'idle' | 'patrol' | 'chase' | 'attack' | 'return' | 'dead';
+  state: 'idle' | 'patrol' | 'chase' | 'windup' | 'attack' | 'return' | 'dead';
   targetId?: string;
+  strikeAt?: number;
+  attackRange: number;
 }
+
+export type CombatFeedback =
+  | {
+      kind: 'strike';
+      attackerId: string;
+      monsterId: string;
+      origin: { x: number; y: number };
+      x: number;
+      y: number;
+      amount: number;
+      lethal: boolean;
+    }
+  | {
+      kind: 'hurt' | 'heal';
+      playerId: string;
+      x: number;
+      y: number;
+      amount: number;
+    };
 
 const slot = z.number().int().min(0).max(23);
 const base = { id: z.uuid(), revision: z.number().int().nonnegative() };

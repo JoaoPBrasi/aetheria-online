@@ -7,6 +7,9 @@ import {
   MovementQueue,
   canStand,
   WORLD_SPAWN,
+  CAMPFIRE,
+  CAMPFIRE_REST_RANGE,
+  type CombatFeedback,
   type CharacterSummary,
 } from '@aetheria/shared';
 import type { IdentityRepository } from '../repositories/identity-repository.js';
@@ -19,6 +22,7 @@ export class WorldRoom extends Room<{
 }> {
   private inputs = new Map<string, MovementQueue>();
   private lastSync = new Map<string, number>();
+  private lastCombat = new Map<string, number>();
   private pendingSaves = new Map<
     string,
     { x: number; y: number; direction: string }
@@ -57,11 +61,20 @@ export class WorldRoom extends Room<{
       const p = this.state.players.get(client.sessionId);
       if (!p?.connected) return;
       try {
-        const snapshot = await this.gameplay.act(p.characterId, raw, () => {
-          if (!p.connected || !this.state.players.has(client.sessionId))
-            return undefined;
-          return { x: p.x, y: p.y, direction: p.direction };
-        });
+        const snapshot = await this.gameplay.act(
+          p.characterId,
+          raw,
+          () => {
+            if (!p.connected || !this.state.players.has(client.sessionId))
+              return undefined;
+            return { x: p.x, y: p.y, direction: p.direction };
+          },
+          (event) => {
+            if (this.state.players.has(client.sessionId))
+              this.lastCombat.set(client.sessionId, Date.now());
+            this.sendCombat(event);
+          },
+        );
         client.send('gameplay', snapshot);
         if (
           raw &&
@@ -151,7 +164,14 @@ export class WorldRoom extends Room<{
             : undefined;
         try {
           if (kind === 'quest:accept') {
-            await this.gameplay.acceptQuest(player.characterId, raw, position);
+            client.send(
+              'gameplay',
+              await this.gameplay.acceptQuest(
+                player.characterId,
+                raw,
+                position,
+              ),
+            );
           } else {
             client.send(
               'gameplay',
@@ -219,6 +239,14 @@ export class WorldRoom extends Room<{
       for (const hit of playerDamages) {
         const player = this.state.players.get(hit.sessionId);
         if (player && player.connected) {
+          this.lastCombat.set(hit.sessionId, Date.now());
+          this.sendCombat({
+            kind: 'hurt',
+            playerId: player.characterId,
+            x: player.x,
+            y: player.y,
+            amount: Math.min(hit.damage, player.health),
+          });
           player.health = Math.max(0, player.health - hit.damage);
           if (player.health <= 0) {
             player.health = player.maxHealth;
@@ -237,10 +265,37 @@ export class WorldRoom extends Room<{
       }
 
       monsterBroadcastCounter++;
+      if (monsterBroadcastCounter % 20 === 0) this.restoreAtCamp();
       if (monsterBroadcastCounter % 2 === 0) {
         this.broadcast('monsters', this.gameplay.monsters());
       }
     }, 50);
+  }
+  private sendCombat(event: CombatFeedback) {
+    this.broadcast('combat', event);
+  }
+  private restoreAtCamp() {
+    const now = Date.now();
+    for (const [sessionId, player] of this.state.players) {
+      if (
+        !player.connected ||
+        player.health >= player.maxHealth ||
+        now - (this.lastCombat.get(sessionId) ?? 0) < 4_000 ||
+        Math.hypot(player.x - CAMPFIRE.x, player.y - CAMPFIRE.y) >
+          CAMPFIRE_REST_RANGE ||
+        this.gameplay.monstersManager.threatens(player.characterId)
+      )
+        continue;
+      const amount = Math.min(8, player.maxHealth - player.health);
+      player.health += amount;
+      this.sendCombat({
+        kind: 'heal',
+        playerId: player.characterId,
+        x: player.x,
+        y: player.y,
+        amount,
+      });
+    }
   }
   async onAuth(client: Client, options: unknown) {
     if (!this.devIdentity) throw new ServerError(503, 'AUTH_NOT_CONFIGURED');
@@ -291,6 +346,7 @@ export class WorldRoom extends Room<{
   }
   async onLeave(client: Client) {
     this.lastSync.delete(client.sessionId);
+    this.lastCombat.delete(client.sessionId);
     this.inputs.delete(client.sessionId);
     const player = this.state.players.get(client.sessionId);
     if (player) {

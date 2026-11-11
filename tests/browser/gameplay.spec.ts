@@ -41,6 +41,86 @@ async function enterGrove(page: Page, x = 592, y = 720) {
   );
 }
 
+test('guides a new solo player, telegraphs a dodgeable attack and confirms the first slime kill', async ({
+  page,
+}) => {
+  test.setTimeout(75_000);
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('/');
+  await page.getByRole('button', { name: /Começar jornada/ }).click();
+  await page
+    .getByLabel('Nome do personagem')
+    .fill('Solo ' + Date.now().toString().slice(-8));
+  await page.getByRole('button', { name: /Criar personagem/ }).click();
+  await page.getByRole('button', { name: /Entrar na vila/ }).click();
+  const guide = page.getByTestId('solo-guide');
+  await expect(guide).toContainText('Fale com o Ancião Eldrin');
+  await expect(page.getByTestId('context-action')).toContainText('Conversar');
+  await page.keyboard.press('e');
+  await page.getByRole('button', { name: /Tenho coragem/ }).click();
+  await expect(
+    page.getByRole('button', { name: /Em Andamento/ }),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(guide).toContainText('estrada a leste');
+  await page.keyboard.press('b');
+  const bag = page.getByRole('dialog', { name: 'Mochila', exact: true });
+  await expect(
+    bag.getByRole('button', { name: /Espada de treino, 1$/ }),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await walk(page, 'x', 1680);
+  await expect(guide).toContainText('Desça pelo acampamento');
+  await walk(page, 'y', 1512);
+  await walk(page, 'x', 1568);
+  await walk(page, 'y', 1632);
+  await expect(guide).toContainText('Recue do círculo');
+  const warning = page.getByTestId('enemy-windup');
+  const combat = page.getByTestId('combat-feedback');
+  await expect(warning).toBeVisible();
+  await page.keyboard.down('w');
+  await page.waitForTimeout(330);
+  await page.keyboard.up('w');
+  await expect(warning).toHaveCount(0);
+  await page.waitForTimeout(430);
+  await expect(combat).toHaveCount(0);
+
+  const action = page.getByTestId('context-action');
+  await page.keyboard.down('s');
+  try {
+    await expect(action).toContainText('Atacar Slime');
+  } finally {
+    await page.keyboard.up('s');
+  }
+  await action.click();
+  await expect(combat).toContainText('30 de dano causado');
+  await expect(page.locator('canvas[data-world-width]')).toHaveAttribute(
+    'data-player-pose',
+    /^attack:/,
+  );
+  await page.screenshot({ path: 'work/solo-combate.png' });
+  await page.waitForTimeout(440);
+  await action.click();
+  await expect(combat).toContainText('Alvo derrotado');
+  await expect(page.getByRole('status')).toContainText('+2 Gosma de slime');
+  await expect(
+    page.getByRole('region', { name: 'Missões acompanhadas' }),
+  ).toContainText('1/2');
+  const health = page.getByTestId('player-health');
+  if ((await health.innerText()).startsWith('100 /')) {
+    await walk(page, 'y', 1672);
+    await expect(health).not.toContainText('100 / 100', { timeout: 6000 });
+  }
+  await walk(page, 'y', 1512);
+  await walk(page, 'x', 1680);
+  await walk(page, 'y', 1380);
+  await expect(combat).toContainText('Fogueira', { timeout: 6000 });
+  await expect(health).toContainText('100 / 100', { timeout: 6000 });
+  expect(errors).toEqual([]);
+});
+
 test('collects with a carried tool and manages inventory inside the game', async ({
   page,
 }) => {
@@ -57,7 +137,7 @@ test('collects with a carried tool and manages inventory inside the game', async
   });
   await page.keyboard.press('e');
   await expect(page.getByRole('status')).toContainText('+3 Madeira');
-  await expect(page.locator('canvas')).toHaveAttribute(
+  await expect(page.locator('canvas[data-world-width]')).toHaveAttribute(
     'data-player-pose',
     /^chop:/,
   );
@@ -114,12 +194,14 @@ test('clicks a nearby resource with correct canvas coordinates after resizing', 
   await page.setViewportSize({ width: 1024, height: 768 });
   await expect
     .poll(() =>
-      page.locator('canvas').evaluate((c) => (c as HTMLCanvasElement).width),
+      page
+        .locator('canvas[data-world-width]')
+        .evaluate((c) => (c as HTMLCanvasElement).width),
     )
     .toBe(1024);
   await enterGrove(page, 464);
   const point = await coordinates(page);
-  await page.locator('canvas').click({
+  await page.locator('canvas[data-world-width]').click({
     position: { x: 512 + 464 - point.x, y: 384 + 720 - point.y - 30 },
   });
   await expect(page.getByRole('status')).toContainText('+3 Madeira');
@@ -188,7 +270,7 @@ test('crosses the plaza, mines the quarry, forges iron equipment and recuts a re
   // A câmera desacelera depois que o personagem para de andar.
   await page.waitForTimeout(350);
   const nearFurnace = await coordinates(page);
-  await page.locator('canvas').click({
+  await page.locator('canvas[data-world-width]').click({
     position: { x: 720 + 1192 - nearFurnace.x, y: 500 + 1162 - nearFurnace.y },
   });
   const selected = (label: string) =>

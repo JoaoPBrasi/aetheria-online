@@ -1,10 +1,15 @@
-import type { GameSnapshot } from '@aetheria/shared';
+import type { CombatFeedback, GameSnapshot } from '@aetheria/shared';
 /** External store: React receives coarse snapshots, never frame-by-frame updates. */
 export class GameBridge {
   interact?: (target?: string) => void;
   acceptQuest?: (questId: string) => void;
   turnInQuest?: (questId: string) => void;
   animateCharacter?: (action: Record<string, unknown>) => void;
+  combatFeedback?: (
+    event: CombatFeedback,
+    local: boolean,
+    attackerSession?: string,
+  ) => void;
   private snapshot: GameSnapshot = {
     status: 'offline',
     players: 0,

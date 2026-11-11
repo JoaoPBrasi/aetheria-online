@@ -46,6 +46,7 @@ export interface QuestDefinition {
     completed: string;
   };
   objectives: QuestObjective[];
+  startingItem?: ItemId;
   rewards: QuestReward;
 }
 
@@ -55,17 +56,25 @@ export const TUTORIAL_QUEST: QuestDefinition = {
   description:
     'O Ancião Eldrin pediu que você aprenda os fundamentos de sobrevivência: colha madeira, fabrique tábuas e derrote slimes que ameaçam a vila.',
   giverNpcId: 'elder-eldrin',
+  startingItem: 'sword',
   dialogues: {
     offer:
-      'Jovem aventureiro! Vejo grande potencial em você, mas Brumavale exige preparo. Tenho uma missão introdutória: colha 5 madeiras, fabrique 2 tábuas na bancada e derrote 2 slimes no prado ao sul. Posso contar com você?',
+      'Leve esta espada de treino. Siga pela estrada a leste e desça pelo acampamento até o Prado dos Slimes. Derrote 2 slimes, corte 5 madeiras no Bosque Antigo e fabrique 2 tábuas na Bancada.',
     inProgress:
-      'Como vão os preparativos? Lembre-se: basta ter o machado na mochila para colher madeira, use a Bancada de Trabalho para fazer tábuas e enfrente os slimes com cautela.',
+      'Ataque com E ou clique no slime. Quando aparecer um círculo, recue até o golpe passar. Lembre-se: basta ter o machado na mochila para cortar madeira e a espada de treino para atacar com ela.',
     readyToTurnIn:
       'Extraordinário! Você cumpriu os objetivos. Conclua a missão para receber 50 XP de Guerreiro, 5 sementes de nabo e 2 de abóbora.',
     completed:
-      'Você já concluiu meus primeiros ensinamentos com louvor. Continue explorando, cuidando da horta e protegendo nossa vila!',
+      'Quando quiser uma arma mais forte, minere na Pedreira do Lago, funda o minério em lingotes na Fornalha e fabrique a espada de ferro na Forja. Volte ao prado para experimentar o novo golpe.',
   },
   objectives: [
+    {
+      id: 'defeat_slimes',
+      type: 'defeat',
+      targetId: 'slime',
+      description: 'Derrotar slimes no Prado dos Slimes',
+      required: 2,
+    },
     {
       id: 'gather_wood',
       type: 'gather',
@@ -78,13 +87,6 @@ export const TUTORIAL_QUEST: QuestDefinition = {
       type: 'craft',
       targetId: 'plank',
       description: 'Fabricar tábuas de madeira na Bancada',
-      required: 2,
-    },
-    {
-      id: 'defeat_slimes',
-      type: 'defeat',
-      targetId: 'slime',
-      description: 'Derrotar slimes no Prado Sul',
       required: 2,
     },
   ],

@@ -22,6 +22,8 @@ export interface GameSnapshot {
   inputBlocked?: boolean;
   feedback?: string;
   feedbackAt?: number;
+  combatText?: string;
+  combatAt?: number;
   plots?: import('../data/farming.js').FarmSnapshot[];
   quests?: import('../data/quests.js').CharacterQuestState[];
   status: ConnectionStatus;

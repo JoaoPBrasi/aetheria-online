@@ -73,6 +73,16 @@ export function GameHud({
     s.status === 'connected' && s.position && s.quests
       ? soloGuide(s.quests, s.position, hiddenQuests)
       : undefined;
+  const position = s.position;
+  const threatened =
+    position &&
+    s.monsters?.some(
+      (monster) =>
+        monster.state === 'windup' &&
+        monster.targetId === characterId &&
+        Math.hypot(position.x - monster.x, position.y - monster.y) <=
+          monster.attackRange + 8,
+    );
   const nearby =
     s.gameplay && s.position
       ? interaction(
@@ -244,7 +254,7 @@ export function GameHud({
           <small>{guide.hint}</small>
         </div>
       )}
-      {!panel && nearby?.monster?.state === 'windup' && (
+      {!panel && threatened && (
         <div className="combat-warning" data-testid="enemy-windup">
           Recue do círculo!
         </div>

@@ -389,19 +389,33 @@ it('attacks slimes within range, validates cooldown, takes damage, awards warrio
   const slime = service.monstersManager.get('slime-1')!;
   slime.health = slime.maxHealth;
   slime.state = 'idle';
+  const feedback: number[] = [];
+  const strike = {
+    id: randomUUID(),
+    revision: s.revision,
+    kind: 'attack',
+    targetId: 'slime-1',
+  };
+  await expect(
+    service.act(
+      id,
+      { ...strike, revision: s.revision + 1 },
+      slimePos,
+      (event) => feedback.push(event.amount),
+    ),
+  ).rejects.toThrow('desatualizado');
+  expect(slime.health).toBe(60);
 
   // 1º ataque desarmado (dano: 20 -> vida vai para 40)
-  s = await service.act(
-    id,
-    {
-      id: randomUUID(),
-      revision: s.revision,
-      kind: 'attack',
-      targetId: 'slime-1',
-    },
-    slimePos,
+  s = await service.act(id, strike, slimePos, (event) =>
+    feedback.push(event.amount),
   );
   expect(slime.health).toBe(40);
+  await service.act(id, strike, slimePos, (event) =>
+    feedback.push(event.amount),
+  );
+  expect(slime.health).toBe(40);
+  expect(feedback).toEqual([20]);
 
   // Rejeitado de imediato pelo cooldown de 400ms
   await expect(

@@ -2,6 +2,7 @@ import { useState, useSyncExternalStore } from 'react';
 import {
   ITEMS,
   RESOURCES,
+  WEAPON_DAMAGE,
   interaction,
   PROFESSION_NAMES,
   levelForXp,
@@ -68,6 +69,12 @@ export function GameplayPanel({
               );
             })}
           </div>
+          {(source?.itemId === 'sword' || source?.itemId === 'iron_sword') && (
+            <p>
+              {WEAPON_DAMAGE[source.itemId]} de dano por golpe. O combate usa a
+              melhor espada que você carrega.
+            </p>
+          )}
           <div className="inventory-controls">
             <label>
               Quantidade

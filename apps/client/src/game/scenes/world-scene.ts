@@ -20,12 +20,16 @@ import {
   type ResourceStates,
   type ResourceDefinition,
   type ForageNode,
+  type CombatFeedback,
 } from '@aetheria/shared';
 import { gameBridge } from '../managers/game-bridge';
 import { movement } from '../networking/movement';
 import { PlayerAvatar } from '../characters/player-avatar';
 import { makeNameplate } from '../ui/nameplate';
 import type { Cosmetics } from '@aetheria/shared';
+import { facingFromInput } from '../characters/animation';
+import { playCombatSound } from '../combat-audio';
+import { showCombatEffect } from '../combat-effects';
 
 export class WorldScene extends Phaser.Scene {
   private avatar!: PlayerAvatar;
@@ -33,7 +37,7 @@ export class WorldScene extends Phaser.Scene {
   private active = false;
   private focusRing!: Phaser.GameObjects.Graphics;
   private walking = false;
-  private lastHealth = 100;
+  private dangerRing!: Phaser.GameObjects.Graphics;
   private plots = new Map<string, Phaser.GameObjects.Rectangle>();
   private accumulator = 0;
   private remoteSprites = new Map<string, PlayerAvatar>();
@@ -59,6 +63,7 @@ export class WorldScene extends Phaser.Scene {
       body: Phaser.GameObjects.Ellipse | Phaser.GameObjects.Sprite;
       hpFill: Phaser.GameObjects.Rectangle;
       barWidth: number;
+      hurtUntil: number;
     }
   >();
   constructor() {
@@ -95,6 +100,7 @@ export class WorldScene extends Phaser.Scene {
   }
   create() {
     this.focusRing = this.add.graphics().setDepth(5001);
+    this.dangerRing = this.add.graphics().setDepth(2);
 
     const artwork = this.cache.json.get('world-art') as WorldArtwork;
     if (
@@ -274,6 +280,9 @@ export class WorldScene extends Phaser.Scene {
     this.label('CAMPOS DO SUL ↓', 1040, 2030);
     this.label('ORCS →', 2260, 1040);
     this.avatar = new PlayerAvatar(this);
+    gameBridge.combatFeedback = (event, local, attackerSession) => {
+      this.combat(event, local, attackerSession);
+    };
     gameBridge.animateCharacter = (action) => {
       const kind = action.kind;
       const resource = RESOURCES.find((r) => r.id === action.node);
@@ -290,6 +299,7 @@ export class WorldScene extends Phaser.Scene {
     };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       gameBridge.animateCharacter = undefined;
+      gameBridge.combatFeedback = undefined;
     });
     this.avatar.setVisible(false);
     this.cameras.main.setBounds(
@@ -529,6 +539,35 @@ export class WorldScene extends Phaser.Scene {
       } else prop.setAlpha(alpha);
     }
   }
+  private combat(
+    event: CombatFeedback,
+    local: boolean,
+    attackerSession?: string,
+  ) {
+    if (!this.active) return;
+    if (local) playCombatSound(event.kind);
+    if (event.kind === 'strike') {
+      const actor = local
+        ? this.avatar
+        : attackerSession
+          ? this.remoteSprites.get(attackerSession)
+          : undefined;
+      if (actor) {
+        const facing = facingFromInput(
+          event.x - event.origin.x,
+          event.y - event.origin.y,
+          actor.facing,
+        );
+        actor.playGesture('attack', this.time.now, facing);
+      }
+      const target = this.monsterSprites.get(event.monsterId);
+      if (target) target.hurtUntil = this.time.now + 160;
+    } else if (local && event.kind === 'hurt')
+      this.avatar.playGesture('hit', this.time.now);
+    const camera = this.cameras.main.worldView;
+    if (local || camera.contains(event.x, event.y))
+      showCombatEffect(this, event, local);
+  }
   update(time: number, delta: number) {
     const farmState = gameBridge.getSnapshot();
     this.focusRing?.clear();
@@ -577,10 +616,6 @@ export class WorldScene extends Phaser.Scene {
         );
     }
     if (!this.avatar) return;
-    const health = farmState.health ?? 100;
-    if (this.active && health < this.lastHealth)
-      this.avatar.playGesture('hit', time);
-    this.lastHealth = health;
     const focused = document.activeElement;
     const typing =
       focused instanceof HTMLSelectElement ||
@@ -636,6 +671,7 @@ export class WorldScene extends Phaser.Scene {
     this.updateCover();
 
     const liveMonsters = new Set<string>();
+    this.dangerRing.clear();
     for (const m of farmState.monsters ?? []) {
       liveMonsters.add(m.id);
       let entry = this.monsterSprites.get(m.id);
@@ -697,7 +733,7 @@ export class WorldScene extends Phaser.Scene {
           .setInteractive({ useHandCursor: true })
           .on('pointerdown', () => gameBridge.interact?.(m.id));
 
-        entry = { container, body, hpFill, barWidth };
+        entry = { container, body, hpFill, barWidth, hurtUntil: 0 };
         this.monsterSprites.set(m.id, entry);
       }
 
@@ -706,9 +742,29 @@ export class WorldScene extends Phaser.Scene {
       } else {
         entry.container.setVisible(true);
         entry.container.setPosition(m.x, m.y).setDepth(m.y);
-        const squish = 1 + Math.sin(time / 150 + m.x) * 0.12;
-        if (entry.body instanceof Phaser.GameObjects.Ellipse)
+        const charging = m.state === 'windup';
+        const hurt = entry.hurtUntil > time;
+        const squish = charging
+          ? 0.67
+          : hurt
+            ? 0.82
+            : 1 + Math.sin(time / 150 + m.x) * 0.12;
+        if (entry.body instanceof Phaser.GameObjects.Ellipse) {
           entry.body.setScale(1 / squish, squish);
+          entry.body.setFillStyle(
+            hurt ? 0xf0dc91 : charging ? 0xf4a75a : 0x5cd65c,
+          );
+        } else if (hurt || charging)
+          entry.body.setTint(hurt ? 0xffddaa : 0xffa570);
+        else entry.body.clearTint();
+        if (charging) {
+          this.dangerRing
+            .fillStyle(0xf6513d, 0.2)
+            .fillCircle(m.x, m.y, m.attackRange);
+          this.dangerRing
+            .lineStyle(2, 0xff8758, 0.95)
+            .strokeCircle(m.x, m.y, m.attackRange);
+        }
         const pct = Math.max(0, Math.min(1, m.health / m.maxHealth));
         entry.hpFill.width = entry.barWidth * pct;
         entry.hpFill.setFillStyle(pct > 0.3 ? 0x33cc33 : 0xcc3333);

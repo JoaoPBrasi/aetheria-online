@@ -3,10 +3,12 @@ import {
   ITEMS,
   type WorldState,
   type GameplaySnapshot,
+  type CombatFeedback,
 } from '@aetheria/shared';
 import { gameBridge } from '../managers/game-bridge';
 import { request, RequestError } from './api';
 import { movement } from './movement';
+import { unlockCombatAudio } from '../combat-audio';
 const connectionErrors: Record<string, string> = {
   ALREADY_CONNECTED: 'Personagem já conectado em outra janela.',
   INVALID_SESSION: 'Sessão inválida. Crie uma nova identidade local.',
@@ -34,6 +36,7 @@ export class WorldConnection {
       !current.gameplay
     )
       return;
+    if (payload.kind === 'attack') unlockCombatAudio();
     this.lastAction = {
       ...payload,
       id: crypto.randomUUID(),
@@ -58,6 +61,8 @@ export class WorldConnection {
       quests: undefined,
       resources: undefined,
       forage: undefined,
+      combatText: undefined,
+      combatAt: undefined,
     });
     try {
       const reservation = (await request(
@@ -112,7 +117,11 @@ export class WorldConnection {
         if (this.disposed) return;
         const old = gameBridge.getSnapshot().gameplay;
         if (old && snapshot.revision > old.revision) {
-          if (gameBridge.getSnapshot().actionPending && this.lastAction)
+          if (
+            gameBridge.getSnapshot().actionPending &&
+            this.lastAction &&
+            this.lastAction.kind !== 'attack'
+          )
             gameBridge.animateCharacter?.(this.lastAction);
           const gains = Object.keys(ITEMS)
             .map((id) => {
@@ -125,7 +134,12 @@ export class WorldConnection {
                 n: count(snapshot) - count(old),
               };
             })
-            .filter((g) => g.n > 0 && !ITEMS[g.id].tool);
+            .filter(
+              (g) =>
+                g.n > 0 &&
+                (!ITEMS[g.id].tool ||
+                  (g.id === 'sword' && gameBridge.getSnapshot().questPending)),
+            );
           if (gains.length)
             gameBridge.update({
               feedback: gains
@@ -142,6 +156,30 @@ export class WorldConnection {
               ? null
               : gameBridge.getSnapshot().gameplayError,
           });
+      });
+      room.onMessage('combat', (event: CombatFeedback) => {
+        if (this.disposed) return;
+        const characterId =
+          event.kind === 'strike' ? event.attackerId : event.playerId;
+        const local =
+          room.state.players.get(room.sessionId)?.characterId === characterId;
+        const attackerSession =
+          event.kind === 'strike' && !local
+            ? [...room.state.players].find(
+                ([, player]) => player.characterId === characterId,
+              )?.[0]
+            : undefined;
+        gameBridge.combatFeedback?.(event, local, attackerSession);
+        if (!local) return;
+        const combatText =
+          event.kind === 'strike'
+            ? event.lethal
+              ? 'Alvo derrotado'
+              : `${event.amount} de dano causado`
+            : event.kind === 'hurt'
+              ? `${event.amount} de dano recebido`
+              : `Fogueira · +${event.amount} de vida`;
+        gameBridge.update({ combatText, combatAt: Date.now() });
       });
       room.onMessage('gameplayError', (message: string) => {
         if (this.disposed) return;

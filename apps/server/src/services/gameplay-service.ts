@@ -2,6 +2,11 @@ import {
   GameActionSchema,
   RESOURCES,
   hasTool,
+  PLAYER_ATTACK_RANGE,
+  PLAYER_ATTACK_COOLDOWN_MS,
+  UNARMED_DAMAGE,
+  WEAPON_DAMAGE,
+  type CombatFeedback,
   type GameplaySnapshot,
   type ItemId,
   type ResourceStates,
@@ -61,6 +66,7 @@ export class GameplayService {
     id: string,
     raw: unknown,
     getPosition: () => { x: number; y: number; direction: string } | undefined,
+    onStrike?: (feedback: Extract<CombatFeedback, { kind: 'strike' }>) => void,
   ): Promise<GameplaySnapshot> {
     const parsed = GameActionSchema.safeParse(raw);
     if (!parsed.success) return Promise.reject(new Error('Comando inválido.'));
@@ -74,42 +80,62 @@ export class GameplayService {
       if (await this.repository.receipt(id, action.id))
         return this.repository.execute(id);
       if (action.kind === 'attack') {
-        const monster = this.monstersManager.get(action.targetId);
-        if (!monster) throw new Error('Monstro não encontrado.');
-        if (monster.state === 'dead' || monster.health <= 0)
-          throw new Error('Monstro já derrotado.');
-        if (Math.hypot(monster.x - position.x, monster.y - position.y) > 64)
-          throw new Error('Monstro fora de alcance.');
-        const lastAttack = this.attackCooldowns.get(id) ?? 0;
-        if (Date.now() - lastAttack < 400)
-          throw new Error('Aguarde o golpe anterior.');
-        this.attackCooldowns.set(id, Date.now());
+        return this.serial(`monster:${action.targetId}`, async () => {
+          const monster = this.monstersManager.get(action.targetId);
+          if (!monster) throw new Error('Monstro não encontrado.');
+          if (monster.state === 'dead' || monster.health <= 0)
+            throw new Error('Monstro já derrotado.');
+          const current = getPosition();
+          if (
+            !current ||
+            Math.hypot(monster.x - current.x, monster.y - current.y) >
+              PLAYER_ATTACK_RANGE
+          )
+            throw new Error('Monstro fora de alcance.');
+          const now = Date.now();
+          if (
+            now - (this.attackCooldowns.get(id) ?? 0) <
+            PLAYER_ATTACK_COOLDOWN_MS
+          )
+            throw new Error('Aguarde o golpe anterior.');
 
-        const currentSnapshot = await this.repository.execute(id);
-        const hasSword = hasTool(currentSnapshot, 'sword');
-        const damage = hasTool(currentSnapshot, 'iron_sword')
-          ? 40
-          : hasSword
-            ? 30
-            : 20;
-
-        const { killed } = this.monstersManager.takeDamage(
-          action.targetId,
-          damage,
-          id,
-        );
-
-        const reward = killed
-          ? {
-              item: monster.drop.itemId as ItemId,
-              quantity: monster.drop.quantity,
-              profession: 'warrior',
-              xp: monster.xp,
-              monster: monster.kind,
-            }
-          : undefined;
-
-        return this.repository.execute(id, action, reward, position);
+          const equipment = await this.repository.execute(id);
+          const damage = hasTool(equipment, 'iron_sword')
+            ? WEAPON_DAMAGE.iron_sword
+            : hasTool(equipment, 'sword')
+              ? WEAPON_DAMAGE.sword
+              : UNARMED_DAMAGE;
+          const lethal = damage >= monster.health;
+          const reward = lethal
+            ? {
+                item: monster.drop.itemId as ItemId,
+                quantity: monster.drop.quantity,
+                profession: 'warrior',
+                xp: monster.xp,
+                monster: monster.kind,
+              }
+            : undefined;
+          const amount = Math.min(damage, monster.health);
+          const snapshot = await this.repository.execute(
+            id,
+            action,
+            reward,
+            current,
+          );
+          this.monstersManager.takeDamage(monster.id, damage, id);
+          this.attackCooldowns.set(id, now);
+          onStrike?.({
+            kind: 'strike',
+            attackerId: id,
+            monsterId: monster.id,
+            origin: { x: current.x, y: current.y },
+            x: monster.x,
+            y: monster.y,
+            amount,
+            lethal,
+          });
+          return snapshot;
+        });
       }
       if (action.kind === 'craft') {
         const result = await this.repository.execute(
@@ -170,7 +196,7 @@ export class GameplayService {
       if (!position) throw new Error('Entre na vila para agir.');
       const questId = this.questAt(raw, position);
       await this.repository.quests().accept(id, questId);
-      return this.quests(id);
+      return this.repository.execute(id);
     });
   }
   turnInQuest(

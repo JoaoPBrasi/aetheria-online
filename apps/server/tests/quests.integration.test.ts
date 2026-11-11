@@ -67,6 +67,12 @@ it('validates quest commands, proximity and character ownership; persists accept
   ).rejects.toThrow('inválido');
   await a.s.acceptQuest(a.id, command, near);
   await a.s.acceptQuest(a.id, command, near);
+  expect(
+    (await a.s.sync(a.id)).inventory.filter((slot) => slot.itemId === 'sword'),
+  ).toHaveLength(1);
+  expect(
+    (await b.s.sync(b.id)).inventory.some((slot) => slot.itemId === 'sword'),
+  ).toBe(false);
   expect(await service().quests(a.id)).toHaveLength(1);
   expect(await b.s.quests(b.id)).toEqual([]);
   await expect(a.s.turnInQuest(a.id, command, near)).rejects.toThrow(

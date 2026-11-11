@@ -9,6 +9,7 @@ export const PLAYER_ANIMATIONS = {
   mine: { frames: 8, fps: 12 },
   water: { frames: 8, fps: 12 },
   hit: { frames: 4, fps: 12 },
+  attack: { frames: 5, fps: 18 },
 } as const;
 export type PlayerAnimation = keyof typeof PLAYER_ANIMATIONS;
 export const PLAYER_LAYERS = [
@@ -50,7 +51,7 @@ export function poseAt(
       ? step % frames
       : Math.min(frames - 1, step);
   return {
-    key: `${state}-${direction === 'left' || direction === 'right' ? 'side' : direction}-${frame}`,
+    key: `${state === 'attack' ? 'chop' : state}-${direction === 'left' || direction === 'right' ? 'side' : direction}-${frame}`,
     flip: direction === 'left',
     frame,
   };

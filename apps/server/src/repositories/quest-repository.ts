@@ -68,19 +68,45 @@ export class QuestRepository {
   }
 
   async accept(characterId: string, questId: string) {
-    if (!QUESTS[questId]) throw new Error('Missão desconhecida.');
+    const definition = QUESTS[questId];
+    if (!definition) throw new Error('Missão desconhecida.');
     const initial = createInitialQuestState(questId);
     await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "Character" WHERE "id"=${characterId}::uuid FOR UPDATE`;
-      await tx.characterQuest.upsert({
-        where: { characterId_questId: { characterId, questId } },
-        create: {
+      const where = { characterId_questId: { characterId, questId } };
+      if (await tx.characterQuest.findUnique({ where })) return;
+      await tx.characterQuest.create({
+        data: {
           characterId,
           questId,
           status: initial.status,
           progress: initial.progress,
         },
-        update: {},
+      });
+      const itemId = definition.startingItem;
+      if (!itemId) return;
+      const inventory = await tx.inventorySlot.findMany({
+        where: { characterId },
+      });
+      if (
+        inventory.some((slot) => slot.itemId === itemId) ||
+        (await tx.characterEquipment.findFirst({
+          where: { characterId, itemId },
+        }))
+      )
+        return;
+      const slots = inventory.map((slot) => ({
+        index: slot.index,
+        itemId: slot.itemId as ItemId,
+        quantity: slot.quantity,
+      }));
+      const added = addItem(slots, itemId, 1).find(
+        (slot) => slot.itemId === itemId,
+      )!;
+      await tx.inventorySlot.create({ data: { ...added, characterId } });
+      await tx.character.update({
+        where: { id: characterId },
+        data: { revision: { increment: 1 } },
       });
     });
   }

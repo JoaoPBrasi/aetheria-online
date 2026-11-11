@@ -61,6 +61,7 @@ it('detects live monsters within range and returns attack action payload', () =>
     health: 60,
     maxHealth: 60,
     state: 'idle' as const,
+    attackRange: 36,
   };
   const target = interaction(
     s,

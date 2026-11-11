@@ -6,6 +6,9 @@ import {
   type MonsterKind,
 } from '@aetheria/shared';
 
+const WINDUP_MS = 700;
+const RECOVERY_MS = 1_000;
+
 export interface RuntimeMonster {
   id: string;
   kind: MonsterKind;
@@ -23,8 +26,9 @@ export interface RuntimeMonster {
   returnRange: number;
   xp: number;
   drop: { itemId: ItemId; quantity: number };
-  state: 'idle' | 'patrol' | 'chase' | 'attack' | 'return' | 'dead';
+  state: MonsterSnapshot['state'];
   targetCharacterId?: string;
+  strikeAt?: number;
   lastAttackTime: number;
   respawnTime: number;
 }
@@ -76,11 +80,18 @@ export class MonsterManager {
       maxHealth: m.maxHealth,
       state: m.state,
       targetId: m.targetCharacterId,
+      strikeAt: m.strikeAt,
+      attackRange: m.attackRange,
     }));
   }
 
   get(id: string): RuntimeMonster | undefined {
     return this.monsters.get(id);
+  }
+  threatens(characterId: string) {
+    return [...this.monsters.values()].some(
+      (m) => m.targetCharacterId === characterId,
+    );
   }
 
   takeDamage(
@@ -99,20 +110,23 @@ export class MonsterManager {
       monster.state = 'dead';
       monster.respawnTime = Date.now() + 15000;
       monster.targetCharacterId = undefined;
+      monster.strikeAt = undefined;
       return { monster, killed: true };
     }
 
-    monster.targetCharacterId = attackerCharacterId;
-    monster.state = 'chase';
+    if (monster.state !== 'windup') {
+      monster.targetCharacterId = attackerCharacterId;
+      monster.state = 'chase';
+    }
     return { monster, killed: false };
   }
 
   tick(
     seconds: number,
     players: Map<string, PlayerTarget>,
+    now = Date.now(),
   ): { playerDamages: { sessionId: string; damage: number }[] } {
     const playerDamages: { sessionId: string; damage: number }[] = [];
-    const now = Date.now();
 
     for (const m of this.monsters.values()) {
       if (m.state === 'dead') {
@@ -129,14 +143,16 @@ export class MonsterManager {
       let target = m.targetCharacterId
         ? players.get(m.targetCharacterId)
         : undefined;
-      if (target && (!target.connected || target.health <= 0)) {
+      if (!target || !target.connected || target.health <= 0) {
         m.targetCharacterId = undefined;
+        m.strikeAt = undefined;
         target = undefined;
       }
 
       const distFromSpawn = Math.hypot(m.x - m.spawnX, m.y - m.spawnY);
       if (target && distFromSpawn > m.returnRange) {
         m.targetCharacterId = undefined;
+        m.strikeAt = undefined;
         target = undefined;
         m.state = 'return';
       }
@@ -146,14 +162,22 @@ export class MonsterManager {
         const dy = target.y - m.y;
         const dist = Math.hypot(dx, dy);
 
-        if (dist <= m.attackRange) {
+        if (m.strikeAt !== undefined) {
+          if (now < m.strikeAt) continue;
+          m.strikeAt = undefined;
+          m.lastAttackTime = now;
           m.state = 'attack';
-          if (now - m.lastAttackTime >= 1200) {
-            m.lastAttackTime = now;
+          if (dist <= m.attackRange)
             playerDamages.push({
               sessionId: target.sessionId,
               damage: m.damage,
             });
+          continue;
+        }
+        if (dist <= m.attackRange) {
+          if (now - m.lastAttackTime >= RECOVERY_MS) {
+            m.state = 'windup';
+            m.strikeAt = now + WINDUP_MS;
           }
         } else {
           m.state = 'chase';

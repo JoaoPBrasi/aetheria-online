@@ -17,7 +17,7 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
   private frameKey = '';
   private startedAt = 0;
   private movingUntil = 0;
-  private action?: { state: PlayerAnimation; until: number };
+  private action?: { state: PlayerAnimation; until: number; facing?: Facing };
   state: PlayerAnimation = 'idle';
   facing: Facing = 'down';
   constructor(scene: Phaser.Scene, name?: string) {
@@ -34,11 +34,12 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
     if (name) this.add(makeNameplate(scene, name, 'player', 0, -72));
     scene.add.existing(this);
   }
-  playGesture(state: PlayerAnimation, time: number) {
+  playGesture(state: PlayerAnimation, time: number, facing?: Facing) {
     const animation = PLAYER_ANIMATIONS[state];
     this.action = {
       state,
       until: time + (animation.frames * 1000) / animation.fps,
+      facing,
     };
     this.startedAt = time;
     this.state = state;
@@ -63,6 +64,8 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
         : time < this.movingUntil
           ? 'walk'
           : 'idle';
+    if (this.action && time < this.action.until)
+      facing = this.action.facing ?? facing;
     if (state !== this.state || facing !== this.facing) {
       this.startedAt = time;
       this.state = state;

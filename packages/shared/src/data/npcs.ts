@@ -30,7 +30,7 @@ export const NPCS: readonly NPCDefinition[] = [
         id: 'quest_tutorial',
         prompt: '📜 Tenho coragem! Que tarefa você tem para mim?',
         response:
-          'Jovem aventureiro! Vejo grande potencial em você, mas Brumavale exige preparo. Tenho uma missão introdutória: colha 5 madeiras, fabrique 2 tábuas na bancada e derrote 2 slimes no prado ao sul. Posso contar com você?',
+          'Posso lhe dar uma espada de treino. Siga pela estrada a leste, desça pelo acampamento e derrote 2 slimes no prado. Depois, traga 5 madeiras do Bosque Antigo e fabrique 2 tábuas na Bancada. Posso contar com você?',
         action: 'accept_quest',
         questId: 'tutorial_first_steps',
       },

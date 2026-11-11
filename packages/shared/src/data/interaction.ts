@@ -4,6 +4,7 @@ import {
   treeStage,
   CRAFTING_STATIONS,
   MONSTERS,
+  PLAYER_ATTACK_RANGE,
   type GameplaySnapshot,
   type ItemId,
   type CraftingStationType,
@@ -163,6 +164,10 @@ export function interaction(
     };
   } else if (chosen.monster) {
     label = `Atacar ${chosen.name} (${chosen.monster.health}/${chosen.monster.maxHealth} HP)`;
+    if (chosen.distance > PLAYER_ATTACK_RANGE) {
+      enabled = false;
+      label = 'Aproxime-se para atacar';
+    }
     payload = {
       kind: 'attack',
       targetId: chosen.monster.id,
