@@ -203,3 +203,11 @@ No criador, use os botões de direção e Testar caminhada para conferir o sprit
 real. Personagens existentes podem ser editados em Personalizar personagem no
 lobby. A preferência de movimento reduzido mantém a prévia parada.
 Veja [personagem animado](docs/character-art.md) para geração e limites.
+
+## Documentação Técnica e DevLog
+
+- [Linha do Tempo e Evolução Visual](docs/visual-evolution.md): DevLog histórico ilustrado com as 5 eras gráficas do jogo.
+- [Arquitetura do Sistema](docs/architecture.md): Monorepo, networking autoritativo e persistência local.
+- [Direção de Arte e Cenografia](docs/world-expansion.md): Expansão cenográfica, zonas rurais e tilesets 16-bit.
+- [Sistema de Missões](docs/quests.md): Contratos de quests, NPCs e rastreador no HUD.
+- [Roadmap](docs/roadmap.md): Planejamento de versões e marcos técnicos.
