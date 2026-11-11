@@ -7,8 +7,7 @@ import {
   MovementQueue,
   canStand,
   WORLD_SPAWN,
-  CAMPFIRE,
-  CAMPFIRE_REST_RANGE,
+  isNearRestCampfire,
   type CombatFeedback,
   type CharacterSummary,
 } from '@aetheria/shared';
@@ -282,8 +281,7 @@ export class WorldRoom extends Room<{
         !player.connected ||
         player.health >= player.maxHealth ||
         now - (this.lastCombat.get(sessionId) ?? 0) < 4_000 ||
-        Math.hypot(player.x - CAMPFIRE.x, player.y - CAMPFIRE.y) >
-          CAMPFIRE_REST_RANGE ||
+        !isNearRestCampfire(player) ||
         this.gameplay.monstersManager.threatens(player.characterId)
       )
         continue;

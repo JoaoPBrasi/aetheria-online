@@ -5,7 +5,14 @@ export const WORLD_ART_REVISION = 'brumavale-lakeside-quarry-v5';
 export const QUARRY = { x: 60, y: 5, w: 13, h: 10 };
 export const WOODLAND_CAMP = { x: 50, y: 41, w: 5, h: 4 };
 export const CAMPFIRE = { x: 52.5 * TILE_SIZE, y: 43.5 * TILE_SIZE };
+export const PLAZA_CAMPFIRE = { x: 32 * TILE_SIZE, y: 32 * TILE_SIZE };
+export const REST_CAMPFIRES = [PLAZA_CAMPFIRE, CAMPFIRE] as const;
 export const CAMPFIRE_REST_RANGE = 66;
+export function isNearRestCampfire({ x, y }: { x: number; y: number }) {
+  return REST_CAMPFIRES.some(
+    (fire) => Math.hypot(x - fire.x, y - fire.y) <= CAMPFIRE_REST_RANGE,
+  );
+}
 const woodland = { x: 43, y: 35, w: 17, h: 20 };
 const woodlandTrees = [
   [46, 41],

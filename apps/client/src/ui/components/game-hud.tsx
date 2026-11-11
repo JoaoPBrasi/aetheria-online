@@ -7,8 +7,7 @@ import {
   levelForXp,
   WORLD_REGIONS,
   TILE_SIZE,
-  CAMPFIRE,
-  CAMPFIRE_REST_RANGE,
+  isNearRestCampfire,
   CRAFTING_STATIONS,
   CRAFTING_INTERACTION_RANGE,
   type CropId,
@@ -439,6 +438,11 @@ export function GameHud({
                   ? 'Trabalhando…'
                   : nearby.label}
             </button>
+            {s.position &&
+              (s.health ?? 100) < (s.maxHealth ?? 100) &&
+              isNearRestCampfire(s.position) && (
+                <p>Fogueira · recupere vida fora de combate</p>
+              )}
             {nearby.payload.operation === 'plant' && (
               <div className="crop-quick">
                 <button
@@ -456,9 +460,7 @@ export function GameHud({
               </div>
             )}
           </>
-        ) : s.position &&
-          Math.hypot(s.position.x - CAMPFIRE.x, s.position.y - CAMPFIRE.y) <=
-            CAMPFIRE_REST_RANGE ? (
+        ) : s.position && isNearRestCampfire(s.position) ? (
           <p>Fogueira · recupere vida fora de combate</p>
         ) : (
           <p>Explore. Aproxime-se de um recurso para interagir.</p>

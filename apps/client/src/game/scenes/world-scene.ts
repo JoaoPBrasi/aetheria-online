@@ -8,6 +8,8 @@ import {
   WORLD_REGIONS,
   QUARRY,
   CAMPFIRE,
+  PLAZA_CAMPFIRE,
+  REST_CAMPFIRES,
   RESOURCES,
   treeStage,
   FARM_PLOTS,
@@ -163,15 +165,22 @@ export class WorldScene extends Phaser.Scene {
       });
     }
 
-    for (const { x, y } of [
-      { x: 990, y: 1032 },
-      CAMPFIRE,
-      { x: 1552, y: 784 },
-    ]) {
-      this.add.ellipse(x, y + 14, 44, 18, 0x132b24, 0.45).setDepth(y - 1);
+    for (const fire of REST_CAMPFIRES) {
+      const { x, y } = fire;
+      const central = fire === PLAZA_CAMPFIRE;
+      this.add
+        .ellipse(
+          x,
+          y + (central ? 16 : 14),
+          central ? 51 : 44,
+          central ? 21 : 18,
+          0x132b24,
+          0.45,
+        )
+        .setDepth(y - 1);
       this.add
         .sprite(x, y, 'bonfire')
-        .setScale(1.75)
+        .setScale(central ? 2.05 : 1.75)
         .setDepth(y)
         .play('bonfire-burn');
     }
@@ -811,7 +820,9 @@ export class WorldScene extends Phaser.Scene {
             m.health > 0 &&
             m.state !== 'dead' &&
             m.targetId === localCharId &&
-            (m.state === 'chase' || m.state === 'windup' || m.state === 'attack'),
+            (m.state === 'chase' ||
+              m.state === 'windup' ||
+              m.state === 'attack'),
         );
       if (isUnderThreat) {
         audioManager.notifyCombatAction();

@@ -9,6 +9,10 @@ import {
   worldTiles,
   BRIDGES,
   QUARRY,
+  CAMPFIRE,
+  CAMPFIRE_REST_RANGE,
+  PLAZA_CAMPFIRE,
+  isNearRestCampfire,
 } from './world.js';
 import {
   MONSTERS,
@@ -18,6 +22,18 @@ import {
 } from './gameplay.js';
 import { FARM_PLOTS } from './index.js';
 describe('world movement', () => {
+  it('permite descansar na praça e no bosque, com alcance limitado e circulação livre', () => {
+    for (const fire of [PLAZA_CAMPFIRE, CAMPFIRE]) {
+      expect(canStand(fire.x, fire.y)).toBe(true);
+      expect(
+        isNearRestCampfire({ x: fire.x + CAMPFIRE_REST_RANGE, y: fire.y }),
+      ).toBe(true);
+      expect(
+        isNearRestCampfire({ x: fire.x + CAMPFIRE_REST_RANGE + 1, y: fire.y }),
+      ).toBe(false);
+    }
+    expect(isNearRestCampfire({ x: 1552, y: 784 })).toBe(false);
+  });
   it('has a walkable spawn and blocks water, buildings and boundaries', () => {
     expect(canStand(WORLD_SPAWN.x, WORLD_SPAWN.y)).toBe(true);
     expect(canStand(45 * 32, 12 * 32)).toBe(false);

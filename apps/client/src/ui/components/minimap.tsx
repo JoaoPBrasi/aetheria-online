@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { MAP_SIZE, TILE_SIZE, worldTiles } from '@aetheria/shared';
+import {
+  MAP_SIZE,
+  PLAZA_CAMPFIRE,
+  TILE_SIZE,
+  worldTiles,
+} from '@aetheria/shared';
 import {
   projectToRadar,
   formatCoordinates,
@@ -29,8 +34,7 @@ const STATIC_LANDMARKS: MinimapMarker[] = [
   {
     id: 'bonfire',
     name: 'Fogueira Central',
-    x: 1040,
-    y: 1040,
+    ...PLAZA_CAMPFIRE,
     color: '#f59842',
     symbol: '🔥',
   },
