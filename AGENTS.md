@@ -96,6 +96,7 @@ Consulte as notas antes de iniciar grandes mudanças:
 - `11 - 🤖 Integração MCP PixelLab (Geração de Personagens e Habilidades).md`
 - `12 - 🗺️ Proposta de Evolução — Funcionalidades Essenciais de MMORPG.md`
 - `13 - 🖼️ Linha do Tempo da Evolução Visual e Gráfica.md`
+- `14 - 📦 Catálogo Geral de Assets — Pixel Crawler.md`
 
 ---
 

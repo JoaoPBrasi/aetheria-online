@@ -13,4 +13,5 @@ apps/server/src/generated/
 *.log
 .vite/
 .vite-temp/
+art/raw/
 
