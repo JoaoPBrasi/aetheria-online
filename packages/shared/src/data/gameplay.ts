@@ -370,14 +370,18 @@ export type CombatFeedback =
       y: number;
       amount: number;
       lethal: boolean;
+      isCrit?: boolean;
+      skillId?: string;
     }
   | {
       kind: 'hurt' | 'heal';
-      source?: 'food';
+      source?: 'food' | 'skill';
       playerId: string;
       x: number;
       y: number;
       amount: number;
+      isCrit?: boolean;
+      skillId?: string;
     };
 
 const itemIds = Object.keys(ITEMS) as [ItemId, ...ItemId[]];
@@ -437,6 +441,14 @@ export const GameActionSchema = z.discriminatedUnion('kind', [
       kind: z.literal('sell'),
       from: slot,
       quantity: z.number().int().min(1).max(99),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
+      kind: z.literal('skill'),
+      skillId: z.enum(['cleave', 'charge', 'heal', 'magic_dart']),
+      targetId: z.string().max(40).optional(),
     })
     .strict(),
 ]);

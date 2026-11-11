@@ -62,6 +62,8 @@ export function ChatBox({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [inputText, channel, connection]);
 
+  const effectiveChannel = filter === 'global' ? 'global' : filter === 'local' ? 'local' : channel;
+
   const handleSend = () => {
     let text = inputText.trim();
     if (!text || !connection) {
@@ -69,7 +71,7 @@ export function ChatBox({
       return;
     }
 
-    let targetChannel = channel;
+    let targetChannel = effectiveChannel;
     if (text.startsWith('/g ') || text.startsWith('/geral ')) {
       targetChannel = 'global';
       text = text.replace(/^\/(g|geral)\s+/, '').trim();
@@ -189,9 +191,9 @@ export function ChatBox({
       >
         <button
           type="button"
-          className={`chat-channel-selector ${channel}`}
+          className={`chat-channel-selector ${effectiveChannel}`}
           onClick={() => {
-            const next = channel === 'local' ? 'global' : 'local';
+            const next = effectiveChannel === 'local' ? 'global' : 'local';
             setChannel(next);
             if (filter !== 'all') {
               setFilter(next);
@@ -199,7 +201,7 @@ export function ChatBox({
           }}
           title="Clique para alternar o canal de envio (Local / Geral)"
         >
-          {channel === 'local' ? 'Local' : 'Geral'}
+          {effectiveChannel === 'local' ? 'Local' : 'Geral'}
         </button>
         <input
           ref={inputRef}
@@ -208,7 +210,7 @@ export function ChatBox({
           value={inputText}
           maxLength={CHAT_MAX_LENGTH}
           placeholder={
-            channel === 'global'
+            effectiveChannel === 'global'
               ? 'Falar no chat Geral... (ou /l para local)'
               : 'Falar no chat Local... (ou /g para geral)'
           }

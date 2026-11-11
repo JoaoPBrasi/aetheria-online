@@ -17,57 +17,107 @@ export function showCombatEffect(
   local: boolean,
 ) {
   const healing = event.kind === 'heal';
+  const isCrit = !!event.isCrit;
+
+  let textLabel = healing ? `+${event.amount} HP` : `−${event.amount}`;
+  if (isCrit && !healing) {
+    textLabel = `💥 CRÍTICO! −${event.amount}`;
+  }
+
   const number = scene.add
     .text(
       event.x,
       event.y - (event.kind === 'strike' ? 33 : 53),
-      healing ? `+${event.amount}` : `−${event.amount}`,
+      textLabel,
       {
         fontFamily: 'Trebuchet MS, Arial, sans-serif',
-        fontSize: local ? '22px' : '18px',
+        fontSize: isCrit ? (local ? '26px' : '20px') : local ? '22px' : '18px',
         fontStyle: 'bold',
         color: healing
-          ? '#a8ef8b'
-          : event.kind === 'hurt'
-            ? '#ff9588'
-            : '#fff0b8',
-        stroke: '#201d17',
-        strokeThickness: 4,
+          ? '#52b788'
+          : isCrit
+            ? '#ffd166'
+            : event.kind === 'hurt'
+              ? '#ff9588'
+              : '#fff0b8',
+        stroke: isCrit ? '#541212' : '#201d17',
+        strokeThickness: isCrit ? 5 : 4,
       },
     )
     .setOrigin(0.5)
     .setDepth(5003);
+
+  if (isCrit) {
+    number.setScale(1.4);
+    scene.tweens.add({
+      targets: number,
+      scale: 1.0,
+      duration: 150,
+      ease: 'Back.Out',
+    });
+    if (local && scene.cameras?.main) {
+      scene.cameras.main.shake(120, 0.006);
+    }
+  }
+
   scene.tweens.add({
     targets: number,
-    y: number.y - 35,
+    y: number.y - (isCrit ? 45 : 35),
     alpha: 0,
-    duration: 750,
+    duration: isCrit ? 950 : 750,
     ease: 'Quad.Out',
     onComplete: () => number.destroy(),
   });
+
   if (event.kind !== 'strike') return;
 
   const angle = Math.atan2(event.y - event.origin.y, event.x - event.origin.x);
   const swing = scene.add.graphics().setDepth(5002);
-  // Arco ampliado e mais impactante da lâmina
-  swing.lineStyle(6, 0xffe6a8, 0.95).beginPath();
-  swing
-    .arc(event.origin.x, event.origin.y - 19, 38, angle - 0.9, angle + 0.9)
-    .strokePath();
-  swing.lineStyle(3, 0xffb764, 0.85);
-  for (let i = -1; i <= 1; i++) {
-    const ray = angle + i * 0.75;
-    swing.lineBetween(
-      event.x,
-      event.y - 12,
-      event.x + Math.cos(ray) * 22,
-      event.y - 12 + Math.sin(ray) * 22,
-    );
+
+  if (event.skillId === 'magic_dart') {
+    // Projétil elétrico arcano ciano
+    swing.lineStyle(4, 0x48cae4, 0.95);
+    swing.lineBetween(event.origin.x, event.origin.y - 14, event.x, event.y - 14);
+    swing.fillStyle(0x00b4d8, 0.85);
+    swing.fillCircle(event.x, event.y - 14, 8);
+  } else if (event.skillId === 'cleave') {
+    // Golpe Fendido: arco duplo incandescente
+    swing.lineStyle(8, 0xff9f1c, 0.95).beginPath();
+    swing
+      .arc(event.origin.x, event.origin.y - 19, 44, angle - 1.1, angle + 1.1)
+      .strokePath();
+    swing.lineStyle(4, 0xffd166, 0.9);
+    for (let i = -2; i <= 2; i++) {
+      const ray = angle + i * 0.5;
+      swing.lineBetween(
+        event.x,
+        event.y - 12,
+        event.x + Math.cos(ray) * 28,
+        event.y - 12 + Math.sin(ray) * 28,
+      );
+    }
+  } else {
+    // Golpe comum ou investida
+    swing.lineStyle(6, isCrit ? 0xffd166 : 0xffe6a8, 0.95).beginPath();
+    swing
+      .arc(event.origin.x, event.origin.y - 19, 38, angle - 0.9, angle + 0.9)
+      .strokePath();
+    swing.lineStyle(3, 0xffb764, 0.85);
+    for (let i = -1; i <= 1; i++) {
+      const ray = angle + i * 0.75;
+      swing.lineBetween(
+        event.x,
+        event.y - 12,
+        event.x + Math.cos(ray) * 22,
+        event.y - 12 + Math.sin(ray) * 22,
+      );
+    }
   }
+
   scene.tweens.add({
     targets: swing,
     alpha: 0,
-    duration: 200,
+    duration: 220,
     onComplete: () => swing.destroy(),
   });
 }

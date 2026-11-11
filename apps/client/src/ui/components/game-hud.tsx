@@ -15,6 +15,9 @@ import {
   type CraftingStationId,
   type Cosmetics,
   cycleNextTarget,
+  COMBAT_SKILLS,
+  HOTBAR_SKILL_IDS,
+  type SkillId,
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
 import type { WorldConnection } from '../../game/networking/world-connection';
@@ -98,6 +101,83 @@ export function GameHud({
     useState<CraftingStationId>('workbench-plaza');
   const [dialogueNpc, setDialogueNpc] = useState<string | null>(null);
   const [seedPlotId, setSeedPlotId] = useState<string>();
+  const [skillCooldowns, setSkillCooldowns] = useState<
+    Partial<Record<SkillId, number>>
+  >({});
+
+  const triggerSkill = (skillId: SkillId) => {
+    const config = COMBAT_SKILLS[skillId];
+    if (!config) return;
+
+    const now = Date.now();
+    const readyAt = skillCooldowns[skillId] ?? 0;
+    if (now < readyAt) {
+      const waitSec = ((readyAt - now) / 1000).toFixed(1);
+      audioManager.playSfx('ui_click');
+      gameBridge.update({
+        feedback: `${config.name} em recarga (${waitSec}s).`,
+        feedbackAt: now,
+      });
+      return;
+    }
+
+    const snap = gameBridge.getSnapshot();
+
+    if (config.type !== 'heal') {
+      const targetId = snap.currentTargetId;
+      if (!targetId) {
+        audioManager.playSfx('ui_click');
+        gameBridge.update({
+          feedback: `Selecione um monstro alvo para usar ${config.name} (Clique ou Tab).`,
+          feedbackAt: now,
+        });
+        return;
+      }
+
+      if (snap.position && snap.monsters) {
+        const targetMonster = snap.monsters.find((m) => m.id === targetId);
+        if (targetMonster) {
+          const dist = Math.hypot(
+            targetMonster.x - snap.position.x,
+            targetMonster.y - snap.position.y,
+          );
+          if (dist > config.range) {
+            audioManager.playSfx('ui_click');
+            gameBridge.update({
+              feedback: `Alvo muito distante para ${config.name} (${Math.round(dist)}px / ${config.range}px).`,
+              feedbackAt: now,
+            });
+            return;
+          }
+        }
+      }
+
+      audioManager.unlockAudio();
+      audioManager.playSfx('strike');
+      setSkillCooldowns((prev) => ({
+        ...prev,
+        [skillId]: now + config.cooldownMs,
+      }));
+      connection?.action({
+        kind: 'skill',
+        skillId,
+        targetId,
+      });
+      return;
+    }
+
+    audioManager.unlockAudio();
+    audioManager.playSfx('heal');
+    setSkillCooldowns((prev) => ({
+      ...prev,
+      [skillId]: now + config.cooldownMs,
+    }));
+    connection?.action({
+      kind: 'skill',
+      skillId,
+      targetId: snap.currentTargetId ?? undefined,
+    });
+  };
   const cast = useSyncExternalStore(
     gameBridge.subscribeCast,
     gameBridge.getCast,
@@ -358,22 +438,28 @@ export function GameHud({
       const num = parseInt(k, 10);
       if (!panel && !isNaN(num) && num >= 1 && num <= 8) {
         e.preventDefault();
-        const slotIndex = num - 1;
-        const currentSnap = gameBridge.getSnapshot().gameplay;
-        if (currentSnap) {
-          const slotItem = currentSnap.inventory.find(
-            (i) => i.index === slotIndex,
-          );
-          const equippedTool = currentSnap.equipment.find(
-            (eq) => eq.slot === 'tool',
-          )?.itemId;
-          if (slotItem?.itemId === 'roasted_turnip') {
-            connection?.action({ kind: 'consume', from: slotIndex });
-          } else if (slotItem && ITEMS[slotItem.itemId]?.tool) {
-            if (slotItem.itemId === equippedTool) {
-              connection?.action({ kind: 'unequip' });
-            } else {
-              connection?.action({ kind: 'equip', from: slotIndex });
+        if (num >= 1 && num <= 4) {
+          const skillId = HOTBAR_SKILL_IDS[num - 1];
+          if (skillId) triggerSkill(skillId);
+        } else {
+          // Teclas 5 a 8 acionam itens da mochila (slots 0 a 3 do inventário)
+          const inventoryIndex = num - 5;
+          const currentSnap = gameBridge.getSnapshot().gameplay;
+          if (currentSnap) {
+            const slotItem = currentSnap.inventory.find(
+              (i) => i.index === inventoryIndex,
+            );
+            const equippedTool = currentSnap.equipment.find(
+              (eq) => eq.slot === 'tool',
+            )?.itemId;
+            if (slotItem?.itemId === 'roasted_turnip') {
+              connection?.action({ kind: 'consume', from: inventoryIndex });
+            } else if (slotItem && ITEMS[slotItem.itemId]?.tool) {
+              if (slotItem.itemId === equippedTool) {
+                connection?.action({ kind: 'unequip' });
+              } else {
+                connection?.action({ kind: 'equip', from: inventoryIndex });
+              }
             }
           }
         }
@@ -598,6 +684,8 @@ export function GameHud({
         <Hotbar
           inventory={s.gameplay.inventory}
           equipment={s.gameplay.equipment}
+          cooldowns={skillCooldowns}
+          onUseSkill={triggerSkill}
           onConsume={(fromIndex) =>
             connection?.action({ kind: 'consume', from: fromIndex })
           }

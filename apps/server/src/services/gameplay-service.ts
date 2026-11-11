@@ -6,6 +6,9 @@ import {
   PLAYER_ATTACK_COOLDOWN_MS,
   UNARMED_DAMAGE,
   WEAPON_DAMAGE,
+  COMBAT_SKILLS,
+  calculateSkillDamage,
+  type SkillId,
   type CombatFeedback,
   type GameplaySnapshot,
   type ItemId,
@@ -21,6 +24,7 @@ export class GameplayService {
   private queues = new Map<string, Promise<unknown>>();
   private cooldowns = new Map<string, number>();
   private attackCooldowns = new Map<string, number>();
+  private skillCooldowns = new Map<string, Map<SkillId, number>>();
   readonly forage = new ForageManager();
   readonly monstersManager = new MonsterManager();
   constructor(private repository: GameplayRepository) {}
@@ -66,7 +70,7 @@ export class GameplayService {
     id: string,
     raw: unknown,
     getPosition: () => { x: number; y: number; direction: string } | undefined,
-    onStrike?: (feedback: Extract<CombatFeedback, { kind: 'strike' }>) => void,
+    onStrike?: (feedback: CombatFeedback) => void,
     prepareConsumption?: () => () => void,
   ): Promise<GameplaySnapshot> {
     const parsed = GameActionSchema.safeParse(raw);
@@ -147,6 +151,105 @@ export class GameplayService {
             y: monster.y,
             amount,
             lethal,
+          });
+          return snapshot;
+        });
+      }
+      if (action.kind === 'skill') {
+        const skill = COMBAT_SKILLS[action.skillId];
+        if (!skill) throw new Error('Habilidade desconhecida.');
+        const now = Date.now();
+        let playerSkills = this.skillCooldowns.get(id);
+        if (!playerSkills) {
+          playerSkills = new Map<SkillId, number>();
+          this.skillCooldowns.set(id, playerSkills);
+        }
+        const readyAt = playerSkills.get(action.skillId) ?? 0;
+        if (now < readyAt) {
+          const remainingSec = ((readyAt - now) / 1000).toFixed(1);
+          throw new Error(`${skill.name} em recarga (${remainingSec}s).`);
+        }
+
+        if (action.skillId === 'heal') {
+          playerSkills.set(action.skillId, now + skill.cooldownMs);
+          onStrike?.({
+            kind: 'heal',
+            source: 'skill',
+            playerId: id,
+            x: position.x,
+            y: position.y,
+            amount: skill.healAmount ?? 35,
+            skillId: 'heal',
+          });
+          return this.repository.execute(id, action, undefined, position);
+        }
+
+        if (!action.targetId)
+          throw new Error(`Selecione um alvo para usar ${skill.name}.`);
+
+        return this.serial(`monster:${action.targetId}`, async () => {
+          const monster = this.monstersManager.get(action.targetId!);
+          if (!monster) throw new Error('Monstro não encontrado.');
+          if (monster.state === 'dead' || monster.health <= 0)
+            throw new Error('Monstro já derrotado.');
+
+          const current = getPosition();
+          if (!current) throw new Error('Entre na vila para agir.');
+          const dist = Math.hypot(monster.x - current.x, monster.y - current.y);
+          if (dist > skill.range)
+            throw new Error(
+              `Alvo fora de alcance (${skill.name} requer até ${skill.range}px, você está a ${Math.round(dist)}px).`,
+            );
+
+          const equipment = await this.repository.execute(id);
+          const weapon: ItemId | undefined = hasTool(equipment, 'iron_sword')
+            ? 'iron_sword'
+            : hasTool(equipment, 'sword')
+              ? 'sword'
+              : undefined;
+          const baseWeaponDmg = weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE;
+          const { damage, isCrit } = calculateSkillDamage(
+            action.skillId,
+            baseWeaponDmg,
+          );
+
+          if (skill.type === 'dash') {
+            const angle = Math.atan2(monster.y - current.y, monster.x - current.x);
+            current.x = Math.round(monster.x - Math.cos(angle) * 36);
+            current.y = Math.round(monster.y - Math.sin(angle) * 36);
+          }
+
+          const lethal = damage >= monster.health;
+          const reward = lethal
+            ? {
+                item: monster.drop.itemId as ItemId,
+                quantity: monster.drop.quantity,
+                profession: 'warrior',
+                xp: monster.xp + 10,
+                monster: monster.kind,
+                weapon,
+              }
+            : undefined;
+          const amount = Math.min(damage, monster.health);
+          const snapshot = await this.repository.execute(
+            id,
+            action,
+            reward,
+            current,
+          );
+          this.monstersManager.takeDamage(monster.id, damage, id);
+          playerSkills!.set(action.skillId, now + skill.cooldownMs);
+          onStrike?.({
+            kind: 'strike',
+            attackerId: id,
+            monsterId: monster.id,
+            origin: { x: current.x, y: current.y },
+            x: monster.x,
+            y: monster.y,
+            amount,
+            lethal,
+            isCrit,
+            skillId: action.skillId,
           });
           return snapshot;
         });

@@ -446,6 +446,48 @@
   height: clamp(36px, 10vw, 49px);
   clip-path: none;
   border-radius: 6px;
+  position: relative;
+}
+.medieval-hud .hotbar-divider {
+  width: 2px;
+  height: clamp(28px, 8vw, 38px);
+  background: linear-gradient(180deg, rgba(200, 160, 42, 0.2), #786955, rgba(200, 160, 42, 0.2));
+  align-self: center;
+  margin: 0 3px;
+  border-radius: 1px;
+}
+.medieval-hud .hotbar-skill-slot {
+  background: radial-gradient(circle at 50% 30%, #3a2e22, #1c1510);
+  border-color: #8c7348;
+}
+.medieval-hud .hotbar-skill-slot:hover {
+  border-color: #ffd166;
+  box-shadow: 0 0 8px rgba(255, 209, 102, 0.35);
+}
+.medieval-hud .hotbar-skill-icon {
+  font-size: clamp(16px, 4vw, 22px);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8));
+  user-select: none;
+}
+.medieval-hud .hotbar-cooldown-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 15, 0.78);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  pointer-events: none;
+  backdrop-filter: blur(1px);
+}
+.medieval-hud .hotbar-cooldown-text {
+  font-family: var(--font-pixel, monospace);
+  font-size: 11px;
+  font-weight: bold;
+  color: #ffd166;
+  text-shadow: 0 1px 2px #000, 0 0 4px #000;
+  letter-spacing: -0.5px;
 }
 .medieval-hud .hotbar-key {
   top: auto;

@@ -62,3 +62,4 @@ describe('Market & Shop Data', () => {
     expect(canSellItem(inventory, 0, 1).ok).toBe(false);
   });
 });
+

@@ -94,8 +94,17 @@ export class WorldRoom extends Room<{
         y: p.y,
       };
 
-      // Chat Geral transmite para todo o servidor; Chat Local transmite para quem está no mesmo mapa
-      this.broadcast('chat', message);
+      // Chat Geral transmite para todo o servidor; Chat Local transmite apenas para quem está no mesmo mapa
+      if (parsed.data.channel === 'global') {
+        this.broadcast('chat', message);
+      } else {
+        for (const clientItem of this.clients) {
+          const clientPlayer = this.state.players.get(clientItem.sessionId);
+          if (clientPlayer?.connected) {
+            clientItem.send('chat', message);
+          }
+        }
+      }
     });
     this.onMessage('action', async (client, raw: unknown) => {
       const p = this.state.players.get(client.sessionId);
@@ -113,6 +122,13 @@ export class WorldRoom extends Room<{
           (event) => {
             if (this.state.players.has(client.sessionId))
               this.lastCombat.set(client.sessionId, Date.now());
+            if (event.kind === 'heal' && event.source === 'skill') {
+              p.health = Math.min(p.maxHealth, p.health + event.amount);
+            }
+            if (event.kind === 'strike' && event.skillId === 'charge') {
+              p.x = event.origin.x;
+              p.y = event.origin.y;
+            }
             this.sendCombat(event);
           },
           () => {
@@ -162,7 +178,7 @@ export class WorldRoom extends Room<{
           raw &&
           typeof raw === 'object' &&
           'kind' in raw &&
-          raw.kind === 'attack'
+          (raw.kind === 'attack' || raw.kind === 'skill')
         )
           this.broadcast('monsters', this.gameplay.monsters());
       } catch (error) {
@@ -374,7 +390,7 @@ export class WorldRoom extends Room<{
     try {
       const character = await this.identities.loadCharacter(parsed.data.token);
       const previousSession = this.leases.acquire(character.id, client.sessionId, true);
-      if (previousSession) {
+      if (previousSession && previousSession !== client.sessionId) {
         // Encerra a conexão da sessão anterior para evitar "Personagem já conectado"
         const oldClient = this.clients.find((c) => c.sessionId === previousSession);
         if (oldClient) {
@@ -383,6 +399,11 @@ export class WorldRoom extends Room<{
           } catch {
             // sessão já encerrada
           }
+        }
+        // Se a sessão anterior estiver no mapa interno de reconexões do Colyseus, remove para desocupar
+        const reconnections = (this as unknown as { _reconnections?: Map<string, unknown> })._reconnections;
+        if (reconnections && reconnections.has(previousSession)) {
+          reconnections.delete(previousSession);
         }
         const oldPlayer = this.state.players.get(previousSession);
         if (oldPlayer) {
@@ -460,7 +481,7 @@ export class WorldRoom extends Room<{
     const player = this.state.players.get(client.sessionId);
     if (player) player.connected = false;
     this.inputs.get(client.sessionId)?.clear();
-    void this.allowReconnection(client, 15).catch(() => undefined);
+    void this.allowReconnection(client, 3).catch(() => undefined);
   }
   onReconnect(client: Client) {
     const player = this.state.players.get(client.sessionId);

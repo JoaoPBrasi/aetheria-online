@@ -341,7 +341,7 @@ export class GameplayRepository {
         });
         changed = true;
       }
-      if (action?.kind === 'attack') {
+      if (action?.kind === 'attack' || action?.kind === 'skill') {
         if (reward) {
           slots = addItem(slots, reward.item, reward.quantity ?? 1);
           await advanceQuests(
@@ -350,7 +350,7 @@ export class GameplayRepository {
             'defeat',
             reward.monster ?? 'slime',
             1,
-            { monsterId: action.targetId, weapon: reward.weapon },
+            { monsterId: action.targetId ?? '', weapon: reward.weapon },
           );
           await tx.characterSkill.update({
             where: {
