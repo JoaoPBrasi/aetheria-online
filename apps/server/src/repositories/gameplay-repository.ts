@@ -16,6 +16,8 @@ import {
   craftingStationRange,
   craftItem,
   DEFAULT_TREE_GROWTH_MS,
+  MARKET_BUY_PRICES,
+  MARKET_SELL_PRICES,
   type CropId,
   type FarmSnapshot,
   type GameAction,
@@ -60,6 +62,7 @@ export class GameplayRepository {
       const snapshot = (): GameplaySnapshot => ({
         characterId,
         revision: c.revision,
+        gold: c.gold,
         inventory: c.inventory.map((s) => ({
           index: s.index,
           itemId: s.itemId as ItemId,
@@ -82,6 +85,7 @@ export class GameplayRepository {
         throw new Error('Estado desatualizado. Tente novamente.');
       let slots: Slot[] = snapshot().inventory;
       let equipment = snapshot().equipment;
+      let currentGold = c.gold;
       let changed = false;
       let kitGranted = c.farmingKitGranted;
       if (!c.starterGranted) {
@@ -360,6 +364,29 @@ export class GameplayRepository {
           changed = true;
         }
       }
+      if (action?.kind === 'buy') {
+        const itemPrice = MARKET_BUY_PRICES[action.itemId];
+        if (!itemPrice) throw new Error('Este item não está à venda.');
+        const totalCost = itemPrice * action.quantity;
+        if (currentGold < totalCost)
+          throw new Error(`Ouro insuficiente (${currentGold}/${totalCost} ouro).`);
+        slots = addItem(slots, action.itemId, action.quantity);
+        currentGold -= totalCost;
+        changed = true;
+      }
+      if (action?.kind === 'sell') {
+        const item = slots.find((s) => s.index === action.from);
+        if (!item || item.quantity < action.quantity)
+          throw new Error('Quantidade insuficiente para venda.');
+        const itemPrice = MARKET_SELL_PRICES[item.itemId];
+        if (!itemPrice)
+          throw new Error('A comerciante não compra este tipo de item.');
+        const revenue = itemPrice * action.quantity;
+        item.quantity -= action.quantity;
+        slots = slots.filter((s) => s.quantity > 0);
+        currentGold += revenue;
+        changed = true;
+      }
       if (changed) {
         await tx.inventorySlot.deleteMany({ where: { characterId } });
         if (slots.length)
@@ -381,6 +408,7 @@ export class GameplayRepository {
             direction: position?.direction,
             starterGranted: true,
             farmingKitGranted: kitGranted,
+            gold: currentGold,
             revision: { increment: 1 },
           },
         });
@@ -395,6 +423,7 @@ export class GameplayRepository {
       return {
         characterId,
         revision: updated.revision,
+        gold: updated.gold,
         inventory: updated.inventory.map((s) => ({
           index: s.index,
           itemId: s.itemId as ItemId,

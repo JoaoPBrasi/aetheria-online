@@ -33,6 +33,7 @@ import { QuestJournal } from './quest-journal';
 import { SeedPicker } from './seed-picker';
 import { CharacterSheet } from './character-sheet';
 import { CharacterPortrait } from './character-portrait';
+import { ShopModal } from './shop-modal';
 import { soloGuide } from '../solo-guide';
 import {
   activeQuests,
@@ -74,11 +75,15 @@ export function GameHud({
     | 'dialogue'
     | 'quests'
     | 'audio'
+    | 'shop'
     | null
   >(null);
   const characterPanel = panel === 'bag' || panel === 'equipment';
   const showModal =
-    panel !== 'dialogue' && panel !== 'audio' && panel !== 'seeds';
+    panel !== 'dialogue' &&
+    panel !== 'audio' &&
+    panel !== 'seeds' &&
+    panel !== 'shop';
   const [hiddenQuests, setHiddenQuests] = useState(() =>
     readHiddenQuests(characterId),
   );
@@ -485,7 +490,10 @@ export function GameHud({
           </div>
           <small data-testid="connection-status">
             {s.status === 'connected' ? 'Conectado' : 'Reconectando…'} ·{' '}
-            <b data-testid="player-count">{s.players} / 16</b>
+            <b data-testid="player-count">{s.players} / 16</b> ·{' '}
+            <span className="hud-gold-counter" title="Moedas de Ouro">
+              🪙 {s.gameplay?.gold ?? 0}
+            </span>
           </small>
         </div>
       </div>
@@ -828,6 +836,16 @@ export function GameHud({
             setPanel(null);
             setDialogueNpc(null);
           }}
+          onOpenShop={() => {
+            setDialogueNpc(null);
+            setPanel('shop');
+          }}
+        />
+      )}
+      {panel === 'shop' && (
+        <ShopModal
+          connection={connection}
+          onClose={() => setPanel(null)}
         />
       )}
     </div>

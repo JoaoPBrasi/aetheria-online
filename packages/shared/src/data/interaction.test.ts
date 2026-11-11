@@ -10,6 +10,7 @@ const tree = GROVE_RESOURCES[0]!;
 const s: GameplaySnapshot = {
   characterId: 'a',
   revision: 0,
+  gold: 50,
   inventory: [{ index: 0, itemId: 'axe', quantity: 1 }],
   equipment: [],
   skills: [],

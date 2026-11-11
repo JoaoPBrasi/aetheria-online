@@ -39,6 +39,7 @@ export interface Slot {
 export interface GameplaySnapshot {
   characterId: string;
   revision: number;
+  gold: number;
   inventory: Slot[];
   equipment: { slot: string; itemId: ItemId }[];
   skills: { profession: string; xp: number }[];
@@ -379,6 +380,7 @@ export type CombatFeedback =
       amount: number;
     };
 
+const itemIds = Object.keys(ITEMS) as [ItemId, ...ItemId[]];
 const slot = z.number().int().min(0).max(23);
 const base = { id: z.uuid(), revision: z.number().int().nonnegative() };
 export const GameActionSchema = z.discriminatedUnion('kind', [
@@ -419,6 +421,22 @@ export const GameActionSchema = z.discriminatedUnion('kind', [
       ...base,
       kind: z.literal('attack'),
       targetId: z.string().max(40),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
+      kind: z.literal('buy'),
+      itemId: z.enum(itemIds),
+      quantity: z.number().int().min(1).max(99),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
+      kind: z.literal('sell'),
+      from: slot,
+      quantity: z.number().int().min(1).max(99),
     })
     .strict(),
 ]);

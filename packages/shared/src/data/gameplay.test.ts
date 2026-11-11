@@ -68,3 +68,41 @@ it('crafts items consuming materials and rejecting insufficient ingredients', ()
   expect(afterSword.find((s) => s.itemId === 'stone')).toBeUndefined();
   expect(afterSword.find((s) => s.itemId === 'sword')?.quantity).toBe(1);
 });
+
+it('validates market buy and sell action schemas', () => {
+  const validBuy = GameActionSchema.safeParse({
+    id: '123e4567-e89b-12d3-a456-426614174000',
+    revision: 1,
+    kind: 'buy',
+    itemId: 'turnip_seed',
+    quantity: 5,
+  });
+  expect(validBuy.success).toBe(true);
+
+  const validSell = GameActionSchema.safeParse({
+    id: '123e4567-e89b-12d3-a456-426614174000',
+    revision: 1,
+    kind: 'sell',
+    from: 0,
+    quantity: 10,
+  });
+  expect(validSell.success).toBe(true);
+
+  const invalidBuy = GameActionSchema.safeParse({
+    id: '123e4567-e89b-12d3-a456-426614174000',
+    revision: 1,
+    kind: 'buy',
+    itemId: 'non_existent_item',
+    quantity: 1,
+  });
+  expect(invalidBuy.success).toBe(false);
+
+  const invalidSell = GameActionSchema.safeParse({
+    id: '123e4567-e89b-12d3-a456-426614174000',
+    revision: 1,
+    kind: 'sell',
+    from: 25, // slot out of bounds
+    quantity: 1,
+  });
+  expect(invalidSell.success).toBe(false);
+});

@@ -5,9 +5,10 @@ import { gameBridge } from '../../game/managers/game-bridge';
 interface DialogueModalProps {
   npcId: NpcId | string;
   onClose: () => void;
+  onOpenShop?: () => void;
 }
 
-export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
+export function DialogueModal({ npcId, onClose, onOpenShop }: DialogueModalProps) {
   const npc = NPCS.find((n) => n.id === npcId) ?? NPCS[0]!;
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -57,6 +58,10 @@ export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
 
   const handleTopicClick = (topic: (typeof npc.topics)[number]) => {
     setActiveTopicId(topic.id);
+    if (topic.action === 'open_shop') {
+      onOpenShop?.();
+      return;
+    }
     if (
       topic.action === 'accept_quest' &&
       topic.questId &&
@@ -88,9 +93,13 @@ export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
     >
       <header className="dialogue-header">
         <div className="dialogue-header-identity">
-          <div className="dialogue-avatar" aria-hidden="true">🧙‍♂️</div>
+          <div className="dialogue-avatar" aria-hidden="true">
+            {npc.id === 'mira-merchant' ? '🪙' : '🧙‍♂️'}
+          </div>
           <div className="dialogue-header-titles">
-            <span className="dialogue-eyebrow">DIÁLOGO & MISSÕES</span>
+            <span className="dialogue-eyebrow">
+              {npc.id === 'mira-merchant' ? 'COMÉRCIO & MERCADO' : 'DIÁLOGO & MISSÕES'}
+            </span>
             <h2 className="dialogue-npc-name">{npc.name}</h2>
             <span className="dialogue-npc-title">{npc.title}</span>
           </div>
@@ -188,7 +197,7 @@ export function DialogueModal({ npcId, onClose }: DialogueModalProps) {
           )}
         </div>
         <button className="dialogue-footer-btn" onClick={onClose}>
-          Até logo, Ancião (ESC)
+          Até logo (ESC)
         </button>
       </footer>
     </div>

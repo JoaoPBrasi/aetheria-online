@@ -160,6 +160,17 @@ export class GameplayService {
         );
         return result;
       }
+      if (action.kind === 'buy' || action.kind === 'sell') {
+        const merchant = NPCS.find((n) => n.id === 'mira-merchant');
+        if (
+          !merchant ||
+          !position ||
+          Math.hypot(merchant.x - position.x, merchant.y - position.y) > 140
+        ) {
+          throw new Error('Aproxime-se da Mercadora Mira para negociar.');
+        }
+        return this.repository.execute(id, action, undefined, position);
+      }
       if (action.kind !== 'gather')
         return this.repository.execute(id, action, undefined, position);
       const wild = this.forage.get(action.node);

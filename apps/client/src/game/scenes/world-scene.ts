@@ -105,6 +105,10 @@ export class WorldScene extends Phaser.Scene {
       frameWidth: 32,
       frameHeight: 32,
     });
+    this.load.spritesheet('npc-merchant', '/sprites/npc-merchant-idle.png', {
+      frameWidth: 64,
+      frameHeight: 64,
+    });
     this.load.spritesheet('bonfire', '/sprites/bonfire-idle.png', {
       frameWidth: 32,
       frameHeight: 32,
@@ -168,6 +172,17 @@ export class WorldScene extends Phaser.Scene {
       this.anims.create({
         key: 'npc-wizard-idle',
         frames: this.anims.generateFrameNumbers('npc-wizard', {
+          start: 0,
+          end: 3,
+        }),
+        frameRate: 4,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists('npc-merchant-idle')) {
+      this.anims.create({
+        key: 'npc-merchant-idle',
+        frames: this.anims.generateFrameNumbers('npc-merchant', {
           start: 0,
           end: 3,
         }),
@@ -283,12 +298,16 @@ export class WorldScene extends Phaser.Scene {
       ).setDepth(station.y + 1);
     }
     for (const npc of NPCS) {
+      const spriteKey = npc.spriteKey ?? 'npc-wizard';
+      const animKey = npc.animKey ?? 'npc-wizard-idle';
+      const scale = npc.scale ?? 2.2;
+      const originY = npc.originY ?? 1;
       const shadow = this.add.ellipse(0, 6, 36, 14, 0x132b24, 0.45);
       const sprite = this.add
-        .sprite(0, 6, 'npc-wizard')
-        .setScale(2.2)
-        .setOrigin(0.5, 1);
-      sprite.play('npc-wizard-idle');
+        .sprite(0, 6, spriteKey)
+        .setScale(scale)
+        .setOrigin(0.5, originY);
+      sprite.play(animKey);
       const label = makeNameplate(this, `✦ ${npc.name}`, 'npc', 0, -76);
       const title = this.add
         .text(0, -100, npc.title, {

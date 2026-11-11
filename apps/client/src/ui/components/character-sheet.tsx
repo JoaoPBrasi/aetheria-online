@@ -70,9 +70,16 @@ export function CharacterSheet({
         aria-labelledby="character-bag-title"
       >
         <MetalCorners />
-        <h2 className="medieval-plaque" id="character-bag-title">
-          <span aria-hidden="true">▦</span> Inventário
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 4px 8px' }}>
+          <h2 className="medieval-plaque" id="character-bag-title" style={{ margin: 0 }}>
+            <span aria-hidden="true">▦</span> Inventário
+          </h2>
+          <span className="shop-wallet" style={{ fontSize: '13px', padding: '2px 8px' }} title="Moedas de ouro">
+            <span aria-hidden="true">🪙</span>
+            <strong>{gameplay?.gold ?? 0}</strong>
+            <small>ouro</small>
+          </span>
+        </div>
         <GameplayPanel connection={connection} section="bag" />
       </section>
       <section

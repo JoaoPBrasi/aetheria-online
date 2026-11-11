@@ -14,3 +14,4 @@ export * from './data/quests.js';
 export * from './data/cemetery.js';
 export * from './data/chat.js';
 export * from './data/targeting.js';
+export * from './data/market.js';

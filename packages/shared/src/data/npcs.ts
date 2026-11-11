@@ -2,7 +2,7 @@ export interface DialogueTopic {
   id: string;
   prompt: string;
   response: string;
-  action?: 'accept_quest' | 'turn_in_quest';
+  action?: 'accept_quest' | 'turn_in_quest' | 'open_shop';
   questId?: string;
 }
 
@@ -14,6 +14,12 @@ export interface NPCDefinition {
   y: number;
   greeting: string;
   topics: DialogueTopic[];
+  spriteKey?: string;
+  animKey?: string;
+  frameWidth?: number;
+  frameHeight?: number;
+  scale?: number;
+  originY?: number;
 }
 
 export const NPCS: readonly NPCDefinition[] = [
@@ -81,6 +87,36 @@ export const NPCS: readonly NPCDefinition[] = [
         prompt: 'O que devo saber sobre os perigos ao redor da vila?',
         response:
           'Ao sul, no Prado dos Slimes, criaturas saltitantes rondam o pasto. Forje uma espada de treino na ferraria para causar mais dano (30 vs 20). Ao derrotá-los com E ou Espaço, você obterá gosma de slime e ganhará experiência de Guerreiro. Se for derrotado, você acordará seguro aqui na praça.',
+      },
+    ],
+  },
+  {
+    id: 'mira-merchant',
+    name: 'Mira',
+    title: 'Mercadora de Brumavale',
+    x: 1140,
+    y: 980,
+    spriteKey: 'npc-merchant',
+    animKey: 'npc-merchant-idle',
+    frameWidth: 64,
+    frameHeight: 64,
+    scale: 2.0,
+    originY: 0.85,
+    greeting:
+      'Saudações, aventureiro! Seja bem-vindo ao meu mercado. Tenho sementes selecionadas, mantimentos e ferramentas para suas jornadas. Também compro seus excedentes por um punhado generoso de ouro!',
+    topics: [
+      {
+        id: 'open_shop',
+        prompt: '🪙 Gostaria de ver suas mercadorias (Abrir Mercado)',
+        response:
+          'Aqui está o mostruário de hoje! Escolha o que precisar ou venda suas colheitas e minérios.',
+        action: 'open_shop',
+      },
+      {
+        id: 'about_trade',
+        prompt: '💰 Como funciona o comércio na vila?',
+        response:
+          'É simples: você pode vender vegetais da horta, madeira, pedra, minérios e gosmas de slime por moedas de ouro. Use seu ouro para comprar sementes ou nabos assados para recuperar suas energias!',
       },
     ],
   },
