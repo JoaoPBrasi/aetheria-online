@@ -11,6 +11,16 @@ describe('configuration', () => {
       }),
     ).toThrow('Local development identity');
   });
+  it('allows dev identity in production when OPEN_PLAYTEST_ENABLED is true', () => {
+    const env = readEnvironment({
+      ...base,
+      NODE_ENV: 'production',
+      DEV_IDENTITY_ENABLED: 'true',
+      OPEN_PLAYTEST_ENABLED: 'true',
+    });
+    expect(env.DEV_IDENTITY_ENABLED).toBe(true);
+    expect(env.OPEN_PLAYTEST_ENABLED).toBe(true);
+  });
   it('does not leak an invalid URL into errors', () => {
     expect(() => readEnvironment({ DATABASE_URL: 'secret-value' })).toThrow(
       'DATABASE_URL',

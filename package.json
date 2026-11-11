@@ -13,6 +13,8 @@
     "character:art": "node scripts/build-character-art.mjs",
     "dev": "pnpm db:up && pnpm --filter @aetheria/shared build && concurrently -k -n shared,server,client \"pnpm --filter @aetheria/shared dev\" \"pnpm --filter @aetheria/server dev\" \"pnpm --filter @aetheria/client dev\"",
     "build": "pnpm --filter @aetheria/shared build && pnpm --filter @aetheria/server build && pnpm --filter @aetheria/client build",
+    "start": "pnpm --filter @aetheria/server start",
+    "start:prod": "pnpm db:migrate && pnpm --filter @aetheria/server start",
     "typecheck": "pnpm --filter @aetheria/shared build && pnpm -r typecheck && tsc --noEmit -p tsconfig.tools.json",
     "lint": "eslint .",
     "format": "prettier --write .",

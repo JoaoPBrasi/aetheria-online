@@ -7,7 +7,9 @@ export const EnvironmentSchema = z
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),
-    HOST: z.string().default('127.0.0.1'),
+    HOST: z
+      .string()
+      .default(process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'),
     PORT: z.coerce.number().int().min(1).max(65535).default(2567),
     TREE_GROWTH_SECONDS: z.coerce
       .number()
@@ -19,6 +21,10 @@ export const EnvironmentSchema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((v) => v === 'true'),
+    OPEN_PLAYTEST_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
     DATABASE_URL: z
       .url()
       .refine(
@@ -27,7 +33,7 @@ export const EnvironmentSchema = z
       ),
   })
   .superRefine((v, ctx) => {
-    if (v.NODE_ENV === 'production' && v.DEV_IDENTITY_ENABLED)
+    if (v.NODE_ENV === 'production' && v.DEV_IDENTITY_ENABLED && !v.OPEN_PLAYTEST_ENABLED)
       ctx.addIssue({
         code: 'custom',
         message: 'Local development identity cannot run in production',

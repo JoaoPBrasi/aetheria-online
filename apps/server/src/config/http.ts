@@ -1,3 +1,6 @@
+import path from 'node:path';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import express, { type ErrorRequestHandler, type Request } from 'express';
 import { matchMaker } from '@colyseus/core';
 import { WORLD_ROOM, MAX_PLAYERS } from '@aetheria/shared';
@@ -93,6 +96,23 @@ export function createHttpApp(
       next(error);
     }
   });
+  const clientDist = fileURLToPath(
+    new URL('../../../client/dist', import.meta.url),
+  );
+  if (existsSync(clientDist)) {
+    app.use(express.static(clientDist));
+    app.use((req, res, next) => {
+      if (
+        req.method === 'GET' &&
+        !req.path.startsWith('/api') &&
+        !req.path.startsWith('/health')
+      ) {
+        res.sendFile(path.join(clientDist, 'index.html'));
+        return;
+      }
+      next();
+    });
+  }
   const errorHandler: ErrorRequestHandler = (error, _req, res, next) => {
     if (res.headersSent) {
       next(error);
