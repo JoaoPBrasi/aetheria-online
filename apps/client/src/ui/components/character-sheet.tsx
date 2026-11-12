@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import {
   ITEMS,
   UNARMED_DAMAGE,
@@ -8,6 +8,7 @@ import {
   EQUIPMENT_DEFINITIONS,
   calculateCharacterStats,
   attributeBonuses,
+  availableAttributePoints,
   type EquipmentSlot,
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
@@ -58,6 +59,11 @@ export function CharacterSheet({
     gameBridge.getSnapshot,
   );
   const gameplay = state.gameplay;
+  const attributeSection = useRef<HTMLElement>(null);
+  const points = availableAttributePoints(
+    gameplay?.skills.find((skill) => skill.profession === 'warrior')?.xp ?? 0,
+    gameplay?.attributes ?? {},
+  );
   const equipment = gameplay?.equipment ?? [];
 
   const weapon =
@@ -148,6 +154,20 @@ export function CharacterSheet({
         <h2 className="medieval-plaque" id="character-equipment-title">
           <span aria-hidden="true">⚔</span> Equipamentos do Herói
         </h2>
+        {gameplay && (
+          <button
+            type="button"
+            className="attribute-jump"
+            onClick={() => {
+              attributeSection.current?.focus({ preventScroll: true });
+              attributeSection.current?.scrollIntoView({ block: 'start' });
+            }}
+          >
+            Atributos
+            {points > 0 &&
+              ` · ${points} ${points === 1 ? 'ponto disponível' : 'pontos disponíveis'}`}
+          </button>
+        )}
 
         <div className="paper-doll-layout">
           {/* Coluna Esquerda: Armaduras */}
@@ -241,6 +261,8 @@ export function CharacterSheet({
           <AttributePanel
             gameplay={gameplay}
             busy={!!busy}
+            points={points}
+            sectionRef={attributeSection}
             onAllocate={(attribute) =>
               connection?.action({ kind: 'allocate_attribute', attribute })
             }

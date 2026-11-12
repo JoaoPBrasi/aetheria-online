@@ -31,7 +31,7 @@ export const ATTRIBUTES = {
   luck: {
     name: 'Sorte',
     effect:
-      '+1 ponto percentual de crítico, +1 de chance de saque raro e +4 de chance de obter uma unidade extra na coleta ou colheita.',
+      '+1 ponto percentual nas chances de crítico e saque raro. +4 pontos percentuais na chance de obter uma unidade extra na coleta ou colheita.',
   },
   intellect: {
     name: 'Inteligência',

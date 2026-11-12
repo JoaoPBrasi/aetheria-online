@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
 import {
   ATTRIBUTES,
   ATTRIBUTE_IDS,
   MAX_ATTRIBUTE_RANK,
   TALENT_XP,
-  availableAttributePoints,
   combatLevel,
   type AttributeId,
   type GameplaySnapshot,
@@ -13,19 +12,24 @@ import {
 export function AttributePanel({
   gameplay,
   busy,
+  points,
+  sectionRef,
   onAllocate,
 }: {
   gameplay: GameplaySnapshot;
   busy: boolean;
+  points: number;
+  sectionRef: Ref<HTMLElement>;
   onAllocate: (attribute: AttributeId) => void;
 }) {
   const xp =
     gameplay.skills.find((skill) => skill.profession === 'warrior')?.xp ?? 0;
   const ranks = gameplay.attributes ?? {};
   const [help, setHelp] = useState<AttributeId>();
-  const points = availableAttributePoints(xp, ranks);
   return (
     <section
+      ref={sectionRef}
+      tabIndex={-1}
       className="character-attributes attribute-allocation"
       aria-labelledby="attribute-allocation-title"
     >

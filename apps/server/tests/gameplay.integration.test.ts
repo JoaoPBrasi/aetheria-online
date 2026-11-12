@@ -83,7 +83,7 @@ it('persists talents, validates prerequisites and never spends a point twice', a
     cleave: 1,
   });
 });
-it('gives attributes a separate budget and applies Luck to real harvests and kills', async () => {
+it('gives attributes a separate budget and applies Luck to gathering and kills', async () => {
   const id = await fixture();
   const local = new GameplayService(new GameplayRepository(db));
   const initial = await local.sync(id);

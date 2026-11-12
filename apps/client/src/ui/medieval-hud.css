@@ -1242,6 +1242,19 @@
   max-height: calc(100% - 188px);
   z-index: 55;
 }
+.medieval-hud .attribute-jump {
+  align-self: center;
+  margin-bottom: 8px;
+  padding: 5px 10px;
+  border: 1px solid #ae8153;
+  border-radius: 4px;
+  color: #ffe6bf;
+  background: linear-gradient(#5f4028, #342218);
+  font-size: 12px;
+}
+.medieval-hud .attribute-jump:hover {
+  background: #684629;
+}
 .attribute-allocation .attribute-points,
 .attribute-allocation .attribute-builds {
   margin: 5px 0;
@@ -1291,7 +1304,7 @@
   font-size: 12px;
 }
 .attribute-increase:disabled {
-  opacity: .55;
+  opacity: 0.55;
 }
 .talent-panel {
   padding: 16px;

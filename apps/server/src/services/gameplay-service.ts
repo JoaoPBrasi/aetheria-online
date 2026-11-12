@@ -152,7 +152,10 @@ export class GameplayService {
             current,
           );
           this.monstersManager.takeDamage(monster.id, damage, id);
-          this.attackReadyAt.set(id, Date.now() + PLAYER_ATTACK_COOLDOWN_MS / attributes.attackRate);
+          this.attackReadyAt.set(
+            id,
+            Date.now() + PLAYER_ATTACK_COOLDOWN_MS / attributes.attackRate,
+          );
           onStrike?.({
             kind: 'strike',
             attackerId: id,
