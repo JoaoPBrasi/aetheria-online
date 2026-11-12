@@ -2,9 +2,9 @@ import type { Cosmetics } from '@aetheria/shared';
 
 export type Facing = 'down' | 'up' | 'left' | 'right';
 export const CLEAVE_CONTACT_MS = 108;
-export const CLEAVE_DURATION_MS = 320;
-// A pose segura a preparação e passa mais rápido pelos quadros após o contato.
-const CLEAVE_FRAMES = [0, 50, 82, CLEAVE_CONTACT_MS, 158, 195, 230, 270];
+export const CLEAVE_DURATION_MS = 365;
+// Segura a silhueta do corte mesmo quando a taxa de quadros cai.
+const CLEAVE_FRAMES = [0, 50, 82, CLEAVE_CONTACT_MS, 206, 242, 275, 315];
 export const PLAYER_ANIMATIONS = {
   idle: { frames: 4, fps: 5 },
   walk: { frames: 6, fps: 10 },

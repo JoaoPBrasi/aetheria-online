@@ -155,7 +155,7 @@ export function GameHud({
       }
 
       audioManager.unlockAudio();
-      audioManager.playSfx('strike');
+      if (skillId !== 'cleave') audioManager.playSfx('strike');
       setSkillCooldowns((prev) => ({
         ...prev,
         [skillId]: now + config.cooldownMs,

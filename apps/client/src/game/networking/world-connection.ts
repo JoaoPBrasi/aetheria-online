@@ -130,7 +130,11 @@ export class WorldConnection {
           if (
             gameBridge.getSnapshot().actionPending &&
             this.lastAction &&
-            this.lastAction.kind !== 'attack'
+            this.lastAction.kind !== 'attack' &&
+            !(
+              this.lastAction.kind === 'skill' &&
+              this.lastAction.skillId === 'cleave'
+            )
           )
             gameBridge.animateCharacter?.(this.lastAction);
           const gains = Object.keys(ITEMS)

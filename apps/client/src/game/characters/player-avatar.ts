@@ -48,6 +48,12 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
     facing?: Facing,
     durationMs?: number,
   ) {
+    if (
+      state === 'hit' &&
+      this.action?.state === 'cleave' &&
+      time < this.action.until
+    )
+      return;
     const animation = PLAYER_ANIMATIONS[state];
     const dur =
       state === 'cleave'
