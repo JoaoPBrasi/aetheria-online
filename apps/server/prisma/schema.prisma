@@ -33,6 +33,7 @@ model Character {
   health            Int                  @default(100)
   energy            Int                  @default(100)
   gold              Int                  @default(50)
+  talents           Json                 @default("{}")
   revision          Int                  @default(0)
   starterGranted    Boolean              @default(false)
   farmingKitGranted Boolean              @default(false)

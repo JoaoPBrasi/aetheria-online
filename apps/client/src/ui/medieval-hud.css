@@ -1235,3 +1235,58 @@
   font-weight: bold;
   margin-left: 4px;
 }
+
+.medieval-hud .hud-modal:has(.talent-panel) {
+  top: auto;
+  bottom: 176px;
+  max-height: calc(100% - 188px);
+  z-index: 55;
+}
+.talent-panel {
+  padding: 16px;
+}
+.talent-panel progress {
+  display: block;
+  width: 100%;
+  accent-color: #d5a458;
+}
+.talent-branches {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 14px;
+}
+.talent-branches ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.talent-branches li {
+  padding: 9px;
+  border: 1px solid #875c36;
+  background: #382619;
+  border-radius: 5px;
+}
+.talent-branches li + li {
+  margin-top: 8px;
+}
+.talent-branches li.talent-branch-child {
+  margin-left: 8px;
+  border-left: 3px solid #a67545;
+}
+.talent-branches p {
+  margin: 5px 0;
+  font-size: 12px;
+}
+.talent-branches button {
+  text-align: left;
+  color: #ffe8bc;
+}
+.talent-branches button:disabled {
+  opacity: 0.65;
+}
+@media (max-width: 480px) {
+  .talent-branches {
+    grid-template-columns: 1fr;
+  }
+}

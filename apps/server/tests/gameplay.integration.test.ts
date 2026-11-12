@@ -38,6 +38,51 @@ async function fixture() {
   });
   return c.id;
 }
+it('persists talents, validates prerequisites and never spends a point twice', async () => {
+  const id = await fixture();
+  const before = await service.sync(id);
+  const action = {
+    id: randomUUID(),
+    revision: before.revision,
+    kind: 'allocate_talent',
+    talent: 'strength',
+  };
+  await expect(
+    service.act(id, { ...action, talent: 'cleave' }, position),
+  ).rejects.toThrow('indisponível');
+  const after = await service.act(id, action, position);
+  expect(after.talents).toEqual({ strength: 1 });
+  expect((await service.act(id, action, position)).talents).toEqual(
+    after.talents,
+  );
+  await expect(
+    service.act(
+      id,
+      {
+        ...action,
+        id: randomUUID(),
+        revision: after.revision,
+        talent: 'cleave',
+      },
+      position,
+    ),
+  ).rejects.toThrow('indisponível');
+  await db.characterSkill.update({
+    where: {
+      characterId_profession: { characterId: id, profession: 'warrior' },
+    },
+    data: { xp: 100 },
+  });
+  await service.act(
+    id,
+    { ...action, id: randomUUID(), revision: after.revision, talent: 'cleave' },
+    position,
+  );
+  expect((await new GameplayRepository(db).execute(id)).talents).toEqual({
+    strength: 1,
+    cleave: 1,
+  });
+});
 afterAll(async () => {
   await db.account.deleteMany({ where: { id: { in: accounts } } });
   await db.$disconnect();

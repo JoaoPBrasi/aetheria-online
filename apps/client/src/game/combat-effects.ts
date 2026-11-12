@@ -25,25 +25,20 @@ export function showCombatEffect(
   }
 
   const number = scene.add
-    .text(
-      event.x,
-      event.y - (event.kind === 'strike' ? 33 : 53),
-      textLabel,
-      {
-        fontFamily: 'Trebuchet MS, Arial, sans-serif',
-        fontSize: isCrit ? (local ? '26px' : '20px') : local ? '22px' : '18px',
-        fontStyle: 'bold',
-        color: healing
-          ? '#52b788'
-          : isCrit
-            ? '#ffd166'
-            : event.kind === 'hurt'
-              ? '#ff9588'
-              : '#fff0b8',
-        stroke: isCrit ? '#541212' : '#201d17',
-        strokeThickness: isCrit ? 5 : 4,
-      },
-    )
+    .text(event.x, event.y - (event.kind === 'strike' ? 33 : 53), textLabel, {
+      fontFamily: 'Trebuchet MS, Arial, sans-serif',
+      fontSize: isCrit ? (local ? '26px' : '20px') : local ? '22px' : '18px',
+      fontStyle: 'bold',
+      color: healing
+        ? '#52b788'
+        : isCrit
+          ? '#ffd166'
+          : event.kind === 'hurt'
+            ? '#ff9588'
+            : '#fff0b8',
+      stroke: isCrit ? '#541212' : '#201d17',
+      strokeThickness: isCrit ? 5 : 4,
+    })
     .setOrigin(0.5)
     .setDepth(5003);
 
@@ -69,17 +64,63 @@ export function showCombatEffect(
     onComplete: () => number.destroy(),
   });
 
+  if (event.kind === 'heal' && event.skillId === 'heal') {
+    const ring = scene.add
+      .ellipse(event.x, event.y, 22, 12)
+      .setStrokeStyle(2, 0x8de5a7)
+      .setDepth(5002);
+    scene.tweens.add({
+      targets: ring,
+      scale: 2.4,
+      alpha: 0,
+      duration: 420,
+      onComplete: () => ring.destroy(),
+    });
+  }
   if (event.kind !== 'strike') return;
 
   const angle = Math.atan2(event.y - event.origin.y, event.x - event.origin.x);
   const swing = scene.add.graphics().setDepth(5002);
 
   if (event.skillId === 'magic_dart') {
-    // Projétil elétrico arcano ciano
-    swing.lineStyle(4, 0x48cae4, 0.95);
-    swing.lineBetween(event.origin.x, event.origin.y - 14, event.x, event.y - 14);
-    swing.fillStyle(0x00b4d8, 0.85);
-    swing.fillCircle(event.x, event.y - 14, 8);
+    const dart = scene.add
+      .rectangle(event.origin.x, event.origin.y - 14, 13, 4, 0x9eefff)
+      .setRotation(angle)
+      .setDepth(5002);
+    scene.tweens.add({
+      targets: dart,
+      x: event.x,
+      y: event.y - 14,
+      duration: 150,
+      onComplete: () => {
+        dart.destroy();
+        const flash = scene.add
+          .circle(event.x, event.y - 14, 6, 0x6cdfff)
+          .setDepth(5002);
+        scene.tweens.add({
+          targets: flash,
+          scale: 2,
+          alpha: 0,
+          duration: 180,
+          onComplete: () => flash.destroy(),
+        });
+      },
+    });
+  } else if (event.skillId === 'charge' && event.dashFrom) {
+    swing.lineStyle(7, 0xedbc77, 0.65);
+    swing.lineBetween(
+      event.dashFrom.x,
+      event.dashFrom.y - 13,
+      event.origin.x,
+      event.origin.y - 13,
+    );
+    swing.lineStyle(2, 0xffe3a1, 0.9);
+    swing.lineBetween(
+      event.dashFrom.x,
+      event.dashFrom.y - 16,
+      event.origin.x,
+      event.origin.y - 16,
+    );
   } else if (event.skillId === 'cleave') {
     // Golpe Fendido: arco duplo incandescente
     swing.lineStyle(8, 0xff9f1c, 0.95).beginPath();

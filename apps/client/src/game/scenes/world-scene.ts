@@ -642,10 +642,26 @@ export class WorldScene extends Phaser.Scene {
           event.y - event.origin.y,
           actor.facing,
         );
-        actor.playGesture('attack', this.time.now, facing);
+        actor.playGesture(
+          event.skillId === 'magic_dart' ? 'collect' : 'attack',
+          this.time.now,
+          facing,
+          event.skillId === 'cleave'
+            ? 420
+            : event.skillId === 'charge'
+              ? 210
+              : undefined,
+        );
       }
       const target = this.monsterSprites.get(event.monsterId);
       if (target) target.hurtUntil = this.time.now + 160;
+    } else if (event.kind === 'heal' && event.skillId === 'heal') {
+      const actor = local
+        ? this.avatar
+        : attackerSession
+          ? this.remoteSprites.get(attackerSession)
+          : undefined;
+      actor?.playGesture('collect', this.time.now);
     } else if (local && event.kind === 'hurt') {
       this.avatar.playGesture('hit', this.time.now);
       if (gameBridge.getCast()?.status === 'channeling') {

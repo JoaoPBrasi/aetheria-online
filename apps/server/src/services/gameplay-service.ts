@@ -6,6 +6,8 @@ import {
   PLAYER_ATTACK_COOLDOWN_MS,
   UNARMED_DAMAGE,
   WEAPON_DAMAGE,
+  physicalTalentBonus,
+  arcaneTalentBonus,
   COMBAT_SKILLS,
   calculateSkillDamage,
   type SkillId,
@@ -121,7 +123,9 @@ export class GameplayService {
             : hasTool(equipment, 'sword')
               ? 'sword'
               : undefined;
-          const damage = weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE;
+          const damage =
+            (weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE) +
+            physicalTalentBonus(equipment.talents);
           const lethal = damage >= monster.health;
           const reward = lethal
             ? {
@@ -171,6 +175,12 @@ export class GameplayService {
         }
 
         if (action.skillId === 'heal') {
+          const snapshot = await this.repository.execute(
+            id,
+            action,
+            undefined,
+            position,
+          );
           playerSkills.set(action.skillId, now + skill.cooldownMs);
           onStrike?.({
             kind: 'heal',
@@ -178,10 +188,13 @@ export class GameplayService {
             playerId: id,
             x: position.x,
             y: position.y,
-            amount: skill.healAmount ?? 35,
+            amount:
+              (skill.healAmount ?? 35) +
+              arcaneTalentBonus(snapshot.talents) +
+              (snapshot.talents?.heal ?? 0) * 5,
             skillId: 'heal',
           });
-          return this.repository.execute(id, action, undefined, position);
+          return snapshot;
         }
 
         if (!action.targetId)
@@ -207,14 +220,26 @@ export class GameplayService {
             : hasTool(equipment, 'sword')
               ? 'sword'
               : undefined;
-          const baseWeaponDmg = weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE;
-          const { damage, isCrit } = calculateSkillDamage(
-            action.skillId,
-            baseWeaponDmg,
-          );
+          const ranks = equipment.talents;
+          const baseWeaponDmg =
+            (weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE) +
+            physicalTalentBonus(ranks);
+          const result = calculateSkillDamage(action.skillId, baseWeaponDmg);
+          const bonus =
+            action.skillId === 'magic_dart'
+              ? arcaneTalentBonus(ranks) + (ranks?.magic_dart ?? 0) * 4
+              : action.skillId === 'charge'
+                ? physicalTalentBonus(ranks) + (ranks?.charge ?? 0) * 5
+                : (ranks?.cleave ?? 0) * 4;
+          const damage = result.damage + bonus;
+          const dashFrom =
+            skill.type === 'dash' ? { x: current.x, y: current.y } : undefined;
 
           if (skill.type === 'dash') {
-            const angle = Math.atan2(monster.y - current.y, monster.x - current.x);
+            const angle = Math.atan2(
+              monster.y - current.y,
+              monster.x - current.x,
+            );
             current.x = Math.round(monster.x - Math.cos(angle) * 36);
             current.y = Math.round(monster.y - Math.sin(angle) * 36);
           }
@@ -248,7 +273,8 @@ export class GameplayService {
             y: monster.y,
             amount,
             lethal,
-            isCrit,
+            isCrit: result.isCrit,
+            dashFrom,
             skillId: action.skillId,
           });
           return snapshot;

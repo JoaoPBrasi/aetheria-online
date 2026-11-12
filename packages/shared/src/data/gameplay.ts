@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CAMPFIRE, CAMPFIRE_REST_RANGE, PLAZA_CAMPFIRE } from './world.js';
 import { EQUIPMENT_SLOTS } from './equipment.js';
+import { TALENT_IDS, type TalentRanks } from './talents.js';
 export * from './resources.js';
 export const ITEMS = {
   wood: { name: 'Madeira', stack: 99, tool: false },
@@ -54,6 +55,7 @@ export interface GameplaySnapshot {
   inventory: Slot[];
   equipment: { slot: string; itemId: ItemId }[];
   skills: { profession: string; xp: number }[];
+  talents?: TalentRanks;
 }
 export const PROFESSION_NAMES: Record<string, string> = {
   lumberjack: 'Lenhador',
@@ -377,6 +379,7 @@ export type CombatFeedback =
       attackerId: string;
       monsterId: string;
       origin: { x: number; y: number };
+      dashFrom?: { x: number; y: number };
       x: number;
       y: number;
       amount: number;
@@ -399,6 +402,13 @@ const itemIds = Object.keys(ITEMS) as [ItemId, ...ItemId[]];
 const slot = z.number().int().min(0).max(23);
 const base = { id: z.uuid(), revision: z.number().int().nonnegative() };
 export const GameActionSchema = z.discriminatedUnion('kind', [
+  z
+    .object({
+      ...base,
+      kind: z.literal('allocate_talent'),
+      talent: z.enum(TALENT_IDS),
+    })
+    .strict(),
   z
     .object({
       ...base,

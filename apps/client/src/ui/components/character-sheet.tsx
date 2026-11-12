@@ -7,6 +7,8 @@ import {
   type Cosmetics,
   EQUIPMENT_DEFINITIONS,
   calculateCharacterStats,
+  physicalTalentBonus,
+  vitalityTalentBonus,
   type EquipmentSlot,
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
@@ -17,14 +19,22 @@ import { ItemIcon, MetalCorners } from './medieval-art';
 
 export type CharacterView = 'bag' | 'equipment';
 
-const ARMOR_SLOTS: { slot: EquipmentSlot; label: string; placeholderIcon: string }[] = [
+const ARMOR_SLOTS: {
+  slot: EquipmentSlot;
+  label: string;
+  placeholderIcon: string;
+}[] = [
   { slot: 'head', label: 'Cabeça', placeholderIcon: '🪖' },
   { slot: 'chest', label: 'Peitoral', placeholderIcon: '🥋' },
   { slot: 'legs', label: 'Calças', placeholderIcon: '👖' },
   { slot: 'feet', label: 'Botas', placeholderIcon: '🥾' },
 ];
 
-const WEAPON_ACCESSORY_SLOTS: { slot: EquipmentSlot; label: string; placeholderIcon: string }[] = [
+const WEAPON_ACCESSORY_SLOTS: {
+  slot: EquipmentSlot;
+  label: string;
+  placeholderIcon: string;
+}[] = [
   { slot: 'accessory', label: 'Amuleto', placeholderIcon: '📿' },
   { slot: 'tool', label: 'Arma / Mão 1', placeholderIcon: '⚔️' },
   { slot: 'offHand', label: 'Escudo / Mão 2', placeholderIcon: '🛡️' },
@@ -57,7 +67,11 @@ export function CharacterSheet({
         ? 'sword'
         : undefined;
   const baseDamage = weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE;
-  const stats = calculateCharacterStats(equipment, baseDamage);
+  const stats = calculateCharacterStats(
+    equipment,
+    baseDamage + physicalTalentBonus(gameplay?.talents),
+  );
+  stats.maxHealth += vitalityTalentBonus(gameplay?.talents);
 
   const busy =
     state.status !== 'connected' || state.actionPending || state.questPending;
@@ -95,11 +109,26 @@ export function CharacterSheet({
         aria-labelledby="character-bag-title"
       >
         <MetalCorners />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 4px 8px' }}>
-          <h2 className="medieval-plaque" id="character-bag-title" style={{ margin: 0 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            margin: '0 4px 8px',
+          }}
+        >
+          <h2
+            className="medieval-plaque"
+            id="character-bag-title"
+            style={{ margin: 0 }}
+          >
             <span aria-hidden="true">▦</span> Inventário
           </h2>
-          <span className="shop-wallet" style={{ fontSize: '13px', padding: '2px 8px' }} title="Moedas de ouro">
+          <span
+            className="shop-wallet"
+            style={{ fontSize: '13px', padding: '2px 8px' }}
+            title="Moedas de ouro"
+          >
             <span aria-hidden="true">🪙</span>
             <strong>{gameplay?.gold ?? 0}</strong>
             <small>ouro</small>
@@ -123,7 +152,9 @@ export function CharacterSheet({
           <div className="paper-doll-column left">
             {ARMOR_SLOTS.map(({ slot, label, placeholderIcon }) => {
               const piece = equipment.find((e) => e.slot === slot);
-              const def = piece ? EQUIPMENT_DEFINITIONS[piece.itemId] : undefined;
+              const def = piece
+                ? EQUIPMENT_DEFINITIONS[piece.itemId]
+                : undefined;
               return (
                 <div
                   key={slot}
@@ -141,7 +172,9 @@ export function CharacterSheet({
                     {piece ? (
                       <ItemIcon item={piece.itemId} />
                     ) : (
-                      <span className="slot-placeholder" aria-hidden="true">{placeholderIcon}</span>
+                      <span className="slot-placeholder" aria-hidden="true">
+                        {placeholderIcon}
+                      </span>
                     )}
                   </div>
                   <strong className="piece-name">
@@ -158,14 +191,18 @@ export function CharacterSheet({
               <CharacterPortrait look={look} />
             </div>
             <strong className="character-hero-name">{name}</strong>
-            <span className="character-title-badge">Aventureiro de Brumavale</span>
+            <span className="character-title-badge">
+              Aventureiro de Brumavale
+            </span>
           </div>
 
           {/* Coluna Direita: Amuleto, Mão Principal e Secundária */}
           <div className="paper-doll-column right">
             {WEAPON_ACCESSORY_SLOTS.map(({ slot, label, placeholderIcon }) => {
               const piece = equipment.find((e) => e.slot === slot);
-              const def = piece ? EQUIPMENT_DEFINITIONS[piece.itemId] : undefined;
+              const def = piece
+                ? EQUIPMENT_DEFINITIONS[piece.itemId]
+                : undefined;
               return (
                 <div
                   key={slot}
@@ -183,7 +220,9 @@ export function CharacterSheet({
                     {piece ? (
                       <ItemIcon item={piece.itemId} />
                     ) : (
-                      <span className="slot-placeholder" aria-hidden="true">{placeholderIcon}</span>
+                      <span className="slot-placeholder" aria-hidden="true">
+                        {placeholderIcon}
+                      </span>
                     )}
                   </div>
                   <strong className="piece-name">
@@ -200,31 +239,47 @@ export function CharacterSheet({
           <h3 className="attributes-title">Atributos de Combate</h3>
           <dl className="attributes-grid">
             <div className="attribute-card">
-              <dt><span aria-hidden="true">♥</span> Vida Máxima</dt>
+              <dt>
+                <span aria-hidden="true">♥</span> Vida Máxima
+              </dt>
               <dd>
                 {state.health ?? 100} / {stats.maxHealth}
-                {stats.bonusHp > 0 && <small className="stat-bonus"> (+{stats.bonusHp})</small>}
+                {stats.bonusHp > 0 && (
+                  <small className="stat-bonus"> (+{stats.bonusHp})</small>
+                )}
               </dd>
             </div>
             <div className="attribute-card">
-              <dt><span aria-hidden="true">🛡️</span> Defesa Física</dt>
+              <dt>
+                <span aria-hidden="true">🛡️</span> Defesa Física
+              </dt>
               <dd>
                 {stats.defense}
-                <small className="stat-hint"> (−{stats.defense} absorvido)</small>
+                <small className="stat-hint">
+                  {' '}
+                  (−{stats.defense} absorvido)
+                </small>
               </dd>
             </div>
             <div className="attribute-card">
-              <dt><span aria-hidden="true">⚔️</span> Poder de Ataque</dt>
+              <dt>
+                <span aria-hidden="true">⚔️</span> Poder de Ataque
+              </dt>
               <dd>
                 {stats.attack}
-                {stats.bonusAttack > 0 && <small className="stat-bonus"> (+{stats.bonusAttack})</small>}
+                {stats.bonusAttack > 0 && (
+                  <small className="stat-bonus"> (+{stats.bonusAttack})</small>
+                )}
                 <small className="stat-hint"> por golpe</small>
               </dd>
             </div>
             <div className="attribute-card">
-              <dt><span aria-hidden="true">⚡</span> Chance de Crítico</dt>
+              <dt>
+                <span aria-hidden="true">⚡</span> Chance de Crítico
+              </dt>
               <dd>
-                {stats.critChance}% <small className="stat-hint">(1.5× dano)</small>
+                {stats.critChance}%{' '}
+                <small className="stat-hint">(1.5× dano)</small>
               </dd>
             </div>
           </dl>

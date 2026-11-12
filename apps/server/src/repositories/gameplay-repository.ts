@@ -2,6 +2,8 @@ import type { Database } from '../database/client.js';
 import { QuestRepository, advanceQuests } from './quest-repository.js';
 import {
   addItem,
+  readTalentRanks,
+  talentBlock,
   transferItem,
   CROPS,
   FARM_RANGE,
@@ -62,6 +64,7 @@ export class GameplayRepository {
       const snapshot = (): GameplaySnapshot => ({
         characterId,
         revision: c.revision,
+        talents: readTalentRanks(c.talents),
         gold: c.gold,
         inventory: c.inventory.map((s) => ({
           index: s.index,
@@ -84,6 +87,7 @@ export class GameplayRepository {
       if (action && action.revision !== c.revision)
         throw new Error('Estado desatualizado. Tente novamente.');
       let slots: Slot[] = snapshot().inventory;
+      const talents = readTalentRanks(c.talents);
       let equipment = snapshot().equipment;
       let currentGold = c.gold;
       let changed = false;
@@ -107,6 +111,13 @@ export class GameplayRepository {
         }
       }
       if (!action && !position && !changed) return snapshot();
+      if (action?.kind === 'allocate_talent') {
+        const xp =
+          c.skills.find((skill) => skill.profession === 'warrior')?.xp ?? 0;
+        if (talentBlock(action.talent, talents, xp))
+          throw new Error('Investimento de talento indisponível.');
+        talents[action.talent] = (talents[action.talent] ?? 0) + 1;
+      }
       if (action?.kind === 'farm') {
         await tx.$queryRaw`SELECT "id" FROM "FarmPlot" WHERE "id"=${action.plot} FOR UPDATE`;
         const plot = await tx.farmPlot.findUnique({
@@ -255,7 +266,8 @@ export class GameplayRepository {
           }
         } else {
           // Desequipa a ferramenta principal ou o primeiro item equipado
-          const existingTool = equipment.find((e) => e.slot === 'tool') ?? equipment[0];
+          const existingTool =
+            equipment.find((e) => e.slot === 'tool') ?? equipment[0];
           if (existingTool) {
             slots = addItem(slots, existingTool.itemId, 1);
             equipment = equipment.filter((e) => e.slot !== existingTool.slot);
@@ -395,7 +407,9 @@ export class GameplayRepository {
         if (!itemPrice) throw new Error('Este item não está à venda.');
         const totalCost = itemPrice * action.quantity;
         if (currentGold < totalCost)
-          throw new Error(`Ouro insuficiente (${currentGold}/${totalCost} ouro).`);
+          throw new Error(
+            `Ouro insuficiente (${currentGold}/${totalCost} ouro).`,
+          );
         slots = addItem(slots, action.itemId, action.quantity);
         currentGold -= totalCost;
         changed = true;
@@ -425,7 +439,7 @@ export class GameplayRepository {
             data: equipment.map((s) => ({ ...s, characterId })),
           });
       }
-      if (changed || position)
+      if (changed || position || action?.kind === 'allocate_talent')
         await tx.character.update({
           where: { id: characterId },
           data: {
@@ -435,6 +449,7 @@ export class GameplayRepository {
             starterGranted: true,
             farmingKitGranted: kitGranted,
             gold: currentGold,
+            talents: action?.kind === 'allocate_talent' ? talents : undefined,
             revision: { increment: 1 },
           },
         });
@@ -449,6 +464,7 @@ export class GameplayRepository {
       return {
         characterId,
         revision: updated.revision,
+        talents: readTalentRanks(updated.talents),
         gold: updated.gold,
         inventory: updated.inventory.map((s) => ({
           index: s.index,

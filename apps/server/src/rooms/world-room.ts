@@ -15,6 +15,7 @@ import {
   type CombatFeedback,
   type CharacterSummary,
   calculateCharacterStats,
+  vitalityTalentBonus,
   type CharacterAttributes,
 } from '@aetheria/shared';
 import type { IdentityRepository } from '../repositories/identity-repository.js';
@@ -72,13 +73,19 @@ export class WorldRoom extends Room<{
       const now = Date.now();
       const last = this.lastChat.get(client.sessionId) ?? 0;
       if (now - last < CHAT_COOLDOWN_MS) {
-        client.send('gameplayError', 'Aguarde um momento antes de enviar outra mensagem.');
+        client.send(
+          'gameplayError',
+          'Aguarde um momento antes de enviar outra mensagem.',
+        );
         return;
       }
 
       const parsed = ChatSendSchema.safeParse(raw);
       if (!parsed.success) {
-        client.send('gameplayError', parsed.error.issues[0]?.message ?? 'Mensagem inválida.');
+        client.send(
+          'gameplayError',
+          parsed.error.issues[0]?.message ?? 'Mensagem inválida.',
+        );
         return;
       }
 
@@ -126,7 +133,9 @@ export class WorldRoom extends Room<{
             if (this.state.players.has(client.sessionId))
               this.lastCombat.set(client.sessionId, Date.now());
             if (event.kind === 'heal' && event.source === 'skill') {
-              p.health = Math.min(p.maxHealth, p.health + event.amount);
+              const amount = Math.min(p.maxHealth - p.health, event.amount);
+              p.health += amount;
+              event = { ...event, amount };
             }
             if (event.kind === 'strike' && event.skillId === 'charge') {
               p.x = event.origin.x;
@@ -161,6 +170,7 @@ export class WorldRoom extends Room<{
         );
         client.send('gameplay', snapshot);
         const stats = calculateCharacterStats(snapshot.equipment);
+        stats.maxHealth += vitalityTalentBonus(snapshot.talents);
         this.characterStats.set(p.characterId, stats);
         p.maxHealth = stats.maxHealth;
         if (p.health > p.maxHealth) p.health = p.maxHealth;
@@ -228,6 +238,7 @@ export class WorldRoom extends Room<{
           'Monstro já derrotado.',
           'Monstro fora de alcance.',
           'Aguarde o golpe anterior.',
+          'Investimento de talento indisponível.',
         ];
         client.send(
           'gameplayError',
@@ -399,10 +410,16 @@ export class WorldRoom extends Room<{
     if (!parsed.success) throw new ServerError(400, 'INVALID_JOIN');
     try {
       const character = await this.identities.loadCharacter(parsed.data.token);
-      const previousSession = this.leases.acquire(character.id, client.sessionId, true);
+      const previousSession = this.leases.acquire(
+        character.id,
+        client.sessionId,
+        true,
+      );
       if (previousSession && previousSession !== client.sessionId) {
         // Encerra a conexão da sessão anterior para evitar "Personagem já conectado"
-        const oldClient = this.clients.find((c) => c.sessionId === previousSession);
+        const oldClient = this.clients.find(
+          (c) => c.sessionId === previousSession,
+        );
         if (oldClient) {
           try {
             oldClient.leave(4001);
@@ -411,7 +428,9 @@ export class WorldRoom extends Room<{
           }
         }
         // Se a sessão anterior estiver no mapa interno de reconexões do Colyseus, remove para desocupar
-        const reconnections = (this as unknown as { _reconnections?: Map<string, unknown> })._reconnections;
+        const reconnections = (
+          this as unknown as { _reconnections?: Map<string, unknown> }
+        )._reconnections;
         if (reconnections && reconnections.has(previousSession)) {
           reconnections.delete(previousSession);
         }
@@ -463,9 +482,13 @@ export class WorldRoom extends Room<{
     player.skinColor = character.skinColor;
     player.hairStyle = character.hairStyle;
     const stats = calculateCharacterStats(snapshot?.equipment ?? []);
+    stats.maxHealth += vitalityTalentBonus(snapshot?.talents);
     this.characterStats.set(character.id, stats);
     player.maxHealth = stats.maxHealth;
-    player.health = Math.min(player.maxHealth, character.health || player.maxHealth);
+    player.health = Math.min(
+      player.maxHealth,
+      character.health || player.maxHealth,
+    );
     const candidate = recovery ?? character;
     const pos = canStand(candidate.x, candidate.y) ? candidate : WORLD_SPAWN;
     player.x = pos.x;

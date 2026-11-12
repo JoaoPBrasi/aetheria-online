@@ -29,7 +29,8 @@ export class WorldConnection {
       this.room?.send('sync');
   }
   sendChat(text: string, channel: 'local' | 'global' = 'local') {
-    if (this.disposed || gameBridge.getSnapshot().status !== 'connected') return;
+    if (this.disposed || gameBridge.getSnapshot().status !== 'connected')
+      return;
     this.room?.send('chat', { text, channel });
   }
   action(payload: Record<string, unknown>) {
@@ -173,7 +174,7 @@ export class WorldConnection {
         const local =
           room.state.players.get(room.sessionId)?.characterId === characterId;
         const attackerSession =
-          event.kind === 'strike' && !local
+          (event.kind === 'strike' || event.kind === 'heal') && !local
             ? [...room.state.players].find(
                 ([, player]) => player.characterId === characterId,
               )?.[0]
@@ -187,7 +188,7 @@ export class WorldConnection {
               : `${event.amount} de dano causado`
             : event.kind === 'hurt'
               ? `${event.amount} de dano recebido`
-              : `${event.source === 'food' ? ITEMS.roasted_turnip.name : 'Fogueira'} · +${event.amount} de vida`;
+              : `${event.source === 'skill' ? 'Primeiros Socorros' : event.source === 'food' ? ITEMS.roasted_turnip.name : 'Fogueira'} · +${event.amount} de vida`;
         gameBridge.update({ combatText, combatAt: Date.now() });
       });
       room.onMessage('gameplayError', (message: string) => {
@@ -199,10 +200,13 @@ export class WorldConnection {
         });
         room.send('sync');
       });
-      room.onMessage('chat', (message: import('@aetheria/shared').ChatMessage) => {
-        if (this.disposed) return;
-        gameBridge.pushChatMessage(message);
-      });
+      room.onMessage(
+        'chat',
+        (message: import('@aetheria/shared').ChatMessage) => {
+          if (this.disposed) return;
+          gameBridge.pushChatMessage(message);
+        },
+      );
       room.send('sync');
       movement.send = (input) => room.send('move', input);
       const questCommand = (

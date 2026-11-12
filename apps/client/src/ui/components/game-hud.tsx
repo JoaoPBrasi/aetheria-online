@@ -35,6 +35,7 @@ import { QuestTracker } from './quest-tracker';
 import { QuestJournal } from './quest-journal';
 import { SeedPicker } from './seed-picker';
 import { CharacterSheet } from './character-sheet';
+import { TalentPanel } from './talent-panel';
 import { CharacterPortrait } from './character-portrait';
 import { ShopModal } from './shop-modal';
 import { soloGuide } from '../solo-guide';
@@ -72,6 +73,7 @@ export function GameHud({
     | 'bag'
     | 'equipment'
     | 'skills'
+    | 'talents'
     | 'farm'
     | 'seeds'
     | 'crafting'
@@ -476,6 +478,7 @@ export function GameHud({
         k === 'c' ||
         k === 'l' ||
         k === 'h' ||
+        k === 'n' ||
         k === 'j' ||
         k === 'o'
       ) {
@@ -490,9 +493,11 @@ export function GameHud({
                 ? 'skills'
                 : k === 'h'
                   ? 'farm'
-                  : k === 'j'
-                    ? 'quests'
-                    : 'audio';
+                  : k === 'n'
+                    ? 'talents'
+                    : k === 'j'
+                      ? 'quests'
+                      : 'audio';
         setPanel((p) => {
           const res = p === next ? null : next;
           audioManager.playSfx(res ? 'ui_open' : 'ui_close');
@@ -697,6 +702,15 @@ export function GameHud({
       )}
       <nav className="hud-dock" aria-label="Atalhos do jogo">
         <button
+          type="button"
+          aria-label="Abrir talentos"
+          aria-expanded={panel === 'talents'}
+          onClick={() => setPanel((p) => (p === 'talents' ? null : 'talents'))}
+        >
+          <kbd>N</kbd>
+          <span>✦</span>Talentos
+        </button>
+        <button
           aria-label="Abrir mochila"
           aria-expanded={panel === 'bag'}
           onClick={() => setPanel((p) => (p === 'bag' ? null : 'bag'))}
@@ -791,17 +805,19 @@ export function GameHud({
           role="dialog"
           aria-modal="true"
           aria-label={
-            panel === 'bag'
-              ? 'Mochila'
-              : panel === 'equipment'
-                ? 'Equipamentos'
-                : panel === 'skills'
-                  ? 'Ofícios'
-                  : panel === 'quests'
-                    ? 'Diário de missões'
-                    : panel === 'crafting'
-                      ? 'Criação e Forja'
-                      : 'Horta'
+            panel === 'talents'
+              ? 'Talentos'
+              : panel === 'bag'
+                ? 'Mochila'
+                : panel === 'equipment'
+                  ? 'Equipamentos'
+                  : panel === 'skills'
+                    ? 'Ofícios'
+                    : panel === 'quests'
+                      ? 'Diário de missões'
+                      : panel === 'crafting'
+                        ? 'Criação e Forja'
+                        : 'Horta'
           }
           onKeyDown={(e) => {
             if (e.key === 'Tab') {
@@ -829,15 +845,17 @@ export function GameHud({
             ) : (
               <span>
                 EXPLORADOR /{' '}
-                {panel === 'skills'
-                  ? 'OFÍCIOS'
-                  : panel === 'farm'
-                    ? 'AGRICULTURA'
-                    : panel === 'quests'
-                      ? 'DIÁRIO DE MISSÕES'
-                      : (CRAFTING_STATIONS.find(
-                          (st) => st.id === craftStation,
-                        )?.name.toUpperCase() ?? 'ESTAÇÃO DE TRABALHO')}
+                {panel === 'talents'
+                  ? 'TALENTOS'
+                  : panel === 'skills'
+                    ? 'OFÍCIOS'
+                    : panel === 'farm'
+                      ? 'AGRICULTURA'
+                      : panel === 'quests'
+                        ? 'DIÁRIO DE MISSÕES'
+                        : (CRAFTING_STATIONS.find(
+                            (st) => st.id === craftStation,
+                          )?.name.toUpperCase() ?? 'ESTAÇÃO DE TRABALHO')}
               </span>
             )}
             <button
@@ -848,7 +866,21 @@ export function GameHud({
               ✕ <kbd>ESC</kbd>
             </button>
           </header>
-          {panel === 'quests' ? (
+          {panel === 'talents' ? (
+            s.gameplay && (
+              <TalentPanel
+                gameplay={s.gameplay}
+                busy={
+                  s.status !== 'connected' ||
+                  !!s.actionPending ||
+                  !!s.questPending
+                }
+                onAllocate={(talent) =>
+                  connection?.action({ kind: 'allocate_talent', talent })
+                }
+              />
+            )
+          ) : panel === 'quests' ? (
             <QuestJournal
               quests={s.quests ?? []}
               hiddenIds={hiddenQuests}
@@ -931,10 +963,7 @@ export function GameHud({
         />
       )}
       {panel === 'shop' && (
-        <ShopModal
-          connection={connection}
-          onClose={() => setPanel(null)}
-        />
+        <ShopModal connection={connection} onClose={() => setPanel(null)} />
       )}
     </div>
   );
