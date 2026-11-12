@@ -127,9 +127,9 @@ export class WorldScene extends Phaser.Scene {
       frameWidth: 64,
       frameHeight: 64,
     });
-    this.load.spritesheet('bonfire', '/sprites/bonfire-idle.png', {
+    this.load.spritesheet('bonfire', '/sprites/bonfire-burn.png', {
       frameWidth: 32,
-      frameHeight: 32,
+      frameHeight: 48,
     });
     this.load.image('station-workbench', '/sprites/station-workbench.png');
     this.load.image('station-anvil', '/sprites/station-anvil.png');
@@ -294,18 +294,43 @@ export class WorldScene extends Phaser.Scene {
     )) {
       const { x, y } = fire;
       const central = fire.id === 'campfire-plaza';
+      const shadowY = y + (central ? 16 : 14);
       this.add
         .ellipse(
           x,
-          y + (central ? 16 : 14),
-          central ? 51 : 44,
-          central ? 21 : 18,
+          shadowY,
+          central ? 52 : 44,
+          central ? 22 : 18,
           0x132b24,
           0.45,
         )
         .setDepth(y - 1);
+
+      const glow = this.add
+        .ellipse(
+          x,
+          shadowY,
+          central ? 60 : 50,
+          central ? 28 : 22,
+          0xffaa33,
+          0.15,
+        )
+        .setDepth(y - 2);
+
+      this.tweens.add({
+        targets: glow,
+        alpha: { from: 0.1, to: 0.22 },
+        scaleX: { from: 1, to: 1.06 },
+        scaleY: { from: 1, to: 1.06 },
+        duration: 750,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+
       this.add
-        .sprite(x, y, 'bonfire')
+        .sprite(x, shadowY, 'bonfire')
+        .setOrigin(0.5, 47 / 48)
         .setScale(central ? 2.05 : 1.75)
         .setDepth(y)
         .play('bonfire-burn')
