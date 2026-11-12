@@ -8,6 +8,21 @@ window.buildCharacterArt = async (sources) => {
   const frames = {},
     heads = [];
   let index = 0;
+  const packFrame = (name, image) => {
+    const x = (index % 32) * size,
+      y = Math.floor(index / 32) * size;
+    if (y + size > atlas.height) throw new Error('Character atlas overflow');
+    output.drawImage(image, x, y);
+    frames[name] = {
+      frame: { x, y, w: size, h: size },
+      rotated: false,
+      trimmed: false,
+      spriteSourceSize: { x: 0, y: 0, w: size, h: size },
+      sourceSize: { w: size, h: size },
+    };
+    index++;
+  };
+  const cleaveFrames = [];
   for (const source of sources) {
     const image = new Image();
     image.src = source.url;
@@ -136,23 +151,43 @@ window.buildCharacterArt = async (sources) => {
         back.fillStyle = '#999';
         back.fillRect(cx - 6, top + 7, 13, 12);
       }
-      for (const layer of layers) {
-        const x = (index % 32) * size,
-          y = Math.floor(index / 32) * size;
-        if (y + size > atlas.height)
-          throw new Error('Character atlas overflow');
-        output.drawImage(canvases[layer], x, y);
-        frames[`${source.name}-${n}:${layer}`] = {
-          frame: { x, y, w: size, h: size },
-          rotated: false,
-          trimmed: false,
-          spriteSourceSize: { x: 0, y: 0, w: size, h: size },
-          sourceSize: { w: size, h: size },
+      for (const layer of layers)
+        packFrame(`${source.name}-${n}:${layer}`, canvases[layer]);
+      // A máscara cinza dos dois quadros de contato já vem desenhada no sprite de corte.
+      // Só a versão do Guerreiro recebe a paleta de aço; o corte de coleta usa o original.
+      if (source.name.startsWith('chop-') && (n === 3 || n === 4)) {
+        const mask = (x, y) => {
+          if (x < 0 || x >= size || y < 0 || y >= size) return false;
+          const i = (y * size + x) * 4;
+          const d = pixels.data;
+          return d[i + 3] && d[i] === 231 && d[i + 1] === 231 && d[i + 2] === 231;
         };
-        index++;
+        const silver = document.createElement('canvas');
+        silver.width = silver.height = size;
+        const stroke = silver.getContext('2d');
+        stroke.drawImage(canvases.base, 0, 0);
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            if (!mask(x, y)) continue;
+            const dx = x - 32;
+            const dy = y - 33;
+            const sx = Math.abs(dx) * 2 >= Math.abs(dy) ? Math.sign(dx) : 0;
+            const sy = Math.abs(dy) * 2 >= Math.abs(dx) ? Math.sign(dy) : 0;
+            stroke.fillStyle = !mask(x + sx, y + sy)
+              ? '#fff4d6'
+              : !mask(x + 2 * sx, y + 2 * sy)
+                ? '#c9e0dc'
+                : !mask(x - sx, y - sy) || !mask(x - 2 * sx, y - 2 * sy)
+                  ? '#627b83'
+                  : '#91acae';
+            stroke.fillRect(x, y, 1, 1);
+          }
+        }
+        cleaveFrames.push([`${source.name}-${n}:cleave`, silver]);
       }
     }
   }
+  for (const [name, sprite] of cleaveFrames) packFrame(name, sprite);
   const height = 2 ** Math.ceil(Math.log2(Math.ceil(index / 32) * size));
   const packed = document.createElement('canvas');
   packed.width = atlas.width;

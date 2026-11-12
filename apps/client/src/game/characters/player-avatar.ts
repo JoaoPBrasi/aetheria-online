@@ -6,6 +6,7 @@ import {
   appearanceLayers,
   PLAYER_LAYERS,
   PLAYER_ANIMATIONS,
+  CLEAVE_DURATION_MS,
   poseAt,
   type Facing,
   type PlayerAnimation,
@@ -48,7 +49,9 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
     durationMs?: number,
   ) {
     const animation = PLAYER_ANIMATIONS[state];
-    const dur = durationMs ?? (animation.frames * 1000) / animation.fps;
+    const dur = state === 'cleave'
+      ? CLEAVE_DURATION_MS
+      : (durationMs ?? (animation.frames * 1000) / animation.fps);
     this.action = {
       state,
       until: time + dur,
@@ -82,19 +85,20 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
     const distance = Math.hypot(x - this.x, y - this.y);
     if (distance > 0.02 && distance < 80) {
       this.movingUntil = time + 120;
-      this.action = undefined;
+      if (this.action?.state !== 'cleave') this.action = undefined;
     }
     this.setPosition(x, y).setDepth(y);
+    const action = this.action && time < this.action.until ? this.action : undefined;
+    if (!action) this.action = undefined;
     const state =
-      this.action && time < this.action.until
-        ? this.action.state
+      action
+        ? action.state
         : time < this.movingUntil
           ? 'walk'
           : 'idle';
-    if (this.action && time < this.action.until)
-      facing = this.action.facing ?? facing;
+    if (action) facing = action.facing ?? facing;
     if (state !== this.state || facing !== this.facing) {
-      this.startedAt = time;
+      if (!action) this.startedAt = time;
       this.state = state;
       this.facing = facing;
     }
@@ -118,12 +122,15 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
       state,
       facing,
       time - this.startedAt,
-      this.action?.durationMs,
+      action?.durationMs,
     ),
-      frameKey = pose.key + facing;
+      frameKey = `${state}:${pose.key}:${facing}`;
     if (frameKey !== this.frameKey) {
-      for (const [layer, sprite] of this.layers)
-        sprite.setFrame(`${pose.key}:${layer}`).setFlipX(pose.flip);
+      const steel = state === 'cleave' && (pose.frame === 3 || pose.frame === 4);
+      for (const [layer, sprite] of this.layers) {
+        const variant = layer === 'base' && steel ? 'cleave' : layer;
+        sprite.setFrame(`${pose.key}:${variant}`).setFlipX(pose.flip);
+      }
       this.frameKey = frameKey;
     }
     return pose;

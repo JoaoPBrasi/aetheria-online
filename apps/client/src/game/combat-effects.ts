@@ -11,6 +11,54 @@ export type ToolEffectKind =
   | 'sword'
   | 'collect';
 
+function showCleaveImpact(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  angle: number,
+  critical: boolean,
+) {
+  const art = scene.add.graphics().setDepth(5002);
+  const pixel = (n: number) => Math.round(n / 2) * 2;
+  const sparkX = pixel(x - Math.cos(angle) * 7);
+  const sparkY = pixel(y - 15 - Math.sin(angle) * 5);
+  const count = critical ? 9 : 6;
+  scene.tweens.addCounter({
+    from: 0,
+    to: 1,
+    duration: 250,
+    onUpdate: (tween) => draw(tween.getValue() ?? 0),
+    onComplete: () => art.destroy(),
+  });
+  function draw(t: number) {
+    art.clear();
+    if (t < 0.24) {
+      // Brilho de contato em degraus, na grade de pixels do personagem.
+      const alpha = 1 - t * 2;
+      art.fillStyle(0xbc783e, alpha).fillRect(sparkX - 8, sparkY - 2, 16, 4);
+      art.fillRect(sparkX - 2, sparkY - 8, 4, 16);
+      art.fillStyle(0xffefbb, alpha).fillRect(sparkX - 4, sparkY - 2, 8, 4);
+      art.fillRect(sparkX - 2, sparkY - 4, 4, 8);
+    }
+    const travel = 1 - (1 - t) ** 2;
+    for (let i = 0; i < count; i++) {
+      const ray = angle + ((i / (count - 1)) - 0.5) * 2.9;
+      const distance = 7 + travel * (15 + (i % 3) * 6);
+      const sx = pixel(sparkX + Math.cos(ray) * distance);
+      const sy = pixel(sparkY + Math.sin(ray) * distance * 0.72 + 14 * t * t);
+      art.fillStyle(i % 3 === 0 ? 0xffefbb : 0xf2b361, (1 - t) ** 1.4);
+      art.fillRect(sx, sy, i % 2 === 0 && t < 0.55 ? 4 : 2, 2);
+    }
+    // Poeira baixa: sugere peso sem desenhar um círculo de área de efeito.
+    for (let i = -1; i <= 1; i++) {
+      const dx = pixel(i * (8 + 9 * travel));
+      art.fillStyle(i === 0 ? 0xb9a481 : 0x8e7758, 0.65 * (1 - t));
+      art.fillRect(pixel(x) + dx - 3, pixel(y - 2 - t * 6) + (i === 0 ? 2 : 0), 6, 2);
+    }
+  }
+  draw(0);
+}
+
 export function showCombatEffect(
   scene: Phaser.Scene,
   event: CombatFeedback,
@@ -85,6 +133,10 @@ export function showCombatEffect(
   if (event.kind !== 'strike') return;
 
   const angle = Math.atan2(event.y - event.origin.y, event.x - event.origin.x);
+  if (event.skillId === 'cleave') {
+    showCleaveImpact(scene, event.x, event.y, angle, isCrit);
+    return;
+  }
   const swing = scene.add.graphics().setDepth(5002);
 
   if (event.skillId === 'magic_dart') {
@@ -126,22 +178,6 @@ export function showCombatEffect(
       event.origin.x,
       event.origin.y - 16,
     );
-  } else if (event.skillId === 'cleave') {
-    // Golpe Fendido: arco duplo incandescente
-    swing.lineStyle(8, 0xff9f1c, 0.95).beginPath();
-    swing
-      .arc(event.origin.x, event.origin.y - 19, 44, angle - 1.1, angle + 1.1)
-      .strokePath();
-    swing.lineStyle(4, 0xffd166, 0.9);
-    for (let i = -2; i <= 2; i++) {
-      const ray = angle + i * 0.5;
-      swing.lineBetween(
-        event.x,
-        event.y - 12,
-        event.x + Math.cos(ray) * 28,
-        event.y - 12 + Math.sin(ray) * 28,
-      );
-    }
   } else {
     // Golpe comum ou investida
     swing.lineStyle(6, isCrit ? 0xffd166 : 0xffe6a8, 0.95).beginPath();
