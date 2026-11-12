@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - packages/*
+verifyDepsBeforeRun: false
 allowBuilds:
   '@embedded-postgres/windows-x64': true
   '@embedded-postgres/linux-x64': true

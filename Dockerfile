@@ -39,6 +39,7 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=384"
 ENV HOST=0.0.0.0
 ENV PORT=2567
 
@@ -47,9 +48,11 @@ COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.ya
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared ./packages/shared
 COPY --from=builder /app/apps/server ./apps/server
+COPY --from=builder /app/apps/client/package.json ./apps/client/package.json
 COPY --from=builder /app/apps/client/dist ./apps/client/dist
+COPY scripts/start-production.mjs ./scripts/start-production.mjs
 
 EXPOSE 2567
 
-# Aplica migrações pendentes no PostgreSQL da nuvem e sobe o servidor autoritativo
-CMD ["pnpm", "start:prod"]
+# Aplica migrações pendentes no PostgreSQL e sobe o servidor autoritativo diretamente via Node
+CMD ["node", "scripts/start-production.mjs"]
