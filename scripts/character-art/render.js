@@ -222,14 +222,15 @@ window.buildCharacterArt = async (
       ctx.fillStyle = colors[i];
       ctx.fillRect(x, y, w, h);
     };
-    const tip = iron ? 24 : 29;
+    // A ponta encurta sem deslocar a empunhadura no pivô da mão (32, 48).
+    const tip = iron ? 32 : 35;
     paint(0, 31, tip, 2, 3);
     paint(0, iron ? 29 : 30, tip + 3, iron ? 6 : 4, 43 - tip);
     paint(1, iron ? 30 : 31, tip + 4, iron ? 4 : 2, 41 - tip);
     paint(2, 32, tip + 2, iron ? 2 : 1, 43 - tip);
     if (iron) paint(3, 33, tip + 4, 1, 40 - tip);
-    paint(0, iron ? 27 : 28, 43, iron ? 10 : 8, 3);
-    paint(4, iron ? 28 : 29, 44, iron ? 8 : 6, 1);
+    paint(0, iron ? 28 : 29, 43, iron ? 8 : 6, 3);
+    paint(4, iron ? 29 : 30, 44, iron ? 6 : 4, 1);
     paint(0, 30, 46, 4, 7);
     paint(5, 31, 46, 2, 5);
     paint(4, 30, 51, 4, 1);
