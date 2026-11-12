@@ -160,7 +160,9 @@ window.buildCharacterArt = async (sources) => {
           if (x < 0 || x >= size || y < 0 || y >= size) return false;
           const i = (y * size + x) * 4;
           const d = pixels.data;
-          return d[i + 3] && d[i] === 231 && d[i + 1] === 231 && d[i + 2] === 231;
+          return (
+            d[i + 3] && d[i] === 231 && d[i + 1] === 231 && d[i + 2] === 231
+          );
         };
         const silver = document.createElement('canvas');
         silver.width = silver.height = size;

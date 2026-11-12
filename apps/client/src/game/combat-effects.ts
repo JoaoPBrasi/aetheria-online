@@ -42,7 +42,7 @@ function showCleaveImpact(
     }
     const travel = 1 - (1 - t) ** 2;
     for (let i = 0; i < count; i++) {
-      const ray = angle + ((i / (count - 1)) - 0.5) * 2.9;
+      const ray = angle + (i / (count - 1) - 0.5) * 2.9;
       const distance = 7 + travel * (15 + (i % 3) * 6);
       const sx = pixel(sparkX + Math.cos(ray) * distance);
       const sy = pixel(sparkY + Math.sin(ray) * distance * 0.72 + 14 * t * t);
@@ -53,7 +53,12 @@ function showCleaveImpact(
     for (let i = -1; i <= 1; i++) {
       const dx = pixel(i * (8 + 9 * travel));
       art.fillStyle(i === 0 ? 0xb9a481 : 0x8e7758, 0.65 * (1 - t));
-      art.fillRect(pixel(x) + dx - 3, pixel(y - 2 - t * 6) + (i === 0 ? 2 : 0), 6, 2);
+      art.fillRect(
+        pixel(x) + dx - 3,
+        pixel(y - 2 - t * 6) + (i === 0 ? 2 : 0),
+        6,
+        2,
+      );
     }
   }
   draw(0);

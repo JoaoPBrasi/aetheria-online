@@ -44,7 +44,11 @@ export function facingFromInput(
 export function validFacing(value: string): Facing {
   return ['up', 'left', 'right'].includes(value) ? (value as Facing) : 'down';
 }
-export function facingForCleave(dx: number, dy: number, fallback: Facing): Facing {
+export function facingForCleave(
+  dx: number,
+  dy: number,
+  fallback: Facing,
+): Facing {
   if (Math.abs(dx) > Math.abs(dy)) return dx < 0 ? 'left' : 'right';
   return facingFromInput(dx, dy, fallback);
 }

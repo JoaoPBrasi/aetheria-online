@@ -49,9 +49,10 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
     durationMs?: number,
   ) {
     const animation = PLAYER_ANIMATIONS[state];
-    const dur = state === 'cleave'
-      ? CLEAVE_DURATION_MS
-      : (durationMs ?? (animation.frames * 1000) / animation.fps);
+    const dur =
+      state === 'cleave'
+        ? CLEAVE_DURATION_MS
+        : (durationMs ?? (animation.frames * 1000) / animation.fps);
     this.action = {
       state,
       until: time + dur,
@@ -88,14 +89,14 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
       if (this.action?.state !== 'cleave') this.action = undefined;
     }
     this.setPosition(x, y).setDepth(y);
-    const action = this.action && time < this.action.until ? this.action : undefined;
+    const action =
+      this.action && time < this.action.until ? this.action : undefined;
     if (!action) this.action = undefined;
-    const state =
-      action
-        ? action.state
-        : time < this.movingUntil
-          ? 'walk'
-          : 'idle';
+    const state = action
+      ? action.state
+      : time < this.movingUntil
+        ? 'walk'
+        : 'idle';
     if (action) facing = action.facing ?? facing;
     if (state !== this.state || facing !== this.facing) {
       if (!action) this.startedAt = time;
@@ -119,14 +120,15 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
       }
     }
     const pose = poseAt(
-      state,
-      facing,
-      time - this.startedAt,
-      action?.durationMs,
-    ),
+        state,
+        facing,
+        time - this.startedAt,
+        action?.durationMs,
+      ),
       frameKey = `${state}:${pose.key}:${facing}`;
     if (frameKey !== this.frameKey) {
-      const steel = state === 'cleave' && (pose.frame === 3 || pose.frame === 4);
+      const steel =
+        state === 'cleave' && (pose.frame === 3 || pose.frame === 4);
       for (const [layer, sprite] of this.layers) {
         const variant = layer === 'base' && steel ? 'cleave' : layer;
         sprite.setFrame(`${pose.key}:${variant}`).setFlipX(pose.flip);
