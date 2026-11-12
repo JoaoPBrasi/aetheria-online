@@ -9,7 +9,7 @@ RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 # Stage 1: Build da aplicação
 FROM base AS builder
 WORKDIR /app
-ENV NODE_OPTIONS="--max-old-space-size=768"
+ENV NODE_OPTIONS="--max-old-space-size=512"
 ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
 # Copia definições do workspace e dependências
@@ -18,8 +18,9 @@ COPY packages/shared/package.json ./packages/shared/
 COPY apps/server/package.json ./apps/server/
 COPY apps/client/package.json ./apps/client/
 
-# Instala todas as dependências com concorrência controlada para evitar estouro de memória
-RUN pnpm install --frozen-lockfile --child-concurrency=1 --network-concurrency=4
+# Instala dependências usando cache do BuildKit no disco para evitar estouro de memória RAM
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --store-dir /pnpm/store --frozen-lockfile --child-concurrency=1
 
 # Copia código-fonte e esquemas
 COPY tsconfig.base.json tsconfig.tools.json ./
