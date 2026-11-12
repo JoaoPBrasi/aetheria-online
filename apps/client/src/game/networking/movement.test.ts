@@ -1,7 +1,32 @@
 import { beforeEach, expect, it } from 'vitest';
-import { WorldState, PlayerPresence } from '@aetheria/shared';
+import {
+  WorldState,
+  PlayerPresence,
+  MovementQueue,
+  attributeBonuses,
+} from '@aetheria/shared';
 import { movement } from './movement';
 beforeEach(() => movement.reset());
+it('predicts and replays movement at the agility speed published by the server', () => {
+  const state = new WorldState();
+  const player = new PlayerPresence();
+  const queue = new MovementQueue();
+  player.movementSpeed = attributeBonuses({ agility: 10 }).movementSpeed;
+  state.players.set('self', player);
+  movement.reconcile(state, 'self');
+  movement.send = (input) => {
+    queue.accept(input);
+  };
+  movement.input(1, 0);
+  const serverStep = queue.step(player.x, player.y, player.movementSpeed)!;
+  expect(serverStep.x).toBeCloseTo(1049.2);
+  expect(movement.position.x).toBeCloseTo(serverStep.x);
+  player.x = serverStep.x;
+  player.ack = serverStep.seq;
+  movement.input(1, 0);
+  movement.reconcile(state, 'self');
+  expect(movement.position.x).toBeCloseTo(1058.4);
+});
 it('replays only inputs not acknowledged by the server', () => {
   movement.send = () => undefined;
   movement.input(1, 0);

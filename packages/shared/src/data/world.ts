@@ -1,5 +1,6 @@
 import { TILE_SIZE } from '../constants/index.js';
 import { CEMETERY } from './cemetery.js';
+import { BASE_MOVEMENT_SPEED } from './attributes.js';
 export const MAP_SIZE = 96;
 export const WORLD_ART_REVISION = 'brumavale-lakeside-quarry-v5';
 export const QUARRY = { x: 60, y: 5, w: 13, h: 10 };
@@ -313,10 +314,11 @@ export function moveInWorld(
   dx: number,
   dy: number,
   seconds: number,
+  speed = BASE_MOVEMENT_SPEED,
 ) {
   const length = Math.hypot(dx, dy);
   if (!length) return { x, y };
-  const distance = 160 * Math.min(Math.max(seconds, 0), 0.05);
+  const distance = speed * Math.min(Math.max(seconds, 0), 0.05);
   // Small substeps prevent tunnelling and allow sliding along walls.
   const steps = Math.max(1, Math.ceil(distance / 4));
   for (let i = 0; i < steps; i++) {

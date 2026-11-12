@@ -1,4 +1,10 @@
 import type { ItemId } from './gameplay.js';
+import { attributeBonuses, type AttributeRanks } from './attributes.js';
+import {
+  physicalTalentBonus,
+  vitalityTalentBonus,
+  type TalentRanks,
+} from './talents.js';
 
 export const EQUIPMENT_SLOTS = [
   'head',
@@ -32,7 +38,9 @@ export interface EquipmentPieceDefinition {
   icon: string;
 }
 
-export const EQUIPMENT_DEFINITIONS: Partial<Record<ItemId, EquipmentPieceDefinition>> = {
+export const EQUIPMENT_DEFINITIONS: Partial<
+  Record<ItemId, EquipmentPieceDefinition>
+> = {
   cloth_hood: {
     slot: 'head',
     name: 'Capuz de Pano',
@@ -148,6 +156,8 @@ export interface CharacterAttributes {
   bonusHp: number;
   bonusAttack: number;
   critChance: number;
+  dodgeChance: number;
+  movementSpeed: number;
 }
 
 /**
@@ -156,6 +166,8 @@ export interface CharacterAttributes {
 export function calculateCharacterStats(
   equipment: { slot: string; itemId: ItemId }[],
   baseWeaponDamage = 20,
+  attributes?: AttributeRanks,
+  talents?: TalentRanks,
 ): CharacterAttributes {
   let defense = 0;
   let bonusHp = 0;
@@ -170,16 +182,23 @@ export function calculateCharacterStats(
     }
   }
 
-  const baseHp = 100;
-  const maxHealth = baseHp + bonusHp;
-  const attack = baseWeaponDamage + bonusAttack;
+  const progress = attributeBonuses(attributes);
+  const maxHealth =
+    100 + bonusHp + progress.maxHealth + vitalityTalentBonus(talents);
+  const attack =
+    baseWeaponDamage +
+    bonusAttack +
+    progress.physicalAttack +
+    physicalTalentBonus(talents);
 
   return {
     maxHealth,
-    defense,
+    defense: defense + progress.defense,
     attack,
     bonusHp,
     bonusAttack,
-    critChance: 15,
+    critChance: Math.round(progress.skillCritChance * 100),
+    dodgeChance: progress.dodgeChance,
+    movementSpeed: progress.movementSpeed,
   };
 }

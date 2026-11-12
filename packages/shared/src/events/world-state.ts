@@ -1,4 +1,5 @@
 import { Schema, MapSchema, defineTypes } from '@colyseus/schema';
+import { BASE_MOVEMENT_SPEED } from '../data/attributes.js';
 export class PlayerPresence extends Schema {
   declare characterId: string;
   declare name: string;
@@ -14,6 +15,7 @@ export class PlayerPresence extends Schema {
   declare hairStyle: string;
   declare health: number;
   declare maxHealth: number;
+  declare movementSpeed: number;
   constructor() {
     super();
     this.characterId = '';
@@ -30,6 +32,7 @@ export class PlayerPresence extends Schema {
     this.hairStyle = 'short';
     this.health = 100;
     this.maxHealth = 100;
+    this.movementSpeed = BASE_MOVEMENT_SPEED;
   }
 }
 defineTypes(PlayerPresence, {
@@ -47,6 +50,7 @@ defineTypes(PlayerPresence, {
   hairStyle: 'string',
   health: 'int32',
   maxHealth: 'int32',
+  movementSpeed: 'float64',
 });
 export class WorldState extends Schema {
   declare mapId: string;

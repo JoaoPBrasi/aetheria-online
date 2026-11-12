@@ -2,6 +2,10 @@ import type { Database } from '../database/client.js';
 import { QuestRepository, advanceQuests } from './quest-repository.js';
 import {
   addItem,
+  attributeBonuses,
+  availableAttributePoints,
+  MAX_ATTRIBUTE_RANK,
+  readAttributeRanks,
   readTalentRanks,
   talentBlock,
   transferItem,
@@ -31,6 +35,23 @@ import {
   type ResourceDefinition,
 } from '@aetheria/shared';
 type Position = { x: number; y: number; direction: string };
+const RARE_MONSTER_LOOT = {
+  slime: 'forest_amulet',
+  orc: 'iron_helmet',
+  skeleton: 'iron_greaves',
+} satisfies Record<MonsterKind, ItemId>;
+
+function tryBonusItem(slots: Slot[], item: ItemId, chance: number) {
+  if (chance <= 0 || Math.random() >= chance) return slots;
+  try {
+    return addItem(slots, item, 1);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Inventário cheio.')
+      return slots;
+    throw error;
+  }
+}
+
 export class GameplayRepository {
   constructor(
     private db: Database,
@@ -65,6 +86,7 @@ export class GameplayRepository {
         characterId,
         revision: c.revision,
         talents: readTalentRanks(c.talents),
+        attributes: readAttributeRanks(c.attributes),
         gold: c.gold,
         inventory: c.inventory.map((s) => ({
           index: s.index,
@@ -88,6 +110,7 @@ export class GameplayRepository {
         throw new Error('Estado desatualizado. Tente novamente.');
       let slots: Slot[] = snapshot().inventory;
       const talents = readTalentRanks(c.talents);
+      const attributes = readAttributeRanks(c.attributes);
       let equipment = snapshot().equipment;
       let currentGold = c.gold;
       let changed = false;
@@ -117,6 +140,16 @@ export class GameplayRepository {
         if (talentBlock(action.talent, talents, xp))
           throw new Error('Investimento de talento indisponível.');
         talents[action.talent] = (talents[action.talent] ?? 0) + 1;
+      }
+      if (action?.kind === 'allocate_attribute') {
+        const xp =
+          c.skills.find((skill) => skill.profession === 'warrior')?.xp ?? 0;
+        const rank = attributes[action.attribute] ?? 0;
+        if (rank >= MAX_ATTRIBUTE_RANK)
+          throw new Error('Atributo no grau máximo.');
+        if (!availableAttributePoints(xp, attributes))
+          throw new Error('Sem pontos de atributo.');
+        attributes[action.attribute] = rank + 1;
       }
       if (action?.kind === 'farm') {
         await tx.$queryRaw`SELECT "id" FROM "FarmPlot" WHERE "id"=${action.plot} FOR UPDATE`;
@@ -196,13 +229,19 @@ export class GameplayRepository {
             if (!crop) throw new Error('Cultura inválida.');
             slots = addItem(slots, crop.item, HARVEST_YIELD.produce);
             slots = addItem(slots, crop.seed, HARVEST_YIELD.seeds);
+            const harvest = tryBonusItem(
+              slots,
+              crop.item,
+              attributeBonuses(attributes).extraResourceChance,
+            );
             await advanceQuests(
               tx,
               characterId,
               'gather',
               crop.item,
-              HARVEST_YIELD.produce,
+              HARVEST_YIELD.produce + Number(harvest !== slots),
             );
+            slots = harvest;
             await tx.characterSkill.update({
               where: {
                 characterId_profession: { characterId, profession: 'farmer' },
@@ -309,7 +348,19 @@ export class GameplayRepository {
           if (!affected) throw new Error('Recurso se recuperando. Aguarde.');
         }
         slots = addItem(slots, node.item, 3);
-        await advanceQuests(tx, characterId, 'gather', node.item, 3);
+        const collected = tryBonusItem(
+          slots,
+          node.item,
+          attributeBonuses(attributes).extraResourceChance,
+        );
+        await advanceQuests(
+          tx,
+          characterId,
+          'gather',
+          node.item,
+          3 + Number(collected !== slots),
+        );
+        slots = collected;
         await tx.characterSkill.update({
           where: {
             characterId_profession: {
@@ -382,6 +433,12 @@ export class GameplayRepository {
       if (action?.kind === 'attack' || action?.kind === 'skill') {
         if (reward) {
           slots = addItem(slots, reward.item, reward.quantity ?? 1);
+          if (reward.monster)
+            slots = tryBonusItem(
+              slots,
+              RARE_MONSTER_LOOT[reward.monster],
+              attributeBonuses(attributes).rareDropChance,
+            );
           await advanceQuests(
             tx,
             characterId,
@@ -439,7 +496,12 @@ export class GameplayRepository {
             data: equipment.map((s) => ({ ...s, characterId })),
           });
       }
-      if (changed || position || action?.kind === 'allocate_talent')
+      if (
+        changed ||
+        position ||
+        action?.kind === 'allocate_talent' ||
+        action?.kind === 'allocate_attribute'
+      )
         await tx.character.update({
           where: { id: characterId },
           data: {
@@ -450,6 +512,8 @@ export class GameplayRepository {
             farmingKitGranted: kitGranted,
             gold: currentGold,
             talents: action?.kind === 'allocate_talent' ? talents : undefined,
+            attributes:
+              action?.kind === 'allocate_attribute' ? attributes : undefined,
             revision: { increment: 1 },
           },
         });
@@ -465,6 +529,7 @@ export class GameplayRepository {
         characterId,
         revision: updated.revision,
         talents: readTalentRanks(updated.talents),
+        attributes: readAttributeRanks(updated.attributes),
         gold: updated.gold,
         inventory: updated.inventory.map((s) => ({
           index: s.index,

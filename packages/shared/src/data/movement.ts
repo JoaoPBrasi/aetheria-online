@@ -23,11 +23,11 @@ export class MovementQueue {
     this.queue.push(parsed.data);
     return true;
   }
-  step(x: number, y: number) {
+  step(x: number, y: number, speed?: number) {
     const input = this.queue.shift();
     if (!input) return undefined;
     return {
-      ...moveInWorld(x, y, input.dx, input.dy, 0.05),
+      ...moveInWorld(x, y, input.dx, input.dy, 0.05, speed),
       seq: input.seq,
       direction:
         input.dy < 0

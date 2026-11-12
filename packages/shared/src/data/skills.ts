@@ -18,7 +18,8 @@ export const COMBAT_SKILLS: Record<SkillId, SkillDefinition> = {
     id: 'cleave',
     name: 'Golpe Fendido',
     icon: '⚔️',
-    description: 'Ataque pesado que desfere 150% do dano no alvo em alcance corpo a corpo.',
+    description:
+      'Ataque pesado que desfere 150% do dano no alvo em alcance corpo a corpo.',
     cooldownMs: 3500,
     range: 64,
     type: 'melee',
@@ -28,7 +29,8 @@ export const COMBAT_SKILLS: Record<SkillId, SkillDefinition> = {
     id: 'charge',
     name: 'Investida',
     icon: '💨',
-    description: 'Avança em arrancada veloz até o monstro alvo causando 35 de dano físico.',
+    description:
+      'Avança em arrancada veloz até o monstro alvo causando 35 de dano físico.',
     cooldownMs: 7000,
     range: 160,
     type: 'dash',
@@ -38,7 +40,8 @@ export const COMBAT_SKILLS: Record<SkillId, SkillDefinition> = {
     id: 'heal',
     name: 'Primeiros Socorros',
     icon: '🩹',
-    description: 'Aplica bandagens medicinais recuperando até 35 pontos de vida.',
+    description:
+      'Aplica bandagens medicinais recuperando até 35 pontos de vida.',
     cooldownMs: 10000,
     range: 0,
     type: 'heal',
@@ -48,7 +51,8 @@ export const COMBAT_SKILLS: Record<SkillId, SkillDefinition> = {
     id: 'magic_dart',
     name: 'Dardo Arcano',
     icon: '⚡',
-    description: 'Dispara um projétil veloz de energia mágica à distância causando 25 de dano.',
+    description:
+      'Dispara um projétil veloz de energia mágica à distância causando 25 de dano.',
     cooldownMs: 4000,
     range: 200,
     type: 'ranged',
@@ -73,12 +77,16 @@ export function calculateSkillDamage(
   skillId: SkillId,
   weaponDamage: number,
   forceCrit?: boolean,
+  bonusDamage = 0,
 ): { damage: number; isCrit: boolean } {
   const def = COMBAT_SKILLS[skillId];
   if (!def) return { damage: weaponDamage, isCrit: false };
 
-  let raw = def.baseDamage ?? Math.round(weaponDamage * (def.damageMultiplier ?? 1));
-  const isCrit = forceCrit !== undefined ? forceCrit : Math.random() < CRIT_CHANCE;
+  let raw =
+    (def.baseDamage ?? Math.round(weaponDamage * (def.damageMultiplier ?? 1))) +
+    bonusDamage;
+  const isCrit =
+    forceCrit !== undefined ? forceCrit : Math.random() < CRIT_CHANCE;
 
   if (isCrit) {
     raw = Math.round(raw * CRIT_MULTIPLIER);
@@ -86,4 +94,3 @@ export function calculateSkillDamage(
 
   return { damage: raw, isCrit };
 }
-

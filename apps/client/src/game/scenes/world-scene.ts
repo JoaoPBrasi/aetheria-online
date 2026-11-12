@@ -627,7 +627,7 @@ export class WorldScene extends Phaser.Scene {
   ) {
     if (!this.active) return;
     if (local) {
-      playCombatSound(event.kind);
+      if (event.kind !== 'dodge') playCombatSound(event.kind);
       audioManager.notifyCombatAction();
     }
     if (event.kind === 'strike') {

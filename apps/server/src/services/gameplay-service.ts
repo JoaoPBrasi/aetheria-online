@@ -6,6 +6,9 @@ import {
   PLAYER_ATTACK_COOLDOWN_MS,
   UNARMED_DAMAGE,
   WEAPON_DAMAGE,
+  attributeBonuses,
+  calculateCharacterStats,
+  CRIT_MULTIPLIER,
   physicalTalentBonus,
   arcaneTalentBonus,
   COMBAT_SKILLS,
@@ -25,7 +28,7 @@ import { ForageManager } from './forage-manager.js';
 export class GameplayService {
   private queues = new Map<string, Promise<unknown>>();
   private cooldowns = new Map<string, number>();
-  private attackCooldowns = new Map<string, number>();
+  private attackReadyAt = new Map<string, number>();
   private skillCooldowns = new Map<string, Map<SkillId, number>>();
   readonly forage = new ForageManager();
   readonly monstersManager = new MonsterManager();
@@ -110,22 +113,26 @@ export class GameplayService {
               PLAYER_ATTACK_RANGE
           )
             throw new Error('Monstro fora de alcance.');
-          const now = Date.now();
-          if (
-            now - (this.attackCooldowns.get(id) ?? 0) <
-            PLAYER_ATTACK_COOLDOWN_MS
-          )
+          if (Date.now() < (this.attackReadyAt.get(id) ?? 0))
             throw new Error('Aguarde o golpe anterior.');
-
           const equipment = await this.repository.execute(id);
+          const attributes = attributeBonuses(equipment.attributes);
+
           const weapon: ItemId | undefined = hasTool(equipment, 'iron_sword')
             ? 'iron_sword'
             : hasTool(equipment, 'sword')
               ? 'sword'
               : undefined;
-          const damage =
-            (weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE) +
-            physicalTalentBonus(equipment.talents);
+          const { attack } = calculateCharacterStats(
+            equipment.equipment,
+            weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE,
+            equipment.attributes,
+            equipment.talents,
+          );
+          const isCrit =
+            attributes.basicCritChance > 0 &&
+            Math.random() < attributes.basicCritChance;
+          const damage = isCrit ? Math.round(attack * CRIT_MULTIPLIER) : attack;
           const lethal = damage >= monster.health;
           const reward = lethal
             ? {
@@ -145,7 +152,7 @@ export class GameplayService {
             current,
           );
           this.monstersManager.takeDamage(monster.id, damage, id);
-          this.attackCooldowns.set(id, now);
+          this.attackReadyAt.set(id, Date.now() + PLAYER_ATTACK_COOLDOWN_MS / attributes.attackRate);
           onStrike?.({
             kind: 'strike',
             attackerId: id,
@@ -155,6 +162,7 @@ export class GameplayService {
             y: monster.y,
             amount,
             lethal,
+            isCrit,
           });
           return snapshot;
         });
@@ -191,6 +199,7 @@ export class GameplayService {
             amount:
               (skill.healAmount ?? 35) +
               arcaneTalentBonus(snapshot.talents) +
+              attributeBonuses(snapshot.attributes).healing +
               (snapshot.talents?.heal ?? 0) * 5,
             skillId: 'heal',
           });
@@ -221,17 +230,29 @@ export class GameplayService {
               ? 'sword'
               : undefined;
           const ranks = equipment.talents;
-          const baseWeaponDmg =
-            (weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE) +
-            physicalTalentBonus(ranks);
-          const result = calculateSkillDamage(action.skillId, baseWeaponDmg);
+          const attributes = attributeBonuses(equipment.attributes);
+          const { attack } = calculateCharacterStats(
+            equipment.equipment,
+            weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE,
+            equipment.attributes,
+            ranks,
+          );
           const bonus =
             action.skillId === 'magic_dart'
-              ? arcaneTalentBonus(ranks) + (ranks?.magic_dart ?? 0) * 4
+              ? arcaneTalentBonus(ranks) +
+                attributes.arcaneDamage +
+                (ranks?.magic_dart ?? 0) * 4
               : action.skillId === 'charge'
-                ? physicalTalentBonus(ranks) + (ranks?.charge ?? 0) * 5
+                ? physicalTalentBonus(ranks) +
+                  attributes.physicalAttack +
+                  (ranks?.charge ?? 0) * 5
                 : (ranks?.cleave ?? 0) * 4;
-          const damage = result.damage + bonus;
+          const { damage, isCrit } = calculateSkillDamage(
+            action.skillId,
+            attack,
+            Math.random() < attributes.skillCritChance,
+            bonus,
+          );
           const dashFrom =
             skill.type === 'dash' ? { x: current.x, y: current.y } : undefined;
 
@@ -273,7 +294,7 @@ export class GameplayService {
             y: monster.y,
             amount,
             lethal,
-            isCrit: result.isCrit,
+            isCrit,
             dashFrom,
             skillId: action.skillId,
           });

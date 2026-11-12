@@ -1,4 +1,4 @@
-import { afterAll, expect, it } from 'vitest';
+import { afterAll, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import {
   GROVE_RESOURCES,
@@ -82,6 +82,80 @@ it('persists talents, validates prerequisites and never spends a point twice', a
     strength: 1,
     cleave: 1,
   });
+});
+it('gives attributes a separate budget and applies Luck to real harvests and kills', async () => {
+  const id = await fixture();
+  const local = new GameplayService(new GameplayRepository(db));
+  const initial = await local.sync(id);
+  const learn = {
+    id: randomUUID(),
+    revision: initial.revision,
+    kind: 'allocate_attribute',
+    attribute: 'luck',
+  };
+  const allocated = await local.act(id, learn, position);
+  expect((await local.act(id, learn, position)).attributes).toEqual({
+    luck: 1,
+  });
+  await expect(
+    local.act(
+      id,
+      {
+        ...learn,
+        id: randomUUID(),
+        revision: allocated.revision,
+        attribute: 'vitality',
+      },
+      position,
+    ),
+  ).rejects.toThrow('Sem pontos');
+  const withTalent = await local.act(
+    id,
+    {
+      id: randomUUID(),
+      revision: allocated.revision,
+      kind: 'allocate_talent',
+      talent: 'strength',
+    },
+    position,
+  );
+  const roll = vi.spyOn(Math, 'random').mockReturnValue(0.025);
+  try {
+    const collected = await local.act(
+      id,
+      {
+        id: randomUUID(),
+        revision: withTalent.revision,
+        kind: 'gather',
+        node: stone.id,
+      },
+      at(stone),
+    );
+    expect(
+      collected.inventory.find((slot) => slot.itemId === 'stone')?.quantity,
+    ).toBe(4);
+    const monster = local.monstersManager.get('slime-1')!;
+    monster.health = 1;
+    const defeated = await local.act(
+      id,
+      {
+        id: randomUUID(),
+        revision: collected.revision,
+        kind: 'attack',
+        targetId: monster.id,
+      },
+      at(monster),
+    );
+    expect(
+      defeated.inventory.find((slot) => slot.itemId === 'forest_amulet')
+        ?.quantity,
+    ).toBe(1);
+  } finally {
+    roll.mockRestore();
+  }
+  const restored = await new GameplayRepository(db).execute(id);
+  expect(restored.attributes).toEqual({ luck: 1 });
+  expect(restored.talents).toEqual({ strength: 1 });
 });
 afterAll(async () => {
   await db.account.deleteMany({ where: { id: { in: accounts } } });

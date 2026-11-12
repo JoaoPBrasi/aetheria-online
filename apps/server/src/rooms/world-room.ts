@@ -15,7 +15,6 @@ import {
   type CombatFeedback,
   type CharacterSummary,
   calculateCharacterStats,
-  vitalityTalentBonus,
   type CharacterAttributes,
 } from '@aetheria/shared';
 import type { IdentityRepository } from '../repositories/identity-repository.js';
@@ -169,10 +168,15 @@ export class WorldRoom extends Room<{
           },
         );
         client.send('gameplay', snapshot);
-        const stats = calculateCharacterStats(snapshot.equipment);
-        stats.maxHealth += vitalityTalentBonus(snapshot.talents);
+        const stats = calculateCharacterStats(
+          snapshot.equipment,
+          undefined,
+          snapshot.attributes,
+          snapshot.talents,
+        );
         this.characterStats.set(p.characterId, stats);
         p.maxHealth = stats.maxHealth;
+        p.movementSpeed = stats.movementSpeed;
         if (p.health > p.maxHealth) p.health = p.maxHealth;
         if (
           raw &&
@@ -239,6 +243,8 @@ export class WorldRoom extends Room<{
           'Monstro fora de alcance.',
           'Aguarde o golpe anterior.',
           'Investimento de talento indisponível.',
+          'Sem pontos de atributo.',
+          'Atributo no grau máximo.',
         ];
         client.send(
           'gameplayError',
@@ -311,7 +317,9 @@ export class WorldRoom extends Room<{
         this.broadcast('forage', this.gameplay.forage.nodes());
       for (const [id, player] of this.state.players) {
         if (!player.connected) continue;
-        const next = this.inputs.get(id)?.step(player.x, player.y);
+        const next = this.inputs
+          .get(id)
+          ?.step(player.x, player.y, player.movementSpeed);
         if (next) {
           player.x = next.x;
           player.y = next.y;
@@ -344,9 +352,19 @@ export class WorldRoom extends Room<{
         const player = this.state.players.get(hit.sessionId);
         if (player && player.connected) {
           const stats = this.characterStats.get(player.characterId);
+          this.lastCombat.set(hit.sessionId, Date.now());
+          if (stats?.dodgeChance && Math.random() < stats.dodgeChance) {
+            this.sendCombat({
+              kind: 'dodge',
+              playerId: player.characterId,
+              x: player.x,
+              y: player.y,
+              amount: 0,
+            });
+            continue;
+          }
           const defense = stats?.defense ?? 0;
           const finalDamage = Math.max(1, hit.damage - defense);
-          this.lastCombat.set(hit.sessionId, Date.now());
           this.sendCombat({
             kind: 'hurt',
             playerId: player.characterId,
@@ -481,10 +499,15 @@ export class WorldRoom extends Room<{
     player.hairColor = character.hairColor;
     player.skinColor = character.skinColor;
     player.hairStyle = character.hairStyle;
-    const stats = calculateCharacterStats(snapshot?.equipment ?? []);
-    stats.maxHealth += vitalityTalentBonus(snapshot?.talents);
+    const stats = calculateCharacterStats(
+      snapshot?.equipment ?? [],
+      undefined,
+      snapshot?.attributes,
+      snapshot?.talents,
+    );
     this.characterStats.set(character.id, stats);
     player.maxHealth = stats.maxHealth;
+    player.movementSpeed = stats.movementSpeed;
     player.health = Math.min(
       player.maxHealth,
       character.health || player.maxHealth,

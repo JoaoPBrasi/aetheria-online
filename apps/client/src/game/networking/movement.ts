@@ -1,5 +1,6 @@
 import {
   moveInWorld,
+  BASE_MOVEMENT_SPEED,
   WORLD_SPAWN,
   DEFAULT_COSMETICS,
   type Cosmetics,
@@ -17,6 +18,7 @@ export const movement = {
   position: { ...WORLD_SPAWN },
   direction: 'down' as Facing,
   seq: 0,
+  speed: BASE_MOVEMENT_SPEED,
   pending: [] as MovementInput[],
   remotes: new Map<
     string,
@@ -36,6 +38,7 @@ export const movement = {
   reset() {
     this.pending = [];
     this.seq = 0;
+    this.speed = BASE_MOVEMENT_SPEED;
     this.remotes.clear();
     this.send = undefined;
     this.position = { ...WORLD_SPAWN };
@@ -53,6 +56,7 @@ export const movement = {
       input.dx,
       input.dy,
       0.05,
+      this.speed,
     );
     this.send(input);
   },
@@ -66,6 +70,7 @@ export const movement = {
         hairStyle: player.hairStyle as Cosmetics['hairStyle'],
       };
       this.seq = Math.max(this.seq, player.ack);
+      this.speed = player.movementSpeed ?? BASE_MOVEMENT_SPEED;
       this.pending = this.pending.filter((i) => i.seq > player.ack);
       this.position = { x: player.x, y: player.y };
       this.direction = validFacing(player.direction);
@@ -77,6 +82,7 @@ export const movement = {
           i.dx,
           i.dy,
           0.05,
+          this.speed,
         );
       }
     }

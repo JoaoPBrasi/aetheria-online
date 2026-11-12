@@ -19,7 +19,12 @@ export function showCombatEffect(
   const healing = event.kind === 'heal';
   const isCrit = !!event.isCrit;
 
-  let textLabel = healing ? `+${event.amount} HP` : `−${event.amount}`;
+  let textLabel =
+    event.kind === 'dodge'
+      ? 'Esquivou'
+      : healing
+        ? `+${event.amount} HP`
+        : `−${event.amount}`;
   if (isCrit && !healing) {
     textLabel = `💥 CRÍTICO! −${event.amount}`;
   }

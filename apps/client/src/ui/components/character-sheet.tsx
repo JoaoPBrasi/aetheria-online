@@ -7,8 +7,7 @@ import {
   type Cosmetics,
   EQUIPMENT_DEFINITIONS,
   calculateCharacterStats,
-  physicalTalentBonus,
-  vitalityTalentBonus,
+  attributeBonuses,
   type EquipmentSlot,
 } from '@aetheria/shared';
 import { gameBridge } from '../../game/managers/game-bridge';
@@ -16,6 +15,7 @@ import type { WorldConnection } from '../../game/networking/world-connection';
 import { CharacterPortrait } from './character-portrait';
 import { GameplayPanel } from './gameplay-panel';
 import { ItemIcon, MetalCorners } from './medieval-art';
+import { AttributePanel } from './attribute-panel';
 
 export type CharacterView = 'bag' | 'equipment';
 
@@ -69,9 +69,11 @@ export function CharacterSheet({
   const baseDamage = weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE;
   const stats = calculateCharacterStats(
     equipment,
-    baseDamage + physicalTalentBonus(gameplay?.talents),
+    baseDamage,
+    gameplay?.attributes,
+    gameplay?.talents,
   );
-  stats.maxHealth += vitalityTalentBonus(gameplay?.talents);
+  const bonuses = attributeBonuses(gameplay?.attributes);
 
   const busy =
     state.status !== 'connected' || state.actionPending || state.questPending;
@@ -235,6 +237,15 @@ export function CharacterSheet({
         </div>
 
         {/* Painel de Atributos do Personagem */}
+        {gameplay && (
+          <AttributePanel
+            gameplay={gameplay}
+            busy={!!busy}
+            onAllocate={(attribute) =>
+              connection?.action({ kind: 'allocate_attribute', attribute })
+            }
+          />
+        )}
         <div className="character-attributes medieval-attributes">
           <h3 className="attributes-title">Atributos de Combate</h3>
           <dl className="attributes-grid">
@@ -278,9 +289,17 @@ export function CharacterSheet({
                 <span aria-hidden="true">⚡</span> Chance de Crítico
               </dt>
               <dd>
-                {stats.critChance}%{' '}
-                <small className="stat-hint">(1.5× dano)</small>
+                {Math.round(bonuses.basicCritChance * 100)}% básico ·{' '}
+                {stats.critChance}% habilidade
               </dd>
+            </div>
+            <div className="attribute-card">
+              <dt>Esquiva</dt>
+              <dd>{Math.round(stats.dodgeChance * 100)}%</dd>
+            </div>
+            <div className="attribute-card">
+              <dt>Saque raro</dt>
+              <dd>{Math.round(bonuses.rareDropChance * 100)}%</dd>
             </div>
           </dl>
         </div>

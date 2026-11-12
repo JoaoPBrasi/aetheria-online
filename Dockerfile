@@ -9,6 +9,7 @@ RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 # Stage 1: Build da aplicação
 FROM base AS builder
 WORKDIR /app
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 # Copia definições do workspace e dependências
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -25,8 +26,10 @@ COPY packages/shared ./packages/shared
 COPY apps/server ./apps/server
 COPY apps/client ./apps/client
 
-# Compila shared, gera prisma client, compila server e compila o client (Vite)
-RUN pnpm build
+# Compila em etapas separadas para logs transparentes e otimização de memória
+RUN pnpm --filter @aetheria/shared build
+RUN pnpm --filter @aetheria/server build
+RUN pnpm --filter @aetheria/client build
 
 # Stage 2: Imagem final de execução (Runner)
 FROM base AS runner

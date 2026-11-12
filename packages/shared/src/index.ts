@@ -7,6 +7,7 @@ export * from './data/world.js';
 export * from './data/movement.js';
 export * from './data/gameplay.js';
 export * from './data/talents.js';
+export * from './data/attributes.js';
 export * from './data/farming.js';
 export * from './data/interaction.js';
 export * from './data/cosmetics.js';

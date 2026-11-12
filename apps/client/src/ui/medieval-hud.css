@@ -1242,6 +1242,57 @@
   max-height: calc(100% - 188px);
   z-index: 55;
 }
+.attribute-allocation .attribute-points,
+.attribute-allocation .attribute-builds {
+  margin: 5px 0;
+  font-size: 12px;
+}
+.attribute-progress {
+  display: block;
+  font-size: 11px;
+}
+.attribute-progress progress {
+  display: block;
+  width: 100%;
+  accent-color: #d5a458;
+}
+.attribute-ranks {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  margin: 8px 0;
+  list-style: none;
+}
+.attribute-ranks li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: start;
+  gap: 5px;
+  padding: 4px;
+  background: #36271b;
+  border: 1px solid #765237;
+  border-radius: 4px;
+}
+.attribute-ranks small {
+  color: #d5bf94;
+}
+.attribute-help,
+.attribute-increase {
+  width: 27px;
+  height: 27px;
+  text-align: center;
+  line-height: 25px;
+  border: 1px solid #a07b52;
+  border-radius: 4px;
+}
+.attribute-explanation {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.attribute-increase:disabled {
+  opacity: .55;
+}
 .talent-panel {
   padding: 16px;
 }
