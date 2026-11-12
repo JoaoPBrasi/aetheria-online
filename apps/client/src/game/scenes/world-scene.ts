@@ -136,6 +136,10 @@ export class WorldScene extends Phaser.Scene {
     this.load.image('resource-bush', '/sprites/resource-bush.png');
     this.load.image('tree-young', '/sprites/tree-medium.png');
     this.load.image('farm-plot-tilled', '/sprites/farm-plot-tilled.png');
+    this.load.spritesheet('monster-slime', '/sprites/monster-slime.png', {
+      frameWidth: 64,
+      frameHeight: 64,
+    });
   }
   create() {
     this.focusRing = this.add.graphics().setDepth(5001);
@@ -183,6 +187,40 @@ export class WorldScene extends Phaser.Scene {
           frameRate: 5,
           repeat: -1,
         });
+
+    if (!this.anims.exists('slime-idle')) {
+      this.anims.create({
+        key: 'slime-idle',
+        frames: this.anims.generateFrameNumbers('monster-slime', {
+          start: 0,
+          end: 3,
+        }),
+        frameRate: 5,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists('slime-hop')) {
+      this.anims.create({
+        key: 'slime-hop',
+        frames: this.anims.generateFrameNumbers('monster-slime', {
+          start: 8,
+          end: 15,
+        }),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists('slime-death')) {
+      this.anims.create({
+        key: 'slime-death',
+        frames: this.anims.generateFrameNumbers('monster-slime', {
+          start: 16,
+          end: 23,
+        }),
+        frameRate: 10,
+        repeat: 0,
+      });
+    }
 
     if (!this.anims.exists('npc-wizard-idle')) {
       this.anims.create({
@@ -981,27 +1019,20 @@ export class WorldScene extends Phaser.Scene {
       if (!entry) {
         const def = MONSTERS.find((d) => d.id === m.id);
         const name = def?.name ?? 'Monstro';
-        const hostile = !!def && def.kind !== 'slime';
-        const barWidth = hostile ? 36 : 26;
+        const isSlime = !def || def.kind === 'slime';
+        const hostile = !isSlime;
+        const barWidth = hostile ? 36 : 28;
         const shadow = this.add.ellipse(0, 0, 26, 10, 0x132b24, 0.4);
-        const body = hostile
+        const body = isSlime
           ? this.add
+              .sprite(0, 0, 'monster-slime', 0)
+              .setOrigin(0.5, 41 / 64)
+              .setScale(1.25)
+              .play('slime-idle')
+          : this.add
               .sprite(0, 4, 'world-props', `${def.kind}-idle-0`)
               .setOrigin(0.5, 1)
-              .play(`${def.kind}-idle`)
-          : this.add.ellipse(0, -12, 28, 22, 0x5cd65c);
-        const eyeLeft = this.add
-          .ellipse(-5, -14, 4, 6, 0x132b24)
-          .setVisible(!hostile);
-        const eyeRight = this.add
-          .ellipse(5, -14, 4, 6, 0x132b24)
-          .setVisible(!hostile);
-        const pupilLeft = this.add
-          .ellipse(-4, -15, 2, 2, 0xffffff)
-          .setVisible(!hostile);
-        const pupilRight = this.add
-          .ellipse(6, -15, 2, 2, 0xffffff)
-          .setVisible(!hostile);
+              .play(`${def.kind}-idle`);
         const label = makeNameplate(
           this,
           name,
@@ -1011,22 +1042,16 @@ export class WorldScene extends Phaser.Scene {
         );
         const hpBg = this.add.rectangle(
           0,
-          hostile ? -54 : -22,
+          hostile ? -54 : -24,
           barWidth,
           4,
           0x222222,
         );
         const hpFill = this.add
-          .rectangle(-barWidth / 2, hostile ? -54 : -22, barWidth, 4, 0x33cc33)
+          .rectangle(-barWidth / 2, hostile ? -54 : -24, barWidth, 4, 0x33cc33)
           .setOrigin(0, 0.5);
 
-        const figure = this.add.container(0, 0, [
-          body,
-          eyeLeft,
-          eyeRight,
-          pupilLeft,
-          pupilRight,
-        ]);
+        const figure = this.add.container(0, 0, [body]);
         const container = this.add.container(m.x, m.y, [
           shadow,
           figure,
@@ -1060,6 +1085,8 @@ export class WorldScene extends Phaser.Scene {
         entry.holdUntil = undefined;
       } else {
         entry.container.setVisible(true);
+        const movingLeft = m.x < entry.container.x - 0.2;
+        const movingRight = m.x > entry.container.x + 0.2;
         entry.container.setPosition(m.x, m.y).setDepth(m.y);
         const charging = m.state === 'windup';
         const hurt = entry.hurtUntil > time;
@@ -1072,19 +1099,28 @@ export class WorldScene extends Phaser.Scene {
           );
           if (!remaining) entry.meleeRecoil = undefined;
         }
-        const squish = charging
-          ? 0.67
-          : hurt
-            ? 0.82
-            : 1 + Math.sin(time / 150 + m.x) * 0.12;
-        if (entry.body instanceof Phaser.GameObjects.Ellipse) {
-          entry.body.setScale(1 / squish, squish);
-          entry.body.setFillStyle(
-            hurt ? 0xf0dc91 : charging ? 0xf4a75a : 0x5cd65c,
-          );
-        } else if (hurt || charging)
-          entry.body.setTint(hurt ? 0xffddaa : 0xffa570);
-        else entry.body.clearTint();
+
+        const def = MONSTERS.find((d) => d.id === m.id);
+        const isSlime = !def || def.kind === 'slime';
+        if (entry.body instanceof Phaser.GameObjects.Sprite) {
+          if (isSlime) {
+            const isMoving = m.state === 'chase' || m.state === 'return';
+            const targetAnim = isMoving ? 'slime-hop' : 'slime-idle';
+            if (entry.body.anims.currentAnim?.key !== targetAnim) {
+              entry.body.play(targetAnim, true);
+            }
+            if (movingLeft) {
+              entry.body.setFlipX(true);
+            } else if (movingRight) {
+              entry.body.setFlipX(false);
+            }
+          }
+          if (hurt || charging) {
+            entry.body.setTint(hurt ? 0xff8888 : 0xffa570);
+          } else {
+            entry.body.clearTint();
+          }
+        }
         if (charging) {
           this.dangerRing
             .fillStyle(0xf6513d, 0.2)
