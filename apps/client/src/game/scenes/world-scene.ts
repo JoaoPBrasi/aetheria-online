@@ -29,7 +29,11 @@ import { movement } from '../networking/movement';
 import { PlayerAvatar } from '../characters/player-avatar';
 import { makeNameplate } from '../ui/nameplate';
 import type { Cosmetics } from '@aetheria/shared';
-import { facingFromInput } from '../characters/animation';
+import {
+  CLEAVE_CONTACT_MS,
+  facingForCleave,
+  facingFromInput,
+} from '../characters/animation';
 import { playCombatSound } from '../combat-audio';
 import {
   showCombatEffect,
@@ -78,11 +82,13 @@ export class WorldScene extends Phaser.Scene {
     string,
     {
       container: Phaser.GameObjects.Container;
+      figure: Phaser.GameObjects.Container;
       body: Phaser.GameObjects.Ellipse | Phaser.GameObjects.Sprite;
       hpBg: Phaser.GameObjects.Rectangle;
       hpFill: Phaser.GameObjects.Rectangle;
       barWidth: number;
       hurtUntil: number;
+      cleaveRecoil?: { x: number; y: number };
     }
   >();
   constructor() {
@@ -626,8 +632,9 @@ export class WorldScene extends Phaser.Scene {
     attackerSession?: string,
   ) {
     if (!this.active) return;
+    const cleave = event.kind === 'strike' && event.skillId === 'cleave';
     if (local) {
-      if (event.kind !== 'dodge') playCombatSound(event.kind);
+      if (event.kind !== 'dodge' && !cleave) playCombatSound(event.kind);
       audioManager.notifyCombatAction();
     }
     if (event.kind === 'strike') {
@@ -636,21 +643,38 @@ export class WorldScene extends Phaser.Scene {
         : attackerSession
           ? this.remoteSprites.get(attackerSession)
           : undefined;
-      if (actor) {
-        const facing = facingFromInput(
-          event.x - event.origin.x,
-          event.y - event.origin.y,
-          actor.facing,
+      const dx = event.x - event.origin.x;
+      const dy = event.y - event.origin.y;
+      if (cleave) {
+        actor?.playGesture(
+          'cleave',
+          this.time.now,
+          facingForCleave(dx, dy, actor.facing),
         );
+        this.time.delayedCall(CLEAVE_CONTACT_MS, () => {
+          if (!this.active) return;
+          const target = this.monsterSprites.get(event.monsterId);
+          if (target) {
+            const length = Math.hypot(dx, dy) || 1;
+            target.hurtUntil = this.time.now + 160;
+            target.cleaveRecoil = {
+              x: (dx / length) * 6,
+              y: (dy / length) * 4,
+            };
+          }
+          if (local) playCombatSound('strike');
+          if (local || this.cameras.main.worldView.contains(event.x, event.y))
+            showCombatEffect(this, event, local);
+        });
+        return;
+      }
+      if (actor) {
+        const facing = facingFromInput(dx, dy, actor.facing);
         actor.playGesture(
           event.skillId === 'magic_dart' ? 'collect' : 'attack',
           this.time.now,
           facing,
-          event.skillId === 'cleave'
-            ? 420
-            : event.skillId === 'charge'
-              ? 210
-              : undefined,
+          event.skillId === 'charge' ? 210 : undefined,
         );
       }
       const target = this.monsterSprites.get(event.monsterId);
@@ -955,13 +979,16 @@ export class WorldScene extends Phaser.Scene {
           .rectangle(-barWidth / 2, hostile ? -54 : -22, barWidth, 4, 0x33cc33)
           .setOrigin(0, 0.5);
 
-        const container = this.add.container(m.x, m.y, [
-          shadow,
+        const figure = this.add.container(0, 0, [
           body,
           eyeLeft,
           eyeRight,
           pupilLeft,
           pupilRight,
+        ]);
+        const container = this.add.container(m.x, m.y, [
+          shadow,
+          figure,
           label,
           hpBg,
           hpFill,
@@ -974,7 +1001,15 @@ export class WorldScene extends Phaser.Scene {
             gameBridge.interact?.(m.id);
           });
 
-        entry = { container, body, hpBg, hpFill, barWidth, hurtUntil: 0 };
+        entry = {
+          container,
+          figure,
+          body,
+          hpBg,
+          hpFill,
+          barWidth,
+          hurtUntil: 0,
+        };
         this.monsterSprites.set(m.id, entry);
       }
 
@@ -985,6 +1020,15 @@ export class WorldScene extends Phaser.Scene {
         entry.container.setPosition(m.x, m.y).setDepth(m.y);
         const charging = m.state === 'windup';
         const hurt = entry.hurtUntil > time;
+        if (entry.cleaveRecoil) {
+          const recoil = entry.cleaveRecoil;
+          const remaining = Math.max(0, (entry.hurtUntil - time) / 160);
+          entry.figure.setPosition(
+            Math.round(recoil.x * remaining),
+            Math.round(recoil.y * remaining),
+          );
+          if (!remaining) entry.cleaveRecoil = undefined;
+        }
         const squish = charging
           ? 0.67
           : hurt
