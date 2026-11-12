@@ -50,6 +50,21 @@
       "source": "Entities/Characters/Body_A/Animations/Idle_Base/Idle_Up-Sheet.png"
     },
     {
+      "file": "Pierce_Down-Body.png",
+      "source": "Entities/Characters/Body_A/Animations/Pierce_Base/Pierce_Down.aseprite",
+      "adaptation": "Quadros do corpo exportados sem a camada da arma de demonstração."
+    },
+    {
+      "file": "Pierce_Side-Body.png",
+      "source": "Entities/Characters/Body_A/Animations/Pierce_Base/Pierce_Side.aseprite",
+      "adaptation": "Quadros do corpo exportados sem a camada da arma de demonstração."
+    },
+    {
+      "file": "Pierce_Up-Body.png",
+      "source": "Entities/Characters/Body_A/Animations/Pierce_Base/Pierce_Top.aseprite",
+      "adaptation": "Quadros do corpo exportados sem a camada da arma de demonstração."
+    },
+    {
       "file": "Slice_Down-Sheet.png",
       "source": "Entities/Characters/Body_A/Animations/Slice_Base/Slice_Down-Sheet.png"
     },
@@ -60,6 +75,21 @@
     {
       "file": "Slice_Up-Sheet.png",
       "source": "Entities/Characters/Body_A/Animations/Slice_Base/Slice_Up-Sheet.png"
+    },
+    {
+      "file": "Slice_Down-Body.png",
+      "source": "Entities/Characters/Body_A/Animations/Slice_Base/Slice_Down.aseprite",
+      "adaptation": "Quadros do corpo exportados sem as camadas da ferramenta e do rastro."
+    },
+    {
+      "file": "Slice_Side-Body.png",
+      "source": "Entities/Characters/Body_A/Animations/Slice_Base/Slice_Side.aseprite",
+      "adaptation": "Quadros do corpo exportados sem as camadas da ferramenta e do rastro."
+    },
+    {
+      "file": "Slice_Up-Body.png",
+      "source": "Entities/Characters/Body_A/Animations/Slice_Base/Slice_Up.aseprite",
+      "adaptation": "Quadros do corpo exportados sem as camadas da ferramenta e do rastro."
     },
     {
       "file": "Walk_Down-Sheet.png",

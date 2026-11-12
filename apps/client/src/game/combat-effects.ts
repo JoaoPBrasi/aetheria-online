@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
-import type { CombatFeedback, WeaponId } from '@aetheria/shared';
+import { MONSTERS, type CombatFeedback, type WeaponId } from '@aetheria/shared';
+import { isIronThrust } from './characters/animation';
 
 export type ToolEffectKind =
   | 'axe'
@@ -11,13 +12,14 @@ export type ToolEffectKind =
   | 'sword'
   | 'collect';
 
-function showCleaveImpact(
+function showMeleeImpact(
   scene: Phaser.Scene,
   x: number,
   y: number,
   angle: number,
   critical: boolean,
   weapon: WeaponId | null,
+  thrust: boolean,
 ) {
   const art = scene.add.graphics().setDepth(5002);
   const pixel = (n: number) => Math.round(n / 2) * 2;
@@ -34,7 +36,7 @@ function showCleaveImpact(
   scene.tweens.addCounter({
     from: 0,
     to: 1,
-    duration: 250,
+    duration: thrust ? 170 : 250,
     onUpdate: (tween) => draw(tween.getValue() ?? 0),
     onComplete: () => art.destroy(),
   });
@@ -43,22 +45,32 @@ function showCleaveImpact(
     if (t < 0.24) {
       // Brilho de contato em degraus, na grade de pixels do personagem.
       const alpha = 1 - t * 2;
-      art.fillStyle(0xbc783e, alpha).fillRect(sparkX - 8, sparkY - 2, 16, 4);
-      art.fillRect(sparkX - 2, sparkY - 8, 4, 16);
-      art.fillStyle(bright, alpha).fillRect(sparkX - 4, sparkY - 2, 8, 4);
-      art.fillRect(sparkX - 2, sparkY - 4, 4, 8);
+      if (thrust) {
+        const dx = Math.cos(angle);
+        const dy = Math.sin(angle);
+        for (let i = -12; i <= 12; i += 2) {
+          art
+            .fillStyle(Math.abs(i) < 5 ? 0xfff2ce : 0xa9cdd4, alpha)
+            .fillRect(pixel(sparkX + dx * i), pixel(sparkY + dy * i), 2, 2);
+        }
+      } else {
+        art.fillStyle(0xbc783e, alpha).fillRect(sparkX - 8, sparkY - 2, 16, 4);
+        art.fillRect(sparkX - 2, sparkY - 8, 4, 16);
+        art.fillStyle(bright, alpha).fillRect(sparkX - 4, sparkY - 2, 8, 4);
+        art.fillRect(sparkX - 2, sparkY - 4, 4, 8);
+      }
     }
     const travel = 1 - (1 - t) ** 2;
     for (let i = 0; i < count; i++) {
-      const ray = angle + (i / (count - 1) - 0.5) * 2.9;
-      const distance = 7 + travel * (15 + (i % 3) * 6);
+      const ray = angle + (i / (count - 1) - 0.5) * (thrust ? 1.5 : 2.9);
+      const distance = 7 + travel * ((thrust ? 9 : 15) + (i % 3) * 6);
       const sx = pixel(sparkX + Math.cos(ray) * distance);
       const sy = pixel(sparkY + Math.sin(ray) * distance * 0.72 + 14 * t * t);
       art.fillStyle(i % 3 === 0 ? bright : particle, (1 - t) ** 1.4);
       art.fillRect(sx, sy, i % 2 === 0 && t < 0.55 ? 4 : 2, 2);
     }
     // Poeira baixa: sugere peso sem desenhar um círculo de área de efeito.
-    for (let i = -1; i <= 1; i++) {
+    for (let i = -1; !thrust && i <= 1; i++) {
       const dx = pixel(i * (8 + 9 * travel));
       art.fillStyle(i === 0 ? 0xb9a481 : 0x8e7758, 0.65 * (1 - t));
       art.fillRect(
@@ -90,21 +102,31 @@ export function showCombatEffect(
     textLabel = `💥 CRÍTICO! −${event.amount}`;
   }
 
+  const monster =
+    event.kind === 'strike'
+      ? MONSTERS.find(({ id }) => id === event.monsterId)
+      : undefined;
+  const labelHeight = monster && monster.kind !== 'slime' ? 91 : 59;
   const number = scene.add
-    .text(event.x, event.y - (event.kind === 'strike' ? 33 : 53), textLabel, {
-      fontFamily: 'Trebuchet MS, Arial, sans-serif',
-      fontSize: isCrit ? (local ? '26px' : '20px') : local ? '22px' : '18px',
-      fontStyle: 'bold',
-      color: healing
-        ? '#52b788'
-        : isCrit
-          ? '#ffd166'
-          : event.kind === 'hurt'
-            ? '#ff9588'
-            : '#fff0b8',
-      stroke: isCrit ? '#541212' : '#201d17',
-      strokeThickness: isCrit ? 5 : 4,
-    })
+    .text(
+      event.x,
+      event.y - (event.kind === 'strike' ? labelHeight : 53),
+      textLabel,
+      {
+        fontFamily: 'Trebuchet MS, Arial, sans-serif',
+        fontSize: isCrit ? (local ? '26px' : '20px') : local ? '22px' : '18px',
+        fontStyle: 'bold',
+        color: healing
+          ? '#52b788'
+          : isCrit
+            ? '#ffd166'
+            : event.kind === 'hurt'
+              ? '#ff9588'
+              : '#fff0b8',
+        stroke: isCrit ? '#541212' : '#201d17',
+        strokeThickness: isCrit ? 5 : 4,
+      },
+    )
     .setOrigin(0.5)
     .setDepth(5003);
 
@@ -146,8 +168,17 @@ export function showCombatEffect(
   if (event.kind !== 'strike') return;
 
   const angle = Math.atan2(event.y - event.origin.y, event.x - event.origin.x);
-  if (event.skillId === 'cleave') {
-    showCleaveImpact(scene, event.x, event.y, angle, isCrit, event.weapon);
+  const thrust = isIronThrust(event);
+  if (event.skillId === 'cleave' || thrust) {
+    showMeleeImpact(
+      scene,
+      event.x,
+      event.y,
+      angle,
+      isCrit,
+      event.weapon,
+      thrust,
+    );
     return;
   }
   const swing = scene.add.graphics().setDepth(5002);

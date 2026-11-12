@@ -43,6 +43,39 @@ const carry: Record<Direction, Grip> = {
   up: [38, 39, 133],
 };
 
+const thrust: Record<Direction, readonly Grip[]> = {
+  down: [
+    [22, 31, 160],
+    [22, 30, 170],
+    [22, 29, 173],
+    [29, 42, 180],
+    [28, 40, 180],
+    [27, 37, 188],
+    [23, 35, 192],
+    [22, 32, 185],
+  ],
+  side: [
+    [34, 34, 104],
+    [34, 34, 99],
+    [33, 34, 96],
+    [47, 39, 90],
+    [44, 38, 90],
+    [39, 38, 95],
+    [36, 37, 112],
+    [33, 37, 120],
+  ],
+  up: [
+    [36, 36, 15],
+    [35, 37, 10],
+    [35, 38, 4],
+    [32, 24, 0],
+    [32, 25, 0],
+    [32, 26, 4],
+    [35, 30, 12],
+    [37, 35, 16],
+  ],
+};
+
 const steps: Record<Direction, readonly Grip[]> = {
   down: [
     [27, 38, -145],
@@ -78,13 +111,15 @@ export function weaponGrip(
   const flip = facing === 'left';
   const direction = flip || facing === 'right' ? 'side' : facing;
   const grip =
-    state === 'attack' || state === 'cleave'
-      ? cut[direction][frame]
-      : state === 'walk'
-        ? steps[direction][frame]
-        : state === 'idle' || state === 'hit'
-          ? carry[direction]
-          : undefined;
+    state === 'iron_thrust'
+      ? thrust[direction][frame]
+      : state === 'attack' || state === 'cleave'
+        ? cut[direction][frame]
+        : state === 'walk'
+          ? steps[direction][frame]
+          : state === 'idle' || state === 'hit'
+            ? carry[direction]
+            : undefined;
   if (!grip) return undefined;
   const [x, y, angle] = grip;
   return {

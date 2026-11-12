@@ -12,18 +12,21 @@ const states = {
   Watering: 'water',
   Hit: 'hit',
 };
-const sources = [];
-for (const [file, state] of Object.entries(states))
-  for (const direction of ['Down', 'Up', 'Side']) {
-    const data = await readFile(
-      new URL(`${file}_${direction}-Sheet.png`, directory),
-    );
-    sources.push({
-      name: `${state}-${direction.toLowerCase()}`,
-      direction: direction.toLowerCase(),
-      url: 'data:image/png;base64,' + data.toString('base64'),
-    });
-  }
+async function sheets(mapping, suffix) {
+  const sources = [];
+  for (const [file, state] of Object.entries(mapping))
+    for (const direction of ['Down', 'Up', 'Side']) {
+      const data = await readFile(
+        new URL(`${file}_${direction}-${suffix}.png`, directory),
+      );
+      sources.push({
+        name: `${state}-${direction.toLowerCase()}`,
+        direction: direction.toLowerCase(),
+        url: 'data:image/png;base64,' + data.toString('base64'),
+      });
+    }
+  return sources;
+}
 const browser = await chromium.launch({
   headless: true,
   ...(process.env.CHROMIUM_PATH || process.platform === 'win32'
@@ -39,25 +42,41 @@ try {
   await page.addScriptTag({
     path: fileURLToPath(new URL('character-art/render.js', import.meta.url)),
   });
-  const result = await page.evaluate(
-    (sources) => window.buildCharacterArt(sources),
-    sources,
-  );
-  await writeFile(
-    new URL('apps/client/public/sprites/player-atlas.png', root),
-    Buffer.from(result.url.split(',')[1], 'base64'),
-  );
-  await writeFile(
-    new URL('apps/client/public/maps/player-atlas.json', root),
-    JSON.stringify(result.atlas),
-  );
-  console.log(
-    JSON.stringify({
-      frames: result.frames,
-      texture: result.atlas.meta.size,
-      sourceSheets: sources.length,
-    }),
-  );
+  for (const [name, sources, columns] of [
+    ['player-atlas', await sheets(states, 'Sheet'), 32],
+    [
+      'player-combat-atlas',
+      await sheets({ Pierce: 'iron_thrust', Slice: 'chop' }, 'Body'),
+      16,
+    ],
+  ]) {
+    const result = await page.evaluate(
+      ({ sources, options }) => window.buildCharacterArt(sources, options),
+      {
+        sources,
+        options: {
+          columns,
+          image: `${name}.png`,
+          weapons: name === 'player-atlas',
+        },
+      },
+    );
+    await writeFile(
+      new URL(`apps/client/public/sprites/${name}.png`, root),
+      Buffer.from(result.url.split(',')[1], 'base64'),
+    );
+    await writeFile(
+      new URL(`apps/client/public/maps/${name}.json`, root),
+      JSON.stringify(result.atlas),
+    );
+    console.log(
+      JSON.stringify({
+        name,
+        frames: result.frames,
+        texture: result.atlas.meta.size,
+      }),
+    );
+  }
 } finally {
   await browser.close();
 }

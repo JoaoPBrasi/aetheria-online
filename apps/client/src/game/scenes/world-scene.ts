@@ -30,7 +30,12 @@ import { movement } from '../networking/movement';
 import { PlayerAvatar } from '../characters/player-avatar';
 import { makeNameplate } from '../ui/nameplate';
 import type { Cosmetics } from '@aetheria/shared';
-import { CLEAVE_CONTACT_MS, facingForCleave } from '../characters/animation';
+import {
+  CLEAVE_CONTACT_MS,
+  THRUST_CONTACT_MS,
+  facingForCleave,
+  isIronThrust,
+} from '../characters/animation';
 import { playCombatSound } from '../combat-audio';
 import {
   showCombatEffect,
@@ -59,6 +64,8 @@ export class WorldScene extends Phaser.Scene {
   private accumulator = 0;
   private lastToolAction?: Record<string, unknown>;
   private lastToolAnimTime = 0;
+  private pendingMeleeImpacts: { at: number; play: (time: number) => void }[] =
+    [];
   private remoteSprites = new Map<string, PlayerAvatar>();
   private coverCells = new Map<string, Set<Phaser.GameObjects.Image>>();
   private fadingCover = new Set<Phaser.GameObjects.Image>();
@@ -85,7 +92,8 @@ export class WorldScene extends Phaser.Scene {
       hpFill: Phaser.GameObjects.Rectangle;
       barWidth: number;
       hurtUntil: number;
-      cleaveRecoil?: { x: number; y: number };
+      meleeRecoil?: { x: number; y: number };
+      holdUntil?: number;
     }
   >();
   constructor() {
@@ -96,6 +104,11 @@ export class WorldScene extends Phaser.Scene {
       'player-art',
       '/sprites/player-atlas.png',
       '/maps/player-atlas.json',
+    );
+    this.load.atlas(
+      'player-combat-art',
+      '/sprites/player-combat-atlas.png',
+      '/maps/player-combat-atlas.json',
     );
     this.load.image('world-ground', '/sprites/brumavale-ground.png');
     this.load.atlas(
@@ -384,6 +397,7 @@ export class WorldScene extends Phaser.Scene {
       gameBridge.combatFeedback = undefined;
       gameBridge.speechBubble = undefined;
       this.lastToolAction = undefined;
+      this.pendingMeleeImpacts.length = 0;
     });
     this.avatar.setVisible(false);
     this.cameras.main.setBounds(
@@ -431,6 +445,7 @@ export class WorldScene extends Phaser.Scene {
     });
     const unsubscribe = gameBridge.subscribe(() => {
       const next = gameBridge.getSnapshot().status === 'connected';
+      if (!next) this.pendingMeleeImpacts.length = 0;
       if (next && !this.active)
         this.avatar.setPosition(WORLD_SPAWN.x, WORLD_SPAWN.y);
       this.active = next;
@@ -630,8 +645,10 @@ export class WorldScene extends Phaser.Scene {
   ) {
     if (!this.active) return;
     const cleave = event.kind === 'strike' && event.skillId === 'cleave';
+    const thrust = isIronThrust(event);
     if (local) {
-      if (event.kind !== 'dodge' && !cleave) playCombatSound(event.kind);
+      if (event.kind !== 'dodge' && !cleave && !thrust)
+        playCombatSound(event.kind);
       audioManager.notifyCombatAction();
     }
     if (event.kind === 'strike') {
@@ -642,28 +659,34 @@ export class WorldScene extends Phaser.Scene {
           : undefined;
       const dx = event.x - event.origin.x;
       const dy = event.y - event.origin.y;
-      if (cleave) {
+      if (cleave || thrust) {
         actor?.playGesture(
-          'cleave',
+          cleave ? 'cleave' : 'iron_thrust',
           this.time.now,
           facingForCleave(dx, dy, actor.facing),
           undefined,
           event.weapon,
         );
-        this.time.delayedCall(CLEAVE_CONTACT_MS, () => {
-          if (!this.active) return;
-          const target = this.monsterSprites.get(event.monsterId);
-          if (target) {
-            const length = Math.hypot(dx, dy) || 1;
-            target.hurtUntil = this.time.now + 160;
-            target.cleaveRecoil = {
-              x: (dx / length) * 6,
-              y: (dy / length) * 4,
-            };
-          }
-          if (local) playCombatSound('strike');
-          if (local || this.cameras.main.worldView.contains(event.x, event.y))
-            showCombatEffect(this, event, local);
+        const at =
+          this.time.now + (cleave ? CLEAVE_CONTACT_MS : THRUST_CONTACT_MS);
+        const target = this.monsterSprites.get(event.monsterId);
+        if (event.lethal && target) target.holdUntil = at;
+        this.pendingMeleeImpacts.push({
+          at,
+          play: (time) => {
+            const target = this.monsterSprites.get(event.monsterId);
+            if (target) {
+              const length = Math.hypot(dx, dy) || 1;
+              target.hurtUntil = time + 160;
+              target.meleeRecoil = {
+                x: (dx / length) * (cleave ? 6 : 4),
+                y: (dy / length) * (cleave ? 4 : 3),
+              };
+            }
+            if (local) playCombatSound('strike');
+            if (local || this.cameras.main.worldView.contains(event.x, event.y))
+              showCombatEffect(this, event, local);
+          },
         });
         return;
       }
@@ -782,6 +805,16 @@ export class WorldScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number) {
+    // Usa o mesmo relógio de updatePose para que o contato não atrase com FPS baixo.
+    for (let i = 0; i < this.pendingMeleeImpacts.length;) {
+      const impact = this.pendingMeleeImpacts[i]!;
+      if (impact.at > time) {
+        i++;
+        continue;
+      }
+      this.pendingMeleeImpacts.splice(i, 1);
+      impact.play(time);
+    }
     const farmState = gameBridge.getSnapshot();
     this.focusRing?.clear();
     if (
@@ -1022,20 +1055,22 @@ export class WorldScene extends Phaser.Scene {
       }
 
       if (m.state === 'dead' || m.health <= 0) {
+        if (entry.holdUntil && time < entry.holdUntil) continue;
         entry.container.setVisible(false);
+        entry.holdUntil = undefined;
       } else {
         entry.container.setVisible(true);
         entry.container.setPosition(m.x, m.y).setDepth(m.y);
         const charging = m.state === 'windup';
         const hurt = entry.hurtUntil > time;
-        if (entry.cleaveRecoil) {
-          const recoil = entry.cleaveRecoil;
+        if (entry.meleeRecoil) {
+          const recoil = entry.meleeRecoil;
           const remaining = Math.max(0, (entry.hurtUntil - time) / 160);
           entry.figure.setPosition(
             Math.round(recoil.x * remaining),
             Math.round(recoil.y * remaining),
           );
-          if (!remaining) entry.cleaveRecoil = undefined;
+          if (!remaining) entry.meleeRecoil = undefined;
         }
         const squish = charging
           ? 0.67

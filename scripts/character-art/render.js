@@ -1,16 +1,19 @@
-window.buildCharacterArt = async (sources) => {
+window.buildCharacterArt = async (
+  sources,
+  { columns, image: atlasImage, weapons },
+) => {
   const size = 64,
     layers = ['backHair', 'base', 'skin', 'clothes', 'short', 'long', 'bun'];
   const atlas = document.createElement('canvas');
-  atlas.width = 2048;
+  atlas.width = columns * size;
   atlas.height = 4096;
   const output = atlas.getContext('2d');
   const frames = {},
     heads = [];
   let index = 0;
   const packFrame = (name, image) => {
-    const x = (index % 32) * size,
-      y = Math.floor(index / 32) * size;
+    const x = (index % columns) * size,
+      y = Math.floor(index / columns) * size;
     if (y + size > atlas.height) throw new Error('Character atlas overflow');
     output.drawImage(image, x, y);
     frames[name] = {
@@ -22,10 +25,7 @@ window.buildCharacterArt = async (sources) => {
     };
     index++;
   };
-  const combatFrames = [];
-  const toolColors = new Set([
-    0x928f88, 0x404545, 0xfffffe, 0x6c492f, 0xccc9c2, 0xe7e7e7,
-  ]);
+  const trailFrames = [];
   const swordColors = {
     sword: ['#34271d', '#845232', '#bc8957', '#e1b886', '#a06c43', '#5b3928'],
     iron_sword: [
@@ -167,35 +167,14 @@ window.buildCharacterArt = async (sources) => {
       }
       for (const layer of layers)
         packFrame(`${source.name}-${n}:${layer}`, canvases[layer]);
-      if (source.name.startsWith('chop-')) {
-        // Separa a ferramenta e o arco da silhueta original. A coleta mantém o quadro original.
+      if (weapons && source.name.startsWith('chop-') && (n === 3 || n === 4)) {
+        // A máscara da folha original fornece o contorno do arco, separado do corpo.
         const colorAt = (x, y) => {
           if (x < 0 || x >= size || y < 0 || y >= size) return -1;
           const i = (y * size + x) * 4;
           const d = pixels.data;
           return d[i + 3] ? (d[i] << 16) | (d[i + 1] << 8) | d[i + 2] : -1;
         };
-        const clean = document.createElement('canvas');
-        clean.width = clean.height = size;
-        const ctx = clean.getContext('2d');
-        ctx.drawImage(canvases.base, 0, 0);
-        for (let y = 0; y < size; y++) {
-          for (let x = 0; x < size; x++) {
-            const color = colorAt(x, y);
-            if (toolColors.has(color)) ctx.clearRect(x, y, 1, 1);
-            if (color !== 0) continue;
-            let nextToBody = false;
-            for (let dy = -1; dy <= 1; dy++)
-              for (let dx = -1; dx <= 1; dx++) {
-                const adjacent = colorAt(x + dx, y + dy);
-                if (adjacent > 0 && !toolColors.has(adjacent))
-                  nextToBody = true;
-              }
-            if (!nextToBody) ctx.clearRect(x, y, 1, 1);
-          }
-        }
-        combatFrames.push([`${source.name}-${n}:combat`, clean]);
-        if (n !== 3 && n !== 4) continue;
         const mask = (x, y) => colorAt(x, y) === 0xe7e7e7;
         for (const [weapon, colors] of Object.entries(swordColors)) {
           const trail = document.createElement('canvas');
@@ -209,6 +188,16 @@ window.buildCharacterArt = async (sources) => {
               const dy = y - 33;
               const sx = Math.abs(dx) * 2 >= Math.abs(dy) ? Math.sign(dx) : 0;
               const sy = Math.abs(dy) * 2 >= Math.abs(dx) ? Math.sign(dy) : 0;
+              if (weapon === 'iron_sword') {
+                const rim = !mask(x + sx, y + sy);
+                const shoulder = !mask(x + sx * 3, y + sy * 3);
+                if (!shoulder && mask(x + sx * 6, y + sy * 6)) continue;
+                stroke.globalAlpha =
+                  (n === 3 ? 1 : 0.6) * (rim ? 1 : shoulder ? 0.8 : 0.35);
+                stroke.fillStyle = rim ? colors[3] : colors[2];
+                stroke.fillRect(x, y, 1, 1);
+                continue;
+              }
               stroke.fillStyle = !mask(x + sx, y + sy)
                 ? colors[3]
                 : !mask(x + 2 * sx, y + 2 * sy)
@@ -218,13 +207,13 @@ window.buildCharacterArt = async (sources) => {
                     : colors[2];
               stroke.fillRect(x, y, 1, 1);
             }
-          combatFrames.push([`${source.name}-${n}:trail-${weapon}`, trail]);
+          trailFrames.push([`${source.name}-${n}:trail-${weapon}`, trail]);
         }
       }
     }
   }
-  for (const [name, sprite] of combatFrames) packFrame(name, sprite);
-  for (const [weapon, colors] of Object.entries(swordColors)) {
+  for (const [name, sprite] of trailFrames) packFrame(name, sprite);
+  for (const [weapon, colors] of weapons ? Object.entries(swordColors) : []) {
     const iron = weapon === 'iron_sword';
     const sword = document.createElement('canvas');
     sword.width = sword.height = size;
@@ -246,7 +235,7 @@ window.buildCharacterArt = async (sources) => {
     paint(4, 30, 51, 4, 1);
     packFrame(`weapon:${weapon}`, sword);
   }
-  const height = 2 ** Math.ceil(Math.log2(Math.ceil(index / 32) * size));
+  const height = 2 ** Math.ceil(Math.log2(Math.ceil(index / columns) * size));
   const packed = document.createElement('canvas');
   packed.width = atlas.width;
   packed.height = height;
@@ -256,7 +245,7 @@ window.buildCharacterArt = async (sources) => {
     atlas: {
       frames,
       meta: {
-        image: 'player-atlas.png',
+        image: atlasImage,
         size: { w: packed.width, h: packed.height },
         scale: '1',
       },

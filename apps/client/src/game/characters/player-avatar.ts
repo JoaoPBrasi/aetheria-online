@@ -8,6 +8,7 @@ import {
   PLAYER_LAYERS,
   PLAYER_ANIMATIONS,
   CLEAVE_DURATION_MS,
+  THRUST_DURATION_MS,
   poseAt,
   type Facing,
   type PlayerAnimation,
@@ -67,7 +68,8 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
   ) {
     if (
       state === 'hit' &&
-      this.action?.state === 'cleave' &&
+      (this.action?.state === 'cleave' ||
+        this.action?.state === 'iron_thrust') &&
       time < this.action.until
     )
       return;
@@ -75,7 +77,9 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
     const dur =
       state === 'cleave'
         ? CLEAVE_DURATION_MS
-        : (durationMs ?? (animation.frames * 1000) / animation.fps);
+        : state === 'iron_thrust'
+          ? THRUST_DURATION_MS
+          : (durationMs ?? (animation.frames * 1000) / animation.fps);
     this.action = {
       state,
       until: time + dur,
@@ -111,7 +115,11 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
     const distance = Math.hypot(x - this.x, y - this.y);
     if (distance > 0.02 && distance < 80) {
       this.movingUntil = time + 120;
-      if (this.action?.state !== 'cleave') this.action = undefined;
+      if (
+        this.action?.state !== 'cleave' &&
+        this.action?.state !== 'iron_thrust'
+      )
+        this.action = undefined;
     }
     this.setPosition(x, y).setDepth(y);
     const action =
@@ -150,19 +158,18 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
         time - this.startedAt,
         action?.durationMs,
       ),
-      melee = state === 'cleave' || state === 'attack',
+      melee =
+        state === 'cleave' || state === 'attack' || state === 'iron_thrust',
       weapon = melee && action?.weapon !== undefined ? action.weapon : equipped,
       frameKey = `${state}:${pose.key}:${facing}:${weapon ?? ''}`;
     if (frameKey !== this.frameKey) {
-      // O quadro 3 da fonte é parcialmente coberto pelo arco. Mãos livres usam a
-      // silhueta seguinte para mostrar o braço inteiro sem desenhar uma lâmina.
-      const bodyKey =
-        melee && !weapon && pose.frame === 3
-          ? pose.key.replace(/-3$/, '-4')
-          : pose.key;
       for (const [layer, sprite] of this.layers) {
-        const variant = layer === 'base' && melee ? 'combat' : layer;
-        sprite.setFrame(`${bodyKey}:${variant}`).setFlipX(pose.flip);
+        sprite
+          .setTexture(
+            melee ? 'player-combat-art' : 'player-art',
+            `${pose.key}:${layer}`,
+          )
+          .setFlipX(pose.flip);
       }
       const grip = weapon && weaponGrip(state, facing, pose.frame);
       this.weapon.setVisible(!!grip);
@@ -176,7 +183,7 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
       }
       const trail =
         !!weapon &&
-        melee &&
+        (state === 'attack' || state === 'cleave') &&
         (pose.frame === 3 || (state === 'cleave' && pose.frame === 4));
       this.trail.setVisible(trail);
       if (trail)
