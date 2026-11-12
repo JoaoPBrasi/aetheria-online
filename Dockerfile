@@ -23,6 +23,7 @@ RUN pnpm install --frozen-lockfile
 
 # Copia código-fonte e esquemas
 COPY tsconfig.base.json tsconfig.tools.json ./
+COPY art ./art
 COPY packages/shared ./packages/shared
 COPY apps/server ./apps/server
 COPY apps/client ./apps/client
