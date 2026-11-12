@@ -37,10 +37,46 @@ const cut: Record<Direction, readonly Grip[]> = {
   ],
 };
 
-const carry: Record<Direction, Grip> = {
-  down: [26, 39, -141],
-  side: [28, 39, 126],
-  up: [38, 39, 133],
+const idleGrip: Record<Direction, readonly Grip[]> = {
+  down: [
+    [26, 40, -141],
+    [26, 40, -141],
+    [26, 41, -141],
+    [26, 40, -141],
+  ],
+  side: [
+    [27, 40, -153],
+    [27, 40, -153],
+    [27, 41, -153],
+    [27, 40, -153],
+  ],
+  up: [
+    [38, 40, 133],
+    [38, 40, 133],
+    [38, 41, 133],
+    [38, 40, 133],
+  ],
+};
+
+const hitGrip: Record<Direction, readonly Grip[]> = {
+  down: [
+    [26, 40, -141],
+    [31, 35, -125],
+    [28, 34, -127],
+    [27, 37, -141],
+  ],
+  side: [
+    [27, 40, -153],
+    [22, 39, -140],
+    [23, 39, -145],
+    [27, 40, -153],
+  ],
+  up: [
+    [38, 40, 133],
+    [39, 36, 116],
+    [39, 37, 120],
+    [38, 38, 130],
+  ],
 };
 
 const thrust: Record<Direction, readonly Grip[]> = {
@@ -78,28 +114,28 @@ const thrust: Record<Direction, readonly Grip[]> = {
 
 const steps: Record<Direction, readonly Grip[]> = {
   down: [
-    [27, 38, -145],
-    [26, 39, -140],
-    [26, 39, -132],
-    [26, 39, -140],
-    [26, 38, -145],
+    [27, 39, -145],
+    [26, 40, -140],
+    [26, 39, -134],
+    [27, 40, -140],
+    [26, 40, -145],
     [26, 39, -142],
   ],
   side: [
-    [28, 37, 116],
-    [29, 37, 122],
-    [30, 38, 131],
-    [29, 39, 136],
-    [29, 39, 129],
-    [27, 38, 120],
+    [27, 40, -146],
+    [29, 40, -150],
+    [30, 38, -156],
+    [29, 40, -160],
+    [27, 40, -155],
+    [26, 39, -149],
   ],
   up: [
-    [36, 39, 133],
-    [37, 38, 136],
-    [37, 39, 140],
-    [38, 39, 133],
+    [38, 41, 133],
+    [37, 40, 136],
+    [38, 39, 140],
+    [37, 38, 133],
     [38, 40, 129],
-    [37, 39, 130],
+    [38, 40, 130],
   ],
 };
 
@@ -117,9 +153,11 @@ export function weaponGrip(
         ? cut[direction][frame]
         : state === 'walk'
           ? steps[direction][frame]
-          : state === 'idle' || state === 'hit'
-            ? carry[direction]
-            : undefined;
+          : state === 'idle'
+            ? idleGrip[direction][frame]
+            : state === 'hit'
+              ? hitGrip[direction][frame]
+              : undefined;
   if (!grip) return undefined;
   const [x, y, angle] = grip;
   return {
@@ -127,6 +165,11 @@ export function weaponGrip(
     y: (y - 48) * 2,
     angle: flip ? -angle : angle,
     flip,
-    behind: direction === 'up',
+    // A mão deve aparecer sobre o cabo quando o personagem carrega a espada.
+    behind:
+      direction === 'up' ||
+      state === 'idle' ||
+      state === 'walk' ||
+      state === 'hit',
   };
 }
