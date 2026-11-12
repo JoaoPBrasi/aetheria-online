@@ -194,14 +194,14 @@ export function showCombatEffect(
       event.x - event.origin.x,
       event.y - event.origin.y,
     );
-    const duration = Math.min(260, Math.max(120, distance * 0.75));
+    const duration = Math.min(650, Math.max(340, distance * 1.8));
 
     scene.tweens.add({
       targets: dart,
       x: event.x,
       y: event.y - 14,
       duration,
-      ease: 'Power1',
+      ease: 'Linear',
       onComplete: () => {
         dart.destroy();
         const impact = scene.add
