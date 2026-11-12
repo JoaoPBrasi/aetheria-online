@@ -185,28 +185,35 @@ export function showCombatEffect(
 
   if (event.skillId === 'magic_dart') {
     const dart = scene.add
-      .rectangle(event.origin.x, event.origin.y - 14, 13, 4, 0x9eefff)
-      .setRotation(angle)
-      .setDepth(5002);
+      .sprite(event.origin.x, event.origin.y - 14, 'vfx-magic-dart', 0)
+      .setOrigin(0.5, 0.5)
+      .setScale(0.7)
+      .setDepth(5002)
+      .play('vfx-magic-dart-fly');
+    const distance = Math.hypot(
+      event.x - event.origin.x,
+      event.y - event.origin.y,
+    );
+    const duration = Math.min(260, Math.max(120, distance * 0.75));
+
     scene.tweens.add({
       targets: dart,
       x: event.x,
       y: event.y - 14,
-      duration: 150,
+      duration,
+      ease: 'Power1',
       onComplete: () => {
         dart.destroy();
-        const flash = scene.add
-          .circle(event.x, event.y - 14, 6, 0x6cdfff)
-          .setDepth(5002);
-        scene.tweens.add({
-          targets: flash,
-          scale: 2,
-          alpha: 0,
-          duration: 180,
-          onComplete: () => flash.destroy(),
-        });
+        const impact = scene.add
+          .sprite(event.x, event.y - 14, 'vfx-arcane-impact', 0)
+          .setOrigin(0.5, 0.5)
+          .setScale(0.75)
+          .setDepth(5002)
+          .play('vfx-arcane-impact-hit');
+        impact.once('animationcomplete', () => impact.destroy());
       },
     });
+    return;
   } else if (event.skillId === 'charge' && event.dashFrom) {
     swing.lineStyle(7, 0xedbc77, 0.65);
     swing.lineBetween(

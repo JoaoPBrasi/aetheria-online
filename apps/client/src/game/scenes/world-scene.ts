@@ -88,12 +88,14 @@ export class WorldScene extends Phaser.Scene {
       container: Phaser.GameObjects.Container;
       figure: Phaser.GameObjects.Container;
       body: Phaser.GameObjects.Ellipse | Phaser.GameObjects.Sprite;
+      label: Phaser.GameObjects.Container;
       hpBg: Phaser.GameObjects.Rectangle;
       hpFill: Phaser.GameObjects.Rectangle;
       barWidth: number;
       hurtUntil: number;
       meleeRecoil?: { x: number; y: number };
       holdUntil?: number;
+      dying?: boolean;
     }
   >();
   constructor() {
@@ -137,6 +139,14 @@ export class WorldScene extends Phaser.Scene {
     this.load.image('tree-young', '/sprites/tree-medium.png');
     this.load.image('farm-plot-tilled', '/sprites/farm-plot-tilled.png');
     this.load.spritesheet('monster-slime', '/sprites/monster-slime.png', {
+      frameWidth: 64,
+      frameHeight: 64,
+    });
+    this.load.spritesheet('vfx-magic-dart', '/sprites/vfx-magic-dart.png', {
+      frameWidth: 48,
+      frameHeight: 48,
+    });
+    this.load.spritesheet('vfx-arcane-impact', '/sprites/vfx-arcane-impact.png', {
       frameWidth: 64,
       frameHeight: 64,
     });
@@ -218,6 +228,29 @@ export class WorldScene extends Phaser.Scene {
           end: 23,
         }),
         frameRate: 10,
+        repeat: 0,
+      });
+    }
+
+    if (!this.anims.exists('vfx-magic-dart-fly')) {
+      this.anims.create({
+        key: 'vfx-magic-dart-fly',
+        frames: this.anims.generateFrameNumbers('vfx-magic-dart', {
+          start: 0,
+          end: 7,
+        }),
+        frameRate: 16,
+        repeat: -1,
+      });
+    }
+    if (!this.anims.exists('vfx-arcane-impact-hit')) {
+      this.anims.create({
+        key: 'vfx-arcane-impact-hit',
+        frames: this.anims.generateFrameNumbers('vfx-arcane-impact', {
+          start: 0,
+          end: 4,
+        }),
+        frameRate: 16,
         repeat: 0,
       });
     }
@@ -1071,6 +1104,7 @@ export class WorldScene extends Phaser.Scene {
           container,
           figure,
           body,
+          label,
           hpBg,
           hpFill,
           barWidth,
@@ -1081,9 +1115,37 @@ export class WorldScene extends Phaser.Scene {
 
       if (m.state === 'dead' || m.health <= 0) {
         if (entry.holdUntil && time < entry.holdUntil) continue;
-        entry.container.setVisible(false);
+        if (!entry.dying) {
+          entry.dying = true;
+          entry.hpBg.setVisible(false);
+          entry.hpFill.setVisible(false);
+          entry.label.setVisible(false);
+          const def = MONSTERS.find((d) => d.id === m.id);
+          const isSlime = !def || def.kind === 'slime';
+          if (isSlime && entry.body instanceof Phaser.GameObjects.Sprite) {
+            entry.body.clearTint();
+            entry.body.play('slime-death');
+            this.time.delayedCall(700, () => {
+              this.tweens.add({
+                targets: entry.container,
+                alpha: 0,
+                duration: 400,
+                onComplete: () => {
+                  entry.container.setVisible(false);
+                },
+              });
+            });
+          } else {
+            entry.container.setVisible(false);
+          }
+        }
         entry.holdUntil = undefined;
       } else {
+        if (entry.dying) {
+          entry.dying = false;
+          entry.container.setAlpha(1);
+          entry.label.setVisible(true);
+        }
         entry.container.setVisible(true);
         const movingLeft = m.x < entry.container.x - 0.2;
         const movingRight = m.x > entry.container.x + 0.2;
@@ -1170,7 +1232,7 @@ export class WorldScene extends Phaser.Scene {
       let radius = 22;
 
       const monsterEntry = this.monsterSprites.get(currentTargetId);
-      if (monsterEntry && monsterEntry.container.visible) {
+      if (monsterEntry && monsterEntry.container.visible && !monsterEntry.dying) {
         targetX = monsterEntry.container.x;
         targetY = monsterEntry.container.y;
         radius =
