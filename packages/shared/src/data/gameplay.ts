@@ -44,6 +44,14 @@ export const PLAYER_ATTACK_RANGE = 64;
 export const PLAYER_ATTACK_COOLDOWN_MS = 400;
 export const UNARMED_DAMAGE = 20;
 export const WEAPON_DAMAGE = { sword: 30, iron_sword: 45 } as const;
+export type WeaponId = keyof typeof WEAPON_DAMAGE;
+
+export function equippedWeapon(
+  equipment: readonly { slot: string; itemId: ItemId }[],
+): WeaponId | undefined {
+  const item = equipment.find(({ slot }) => slot === 'tool')?.itemId;
+  return item === 'sword' || item === 'iron_sword' ? item : undefined;
+}
 export interface Slot {
   index: number;
   itemId: ItemId;
@@ -58,6 +66,20 @@ export interface GameplaySnapshot {
   skills: { profession: string; xp: number }[];
   talents?: TalentRanks;
   attributes?: AttributeRanks;
+}
+export function combatWeapon({
+  equipment,
+  inventory,
+}: Pick<GameplaySnapshot, 'equipment' | 'inventory'>): WeaponId | undefined {
+  const selected = equippedWeapon(equipment);
+  if (selected) return selected;
+  if (
+    inventory.some((item) => item.itemId === 'iron_sword' && item.quantity > 0)
+  )
+    return 'iron_sword';
+  if (inventory.some((item) => item.itemId === 'sword' && item.quantity > 0))
+    return 'sword';
+  return undefined;
 }
 export const PROFESSION_NAMES: Record<string, string> = {
   lumberjack: 'Lenhador',
@@ -379,6 +401,7 @@ export type CombatFeedback =
   | {
       kind: 'strike';
       attackerId: string;
+      weapon: WeaponId | null;
       monsterId: string;
       origin: { x: number; y: number };
       dashFrom?: { x: number; y: number };

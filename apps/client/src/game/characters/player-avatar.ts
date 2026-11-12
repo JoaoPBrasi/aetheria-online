@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { makeNameplate } from '../ui/nameplate';
 import { makeSpeechBubble } from '../ui/speech-bubble';
-import type { Cosmetics } from '@aetheria/shared';
+import type { Cosmetics, WeaponId } from '@aetheria/shared';
+import { weaponGrip } from './weapon-pose';
 import {
   appearanceLayers,
   PLAYER_LAYERS,
@@ -15,6 +16,8 @@ import {
 /** All layers use the original 64px frame and the same foot pivot, including actions. */
 export class PlayerAvatar extends Phaser.GameObjects.Container {
   private layers = new Map<string, Phaser.GameObjects.Sprite>();
+  private weapon: Phaser.GameObjects.Sprite;
+  private trail: Phaser.GameObjects.Sprite;
   private lookKey = '';
   private frameKey = '';
   private startedAt = 0;
@@ -25,12 +28,19 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
     until: number;
     facing?: Facing;
     durationMs?: number;
+    weapon?: WeaponId | null;
   };
   state: PlayerAnimation = 'idle';
   facing: Facing = 'down';
   constructor(scene: Phaser.Scene, name?: string) {
     super(scene, 1040, 1040);
     this.add(scene.add.ellipse(0, 0, 25, 9, 0x10251e, 0.35));
+    this.weapon = scene.add
+      .sprite(0, 0, 'player-art', 'weapon:sword')
+      .setScale(2)
+      .setOrigin(0.5, 0.75)
+      .setVisible(false);
+    this.add(this.weapon);
     for (const layer of PLAYER_LAYERS) {
       const sprite = scene.add
         .sprite(0, 0, 'player-art', `idle-down-0:${layer}`)
@@ -39,6 +49,12 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
       this.add(sprite);
       this.layers.set(layer, sprite);
     }
+    this.trail = scene.add
+      .sprite(0, 0, 'player-art', 'chop-side-3:trail-iron_sword')
+      .setScale(2)
+      .setOrigin(0.5, 0.75)
+      .setVisible(false);
+    this.add(this.trail);
     if (name) this.add(makeNameplate(scene, name, 'player', 0, -72));
     scene.add.existing(this);
   }
@@ -47,6 +63,7 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
     time: number,
     facing?: Facing,
     durationMs?: number,
+    weapon?: WeaponId | null,
   ) {
     if (
       state === 'hit' &&
@@ -64,6 +81,7 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
       until: time + dur,
       facing,
       durationMs: dur,
+      weapon,
     };
     this.startedAt = time;
     this.state = state;
@@ -88,6 +106,7 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
     y: number,
     facing: Facing,
     look: Cosmetics,
+    equipped?: WeaponId,
   ) {
     const distance = Math.hypot(x - this.x, y - this.y);
     if (distance > 0.02 && distance < 80) {
@@ -131,14 +150,37 @@ export class PlayerAvatar extends Phaser.GameObjects.Container {
         time - this.startedAt,
         action?.durationMs,
       ),
-      frameKey = `${state}:${pose.key}:${facing}`;
+      melee = state === 'cleave' || state === 'attack',
+      weapon = melee && action?.weapon !== undefined ? action.weapon : equipped,
+      frameKey = `${state}:${pose.key}:${facing}:${weapon ?? ''}`;
     if (frameKey !== this.frameKey) {
-      const steel =
-        state === 'cleave' && (pose.frame === 3 || pose.frame === 4);
+      // O quadro 3 da fonte é parcialmente coberto pelo arco. Mãos livres usam a
+      // silhueta seguinte para mostrar o braço inteiro sem desenhar uma lâmina.
+      const bodyKey =
+        melee && !weapon && pose.frame === 3
+          ? pose.key.replace(/-3$/, '-4')
+          : pose.key;
       for (const [layer, sprite] of this.layers) {
-        const variant = layer === 'base' && steel ? 'cleave' : layer;
-        sprite.setFrame(`${pose.key}:${variant}`).setFlipX(pose.flip);
+        const variant = layer === 'base' && melee ? 'combat' : layer;
+        sprite.setFrame(`${bodyKey}:${variant}`).setFlipX(pose.flip);
       }
+      const grip = weapon && weaponGrip(state, facing, pose.frame);
+      this.weapon.setVisible(!!grip);
+      if (grip && weapon) {
+        this.weapon
+          .setFrame(`weapon:${weapon}`)
+          .setFlipX(grip.flip)
+          .setPosition(grip.x, grip.y)
+          .setAngle(grip.angle);
+        this.moveTo(this.weapon, grip.behind ? 1 : this.layers.size + 2);
+      }
+      const trail =
+        !!weapon &&
+        melee &&
+        (pose.frame === 3 || (state === 'cleave' && pose.frame === 4));
+      this.trail.setVisible(trail);
+      if (trail)
+        this.trail.setFrame(`${pose.key}:trail-${weapon}`).setFlipX(pose.flip);
       this.frameKey = frameKey;
     }
     return pose;

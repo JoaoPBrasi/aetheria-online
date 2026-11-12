@@ -14,6 +14,7 @@ import {
   CRAFTING_STATIONS,
   cropStatus,
   nearbyFarmTarget,
+  equippedWeapon,
   interaction,
   MONSTERS,
   NPCS,
@@ -29,11 +30,7 @@ import { movement } from '../networking/movement';
 import { PlayerAvatar } from '../characters/player-avatar';
 import { makeNameplate } from '../ui/nameplate';
 import type { Cosmetics } from '@aetheria/shared';
-import {
-  CLEAVE_CONTACT_MS,
-  facingForCleave,
-  facingFromInput,
-} from '../characters/animation';
+import { CLEAVE_CONTACT_MS, facingForCleave } from '../characters/animation';
 import { playCombatSound } from '../combat-audio';
 import {
   showCombatEffect,
@@ -650,6 +647,8 @@ export class WorldScene extends Phaser.Scene {
           'cleave',
           this.time.now,
           facingForCleave(dx, dy, actor.facing),
+          undefined,
+          event.weapon,
         );
         this.time.delayedCall(CLEAVE_CONTACT_MS, () => {
           if (!this.active) return;
@@ -669,12 +668,13 @@ export class WorldScene extends Phaser.Scene {
         return;
       }
       if (actor) {
-        const facing = facingFromInput(dx, dy, actor.facing);
+        const facing = facingForCleave(dx, dy, actor.facing);
         actor.playGesture(
           event.skillId === 'magic_dart' ? 'collect' : 'attack',
           this.time.now,
           facing,
           event.skillId === 'charge' ? 210 : undefined,
+          event.weapon,
         );
       }
       const target = this.monsterSprites.get(event.monsterId);
@@ -881,6 +881,7 @@ export class WorldScene extends Phaser.Scene {
       next.y,
       movement.direction,
       movement.cosmetics,
+      equippedWeapon(farmState.gameplay?.equipment ?? []),
     );
     this.walking = this.avatar.state === 'walk';
     if (this.walking && farmState.farmTarget)
@@ -897,10 +898,17 @@ export class WorldScene extends Phaser.Scene {
         this.remoteSprites.set(id, sprite);
       }
       const point = movement.interpolate(remote.samples, performance.now());
-      sprite.updatePose(time, point.x, point.y, remote.direction, {
-        ...remote,
-        hairStyle: remote.hairStyle as Cosmetics['hairStyle'],
-      });
+      sprite.updatePose(
+        time,
+        point.x,
+        point.y,
+        remote.direction,
+        {
+          ...remote,
+          hairStyle: remote.hairStyle as Cosmetics['hairStyle'],
+        },
+        remote.weapon,
+      );
       sprite.setAlpha(remote.connected ? 1 : 0.4);
     }
     for (const [id, sprite] of this.remoteSprites)

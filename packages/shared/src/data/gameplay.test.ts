@@ -7,8 +7,22 @@ import {
   CRAFTING_RECIPES,
   GameActionSchema,
   levelForXp,
+  combatWeapon,
   type Slot,
 } from './gameplay.js';
+it('honors the equipped sword before using the best one in the bag', () => {
+  const inventory: Slot[] = [{ index: 0, itemId: 'iron_sword', quantity: 1 }];
+  expect(
+    combatWeapon({ equipment: [{ slot: 'tool', itemId: 'sword' }], inventory }),
+  ).toBe('sword');
+  expect(combatWeapon({ equipment: [], inventory })).toBe('iron_sword');
+  expect(
+    combatWeapon({
+      equipment: [{ slot: 'tool', itemId: 'axe' }],
+      inventory: [],
+    }),
+  ).toBeUndefined();
+});
 it('stacks up to the item limit and splits without losing quantity', () => {
   const slots = addItem(
     [{ index: 0, itemId: 'wood', quantity: 98 }],

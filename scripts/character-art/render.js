@@ -22,7 +22,21 @@ window.buildCharacterArt = async (sources) => {
     };
     index++;
   };
-  const cleaveFrames = [];
+  const combatFrames = [];
+  const toolColors = new Set([
+    0x928f88, 0x404545, 0xfffffe, 0x6c492f, 0xccc9c2, 0xe7e7e7,
+  ]);
+  const swordColors = {
+    sword: ['#34271d', '#845232', '#bc8957', '#e1b886', '#a06c43', '#5b3928'],
+    iron_sword: [
+      '#222931',
+      '#68808a',
+      '#acc7cd',
+      '#edf6e8',
+      '#c59453',
+      '#493230',
+    ],
+  };
   for (const source of sources) {
     const image = new Image();
     image.src = source.url;
@@ -153,43 +167,85 @@ window.buildCharacterArt = async (sources) => {
       }
       for (const layer of layers)
         packFrame(`${source.name}-${n}:${layer}`, canvases[layer]);
-      // A máscara cinza dos dois quadros de contato já vem desenhada no sprite de corte.
-      // Só a versão do Guerreiro recebe a paleta de aço; o corte de coleta usa o original.
-      if (source.name.startsWith('chop-') && (n === 3 || n === 4)) {
-        const mask = (x, y) => {
-          if (x < 0 || x >= size || y < 0 || y >= size) return false;
+      if (source.name.startsWith('chop-')) {
+        // Separa a ferramenta e o arco da silhueta original. A coleta mantém o quadro original.
+        const colorAt = (x, y) => {
+          if (x < 0 || x >= size || y < 0 || y >= size) return -1;
           const i = (y * size + x) * 4;
           const d = pixels.data;
-          return (
-            d[i + 3] && d[i] === 231 && d[i + 1] === 231 && d[i + 2] === 231
-          );
+          return d[i + 3] ? (d[i] << 16) | (d[i + 1] << 8) | d[i + 2] : -1;
         };
-        const silver = document.createElement('canvas');
-        silver.width = silver.height = size;
-        const stroke = silver.getContext('2d');
-        stroke.drawImage(canvases.base, 0, 0);
+        const clean = document.createElement('canvas');
+        clean.width = clean.height = size;
+        const ctx = clean.getContext('2d');
+        ctx.drawImage(canvases.base, 0, 0);
         for (let y = 0; y < size; y++) {
           for (let x = 0; x < size; x++) {
-            if (!mask(x, y)) continue;
-            const dx = x - 32;
-            const dy = y - 33;
-            const sx = Math.abs(dx) * 2 >= Math.abs(dy) ? Math.sign(dx) : 0;
-            const sy = Math.abs(dy) * 2 >= Math.abs(dx) ? Math.sign(dy) : 0;
-            stroke.fillStyle = !mask(x + sx, y + sy)
-              ? '#fff4d6'
-              : !mask(x + 2 * sx, y + 2 * sy)
-                ? '#c9e0dc'
-                : !mask(x - sx, y - sy) || !mask(x - 2 * sx, y - 2 * sy)
-                  ? '#627b83'
-                  : '#91acae';
-            stroke.fillRect(x, y, 1, 1);
+            const color = colorAt(x, y);
+            if (toolColors.has(color)) ctx.clearRect(x, y, 1, 1);
+            if (color !== 0) continue;
+            let nextToBody = false;
+            for (let dy = -1; dy <= 1; dy++)
+              for (let dx = -1; dx <= 1; dx++) {
+                const adjacent = colorAt(x + dx, y + dy);
+                if (adjacent > 0 && !toolColors.has(adjacent))
+                  nextToBody = true;
+              }
+            if (!nextToBody) ctx.clearRect(x, y, 1, 1);
           }
         }
-        cleaveFrames.push([`${source.name}-${n}:cleave`, silver]);
+        combatFrames.push([`${source.name}-${n}:combat`, clean]);
+        if (n !== 3 && n !== 4) continue;
+        const mask = (x, y) => colorAt(x, y) === 0xe7e7e7;
+        for (const [weapon, colors] of Object.entries(swordColors)) {
+          const trail = document.createElement('canvas');
+          trail.width = trail.height = size;
+          const stroke = trail.getContext('2d');
+          stroke.globalAlpha = weapon === 'sword' ? 0.68 : 0.85;
+          for (let y = 0; y < size; y++)
+            for (let x = 0; x < size; x++) {
+              if (!mask(x, y)) continue;
+              const dx = x - 32;
+              const dy = y - 33;
+              const sx = Math.abs(dx) * 2 >= Math.abs(dy) ? Math.sign(dx) : 0;
+              const sy = Math.abs(dy) * 2 >= Math.abs(dx) ? Math.sign(dy) : 0;
+              stroke.fillStyle = !mask(x + sx, y + sy)
+                ? colors[3]
+                : !mask(x + 2 * sx, y + 2 * sy)
+                  ? colors[2]
+                  : !mask(x - sx, y - sy) || !mask(x - 2 * sx, y - 2 * sy)
+                    ? colors[1]
+                    : colors[2];
+              stroke.fillRect(x, y, 1, 1);
+            }
+          combatFrames.push([`${source.name}-${n}:trail-${weapon}`, trail]);
+        }
       }
     }
   }
-  for (const [name, sprite] of cleaveFrames) packFrame(name, sprite);
+  for (const [name, sprite] of combatFrames) packFrame(name, sprite);
+  for (const [weapon, colors] of Object.entries(swordColors)) {
+    const iron = weapon === 'iron_sword';
+    const sword = document.createElement('canvas');
+    sword.width = sword.height = size;
+    const ctx = sword.getContext('2d');
+    const paint = (i, x, y, w, h) => {
+      ctx.fillStyle = colors[i];
+      ctx.fillRect(x, y, w, h);
+    };
+    const tip = iron ? 24 : 29;
+    paint(0, 31, tip, 2, 3);
+    paint(0, iron ? 29 : 30, tip + 3, iron ? 6 : 4, 43 - tip);
+    paint(1, iron ? 30 : 31, tip + 4, iron ? 4 : 2, 41 - tip);
+    paint(2, 32, tip + 2, iron ? 2 : 1, 43 - tip);
+    if (iron) paint(3, 33, tip + 4, 1, 40 - tip);
+    paint(0, iron ? 27 : 28, 43, iron ? 10 : 8, 3);
+    paint(4, iron ? 28 : 29, 44, iron ? 8 : 6, 1);
+    paint(0, 30, 46, 4, 7);
+    paint(5, 31, 46, 2, 5);
+    paint(4, 30, 51, 4, 1);
+    packFrame(`weapon:${weapon}`, sword);
+  }
   const height = 2 ** Math.ceil(Math.log2(Math.ceil(index / 32) * size));
   const packed = document.createElement('canvas');
   packed.width = atlas.width;

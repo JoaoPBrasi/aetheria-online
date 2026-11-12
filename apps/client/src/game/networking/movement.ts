@@ -6,6 +6,7 @@ import {
   type Cosmetics,
   type MovementInput,
   type WorldState,
+  type WeaponId,
 } from '@aetheria/shared';
 import {
   facingFromInput,
@@ -32,6 +33,7 @@ export const movement = {
       skinColor: string;
       hairStyle: string;
       direction: Facing;
+      weapon?: WeaponId;
     }
   >(),
   send: undefined as ((input: MovementInput) => void) | undefined,
@@ -103,6 +105,7 @@ export const movement = {
         skinColor: p.skinColor,
         hairStyle: p.hairStyle,
         direction: validFacing(p.direction),
+        weapon: p.weapon || undefined,
         connected: p.connected,
         samples,
       });

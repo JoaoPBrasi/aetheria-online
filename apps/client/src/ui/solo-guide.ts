@@ -161,7 +161,7 @@ function ironBladeStep(
   )
     return {
       title: 'Derrote um Orc Batedor',
-      hint: 'Leve a espada de ferro e recue quando o orc anunciar o golpe.',
+      hint: 'Equipe a espada de ferro e recue quando o orc anunciar o golpe.',
       target: { x: scout.spawnX, y: scout.spawnY },
     };
 

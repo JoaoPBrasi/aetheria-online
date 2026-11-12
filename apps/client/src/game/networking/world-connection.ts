@@ -131,6 +131,8 @@ export class WorldConnection {
             gameBridge.getSnapshot().actionPending &&
             this.lastAction &&
             this.lastAction.kind !== 'attack' &&
+            this.lastAction.kind !== 'equip' &&
+            this.lastAction.kind !== 'unequip' &&
             !(
               this.lastAction.kind === 'skill' &&
               this.lastAction.skillId === 'cleave'

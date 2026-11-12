@@ -50,6 +50,17 @@ it('exports every animation layer inside the actual PNG bounds without trimming 
     w: png.readUInt32BE(16),
     h: png.readUInt32BE(20),
   });
+  for (const direction of ['down', 'side', 'up']) {
+    for (let frame = 0; frame < PLAYER_ANIMATIONS.cleave.frames; frame++) {
+      expect(atlas.frames[`chop-${direction}-${frame}:combat`]).toBeDefined();
+    }
+    for (const weapon of ['sword', 'iron_sword']) {
+      expect(atlas.frames[`weapon:${weapon}`]).toBeDefined();
+      for (const frame of [3, 4]) {
+        expect(atlas.frames[`chop-${direction}-${frame}:trail-${weapon}`]).toBeDefined();
+      }
+    }
+  }
   for (const [state, animation] of Object.entries(PLAYER_ANIMATIONS))
     for (const direction of ['down', 'up', 'right'] as const)
       for (let frame = 0; frame < animation.frames; frame++)

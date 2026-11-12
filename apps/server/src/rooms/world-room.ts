@@ -15,6 +15,7 @@ import {
   type CombatFeedback,
   type CharacterSummary,
   calculateCharacterStats,
+  equippedWeapon,
   type CharacterAttributes,
 } from '@aetheria/shared';
 import type { IdentityRepository } from '../repositories/identity-repository.js';
@@ -177,6 +178,7 @@ export class WorldRoom extends Room<{
         this.characterStats.set(p.characterId, stats);
         p.maxHealth = stats.maxHealth;
         p.movementSpeed = stats.movementSpeed;
+        p.weapon = equippedWeapon(snapshot.equipment) ?? '';
         if (p.health > p.maxHealth) p.health = p.maxHealth;
         if (
           raw &&
@@ -508,6 +510,7 @@ export class WorldRoom extends Room<{
     this.characterStats.set(character.id, stats);
     player.maxHealth = stats.maxHealth;
     player.movementSpeed = stats.movementSpeed;
+    player.weapon = equippedWeapon(snapshot?.equipment ?? []) ?? '';
     player.health = Math.min(
       player.maxHealth,
       character.health || player.maxHealth,

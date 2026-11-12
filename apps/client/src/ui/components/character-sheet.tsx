@@ -3,7 +3,7 @@ import {
   ITEMS,
   UNARMED_DAMAGE,
   WEAPON_DAMAGE,
-  hasTool,
+  combatWeapon,
   type Cosmetics,
   EQUIPMENT_DEFINITIONS,
   calculateCharacterStats,
@@ -66,12 +66,7 @@ export function CharacterSheet({
   );
   const equipment = gameplay?.equipment ?? [];
 
-  const weapon =
-    gameplay && hasTool(gameplay, 'iron_sword')
-      ? 'iron_sword'
-      : gameplay && hasTool(gameplay, 'sword')
-        ? 'sword'
-        : undefined;
+  const weapon = gameplay && combatWeapon(gameplay);
   const baseDamage = weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE;
   const stats = calculateCharacterStats(
     equipment,

@@ -101,8 +101,9 @@ export function GameplayPanel({
             {(source?.itemId === 'sword' ||
               source?.itemId === 'iron_sword') && (
               <p>
-                {WEAPON_DAMAGE[source.itemId]} de dano por golpe. O combate usa
-                a melhor espada que você carrega.
+                {WEAPON_DAMAGE[source.itemId]} de dano base por golpe. Equipe
+                para usar esta espada. Sem espada equipada, o personagem saca a
+                melhor da mochila ao atacar.
               </p>
             )}
             {source?.itemId === 'roasted_turnip' && (
@@ -153,7 +154,8 @@ export function GameplayPanel({
                 >
                   Mover / dividir
                 </button>
-                {(ITEMS[source.itemId].tool || getEquipmentSlot(source.itemId)) && (
+                {(ITEMS[source.itemId].tool ||
+                  getEquipmentSlot(source.itemId)) && (
                   <button
                     disabled={disabled || !source}
                     onClick={() =>

@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import type { CombatFeedback } from '@aetheria/shared';
+import type { CombatFeedback, WeaponId } from '@aetheria/shared';
 
 export type ToolEffectKind =
   | 'axe'
@@ -17,12 +17,20 @@ function showCleaveImpact(
   y: number,
   angle: number,
   critical: boolean,
+  weapon: WeaponId | null,
 ) {
   const art = scene.add.graphics().setDepth(5002);
   const pixel = (n: number) => Math.round(n / 2) * 2;
   const sparkX = pixel(x - Math.cos(angle) * 7);
   const sparkY = pixel(y - 15 - Math.sin(angle) * 5);
-  const count = critical ? 9 : 6;
+  const count = weapon === 'iron_sword' ? (critical ? 9 : 6) : critical ? 6 : 4;
+  const bright =
+    weapon === 'iron_sword'
+      ? 0xffefbb
+      : weapon === 'sword'
+        ? 0xeac38b
+        : 0xe4d4b5;
+  const particle = weapon === 'iron_sword' ? 0xf2b361 : 0xb18b63;
   scene.tweens.addCounter({
     from: 0,
     to: 1,
@@ -37,7 +45,7 @@ function showCleaveImpact(
       const alpha = 1 - t * 2;
       art.fillStyle(0xbc783e, alpha).fillRect(sparkX - 8, sparkY - 2, 16, 4);
       art.fillRect(sparkX - 2, sparkY - 8, 4, 16);
-      art.fillStyle(0xffefbb, alpha).fillRect(sparkX - 4, sparkY - 2, 8, 4);
+      art.fillStyle(bright, alpha).fillRect(sparkX - 4, sparkY - 2, 8, 4);
       art.fillRect(sparkX - 2, sparkY - 4, 4, 8);
     }
     const travel = 1 - (1 - t) ** 2;
@@ -46,7 +54,7 @@ function showCleaveImpact(
       const distance = 7 + travel * (15 + (i % 3) * 6);
       const sx = pixel(sparkX + Math.cos(ray) * distance);
       const sy = pixel(sparkY + Math.sin(ray) * distance * 0.72 + 14 * t * t);
-      art.fillStyle(i % 3 === 0 ? 0xffefbb : 0xf2b361, (1 - t) ** 1.4);
+      art.fillStyle(i % 3 === 0 ? bright : particle, (1 - t) ** 1.4);
       art.fillRect(sx, sy, i % 2 === 0 && t < 0.55 ? 4 : 2, 2);
     }
     // Poeira baixa: sugere peso sem desenhar um círculo de área de efeito.
@@ -139,7 +147,7 @@ export function showCombatEffect(
 
   const angle = Math.atan2(event.y - event.origin.y, event.x - event.origin.x);
   if (event.skillId === 'cleave') {
-    showCleaveImpact(scene, event.x, event.y, angle, isCrit);
+    showCleaveImpact(scene, event.x, event.y, angle, isCrit, event.weapon);
     return;
   }
   const swing = scene.add.graphics().setDepth(5002);
@@ -184,12 +192,12 @@ export function showCombatEffect(
       event.origin.y - 16,
     );
   } else {
-    // Golpe comum ou investida
-    swing.lineStyle(6, isCrit ? 0xffd166 : 0xffe6a8, 0.95).beginPath();
-    swing
-      .arc(event.origin.x, event.origin.y - 19, 38, angle - 0.9, angle + 0.9)
-      .strokePath();
-    swing.lineStyle(3, 0xffb764, 0.85);
+    // O arco acompanha a arma no avatar; aqui fica só o contato com o alvo.
+    swing.lineStyle(
+      3,
+      event.weapon === 'iron_sword' ? 0xffd99c : 0xd4aa76,
+      0.85,
+    );
     for (let i = -1; i <= 1; i++) {
       const ray = angle + i * 0.75;
       swing.lineBetween(

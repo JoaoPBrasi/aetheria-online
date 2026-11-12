@@ -1,7 +1,7 @@
 import {
   GameActionSchema,
   RESOURCES,
-  hasTool,
+  combatWeapon,
   PLAYER_ATTACK_RANGE,
   PLAYER_ATTACK_COOLDOWN_MS,
   UNARMED_DAMAGE,
@@ -118,11 +118,7 @@ export class GameplayService {
           const equipment = await this.repository.execute(id);
           const attributes = attributeBonuses(equipment.attributes);
 
-          const weapon: ItemId | undefined = hasTool(equipment, 'iron_sword')
-            ? 'iron_sword'
-            : hasTool(equipment, 'sword')
-              ? 'sword'
-              : undefined;
+          const weapon = combatWeapon(equipment);
           const { attack } = calculateCharacterStats(
             equipment.equipment,
             weapon ? WEAPON_DAMAGE[weapon] : UNARMED_DAMAGE,
@@ -158,6 +154,7 @@ export class GameplayService {
           );
           onStrike?.({
             kind: 'strike',
+            weapon: weapon ?? null,
             attackerId: id,
             monsterId: monster.id,
             origin: { x: current.x, y: current.y },
@@ -227,11 +224,7 @@ export class GameplayService {
             );
 
           const equipment = await this.repository.execute(id);
-          const weapon: ItemId | undefined = hasTool(equipment, 'iron_sword')
-            ? 'iron_sword'
-            : hasTool(equipment, 'sword')
-              ? 'sword'
-              : undefined;
+          const weapon = combatWeapon(equipment);
           const ranks = equipment.talents;
           const attributes = attributeBonuses(equipment.attributes);
           const { attack } = calculateCharacterStats(
@@ -290,6 +283,7 @@ export class GameplayService {
           playerSkills!.set(action.skillId, now + skill.cooldownMs);
           onStrike?.({
             kind: 'strike',
+            weapon: weapon ?? null,
             attackerId: id,
             monsterId: monster.id,
             origin: { x: current.x, y: current.y },
