@@ -10,6 +10,7 @@ RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 FROM base AS builder
 WORKDIR /app
 ENV NODE_OPTIONS="--max-old-space-size=2048"
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
 # Copia definições do workspace e dependências
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
