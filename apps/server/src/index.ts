@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { Server, matchMaker } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
-import { WORLD_ROOM } from '@aetheria/shared';
+import { WORLD_ROOM, FARM_PLOTS } from '@aetheria/shared';
 import { readEnvironment } from './config/env.js';
 import { createHttpApp } from './config/http.js';
 import { createDatabase } from './database/client.js';
@@ -38,6 +38,15 @@ matchMaker.controller.exposedMethods = [];
 server.define(WORLD_ROOM, ConfiguredWorldRoom);
 try {
   await db.$connect();
+  await db.$transaction(
+    FARM_PLOTS.map((plot) =>
+      db.farmPlot.upsert({
+        where: { id: plot.id },
+        create: plot,
+        update: { mapId: plot.mapId, tileX: plot.tileX, tileY: plot.tileY },
+      }),
+    ),
+  );
   await server.listen(env.PORT, env.HOST);
   await matchMaker.createRoom(WORLD_ROOM, {});
   console.info(`Aetheria server ready on ${env.HOST}:${env.PORT}`);

@@ -522,6 +522,14 @@ export class WorldRoom extends Room<{
     player.direction = candidate.direction;
     this.inputs.set(client.sessionId, new MovementQueue());
     this.state.players.set(client.sessionId, player);
+    try {
+      client.send('plots', await this.gameplay.plots());
+      client.send('resources', await this.gameplay.resources());
+      client.send('forage', this.gameplay.forage.nodes());
+      client.send('monsters', this.gameplay.monsters());
+    } catch {
+      // Ignora erro eventual de envio imediato; sync regular garante sincronização
+    }
   }
   async onLeave(client: Client) {
     this.lastSync.delete(client.sessionId);
